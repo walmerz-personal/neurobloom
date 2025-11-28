@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroBloom iOS Mockups - MVP</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+            background: #f5f5f7;
+            padding: 40px 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #1d1d1f;
+            margin-bottom: 10px;
+            font-size: 48px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #6e6e73;
+            margin-bottom: 60px;
+            font-size: 21px;
+        }
+
+        .screens-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 40px;
+            margin-bottom: 60px;
+        }
+
+        .phone-frame {
+            background: #1d1d1f;
+            border-radius: 55px;
+            padding: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .phone-frame::before {
+            content: '';
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 30px;
+            background: #1d1d1f;
+            border-radius: 0 0 20px 20px;
+            z-index: 10;
+        }
+
+        .screen {
+            background: white;
+            border-radius: 45px;
+            overflow: hidden;
+            height: 800px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen-title {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1d1d1f;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            padding-top: 10px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .time {
+            flex: 1;
+        }
+
+        .status-icons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        /* Navigation */
+        .nav-bar {
+            padding: 8px 20px 16px;
+            background: white;
+        }
+
+        .nav-title {
+            font-size: 34px;
+            font-weight: 700;
+            color: #1d1d1f;
+        }
+
+        /* Content */
+        .content {
+            flex: 1;
+            padding: 0 20px 20px;
+            overflow-y: auto;
+        }
+
+        /* Tab Bar */
+        .tab-bar {
+            height: 83px;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(20px);
+            border-top: 0.5px solid #e5e5ea;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding-bottom: 20px;
+        }
+
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: #6e6e73;
+            font-size: 10px;
+        }
+
+        .tab-item.active {
+            color: #3B82F6;
+        }
+
+        .tab-icon {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        /* Components */
+        .welcome-card {
+            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+            border-radius: 20px;
+            padding: 28px;
+            color: white;
+            margin-bottom: 24px;
+        }
+
+        .welcome-card h2 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .welcome-card p {
+            font-size: 17px;
+            opacity: 0.95;
+            line-height: 1.5;
+        }
+
+        .quick-action {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            min-height: 80px;
+        }
+
+        .action-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+
+        .action-icon.blue { background: #E0F2FE; }
+        .action-icon.coral { background: #FED7AA; }
+        .action-icon.green { background: #D1FAE5; }
+        .action-icon.purple { background: #E9D5FF; }
+
+        .action-content h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 2px;
+        }
+
+        .action-content p {
+            font-size: 15px;
+            color: #6e6e73;
+        }
+
+        /* Chat Interface */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 16px 0;
+            overflow-y: auto;
+        }
+
+        .message {
+            margin-bottom: 16px;
+            display: flex;
+        }
+
+        .message.lilly {
+            justify-content: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message-bubble {
+            max-width: 75%;
+            padding: 14px 18px;
+            border-radius: 20px;
+            font-size: 17px;
+            line-height: 1.4;
+        }
+
+        .message.lilly .message-bubble {
+            background: #F0F0F3;
+            color: #1d1d1f;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.user .message-bubble {
+            background: #3B82F6;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .lilly-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #F97316 0%, #FB923C 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .chat-input-container {
+            padding: 12px;
+            background: white;
+            border-top: 0.5px solid #e5e5ea;
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: #F0F0F3;
+            border: none;
+            border-radius: 24px;
+            padding: 12px 18px;
+            font-size: 17px;
+            outline: none;
+        }
+
+        .voice-button, .send-button {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .voice-button {
+            background: #F0F0F3;
+        }
+
+        .send-button {
+            background: #3B82F6;
+            color: white;
+        }
+
+        /* Exercise Cards */
+        .exercise-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .exercise-thumbnail {
+            width: 100%;
+            height: 180px;
+            background: linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+        }
+
+        .exercise-info {
+            padding: 16px;
+        }
+
+        .exercise-info h3 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 6px;
+        }
+
+        .exercise-meta {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #6e6e73;
+        }
+
+        .exercise-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .difficulty-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .difficulty-beginner {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        /* Progress Stats */
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .stat-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: #1d1d1f;
+        }
+
+        .stat-value {
+            font-size: 15px;
+            color: #3B82F6;
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #F0F0F3;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3B82F6 0%, #2563EB 100%);
+            border-radius: 4px;
+        }
+
+        .streak-container {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+
+        .streak-item {
+            text-align: center;
+        }
+
+        .streak-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #3B82F6;
+            display: block;
+        }
+
+        .streak-label {
+            font-size: 13px;
+            color: #6e6e73;
+            margin-top: 4px;
+        }
+
+        /* Buttons */
+        .primary-button {
+            width: 100%;
+            background: #3B82F6;
+            color: white;
+            border: none;
+            border-radius: 14px;
+            padding: 18px;
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 12px;
+            cursor: pointer;
+        }
+
+        .secondary-button {
+            width: 100%;
+            background: #F0F0F3;
+            color: #1d1d1f;
+            border: none;
+            border-radius: 14px;
+            padding: 18px;
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 12px;
+            cursor: pointer;
+        }
+
+        /* Check-in Form */
+        .check-in-section {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: 19px;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 16px;
+        }
+
+        .emoji-scale {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 12px;
+        }
+
+        .emoji-option {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 2px solid #e5e5ea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .emoji-option.selected {
+            border-color: #3B82F6;
+            background: #E0F2FE;
+            transform: scale(1.1);
+        }
+
+        .slider-container {
+            margin-top: 16px;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #F0F0F3;
+            appearance: none;
+            outline: none;
+            margin-top: 12px;
+        }
+
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #3B82F6;
+            cursor: pointer;
+        }
+
+        .notes {
+            max-width: 100%;
+            width: 100%;
+            background: #F0F0F3;
+            border: none;
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 17px;
+            font-family: inherit;
+            outline: none;
+            resize: vertical;
+            min-height: 100px;
+            margin-top: 12px;
+        }
+
+        /* Onboarding */
+        .onboarding-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 40px 24px;
+        }
+
+        .onboarding-icon {
+            width: 120px;
+            height: 120px;
+            border-radius: 30px;
+            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 64px;
+            margin-bottom: 32px;
+        }
+
+        .onboarding-screen h2 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1d1d1f;
+            margin-bottom: 16px;
+        }
+
+        .onboarding-screen p {
+            font-size: 19px;
+            color: #6e6e73;
+            line-height: 1.5;
+            margin-bottom: 32px;
+        }
+
+        .step-indicator {
+            display: flex;
+            gap: 8px;
+            margin-top: auto;
+            padding-bottom: 40px;
+        }
+
+        .step-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e5e5ea;
+        }
+
+        .step-dot.active {
+            background: #3B82F6;
+            width: 24px;
+            border-radius: 4px;
+        }
+
+        /* Design Notes */
+        .design-notes {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-top: 60px;
+        }
+
+        .design-notes h2 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1d1d1f;
+            margin-bottom: 24px;
+        }
+
+        .design-notes h3 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-top: 32px;
+            margin-bottom: 16px;
+        }
+
+        .design-notes ul {
+            margin-left: 20px;
+            color: #1d1d1f;
+            font-size: 17px;
+            line-height: 1.8;
+        }
+
+        .design-notes li {
+            margin-bottom: 12px;
+        }
+
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .color-swatch {
+            border-radius: 12px;
+            padding: 24px 16px;
+            text-align: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .color-name {
+            font-size: 14px;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>NeuroBloom</h1>
+        <p class="subtitle">iOS MVP Design Mockups - Accessibility-First Mobile Experience</p>
+
+        <div class="screens-grid">
+            <!-- Screen 1: Onboarding Welcome -->
+            <div>
+                <div class="phone-frame">
+                    <div class="screen">
+                        <div class="status-bar">
+                            <div class="time">9:41</div>
+                            <div class="status-icons">
+                                <span>📶</span>
+                                <span>📶</span>
+                                <span>🔋</span>
+                            </div>
+                        </div>
+                        <div class="content">
+                            <div class="onboarding-screen">
+                                <div class="onboarding-icon">🌸</div>
+                                <h2>Welcome to<br>NeuroBloom</h2>
+                                <p>Your companion for stroke recovery. We're here to guide you every step of the way.</p>
+                                <button class="primary-button">Get Started</button>
+                                <button class="secondary-button">I'm a Caregiver</button>
+                                <div class="step-indicator">
+                                    <div class="step-dot active"></div>
+                                    <div class="step-dot"></div>
+                                    <div class="step-dot"></div>
+                                    <div class="step-dot"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p class="screen-title">Onboarding - Welcome</p>
+            </div>
+
+            <!-- Screen 2: Home Dashboard -->
+            <div>
+                <div class="phone-frame">
+                    <div class="screen">
+                        <div class="status-bar">
+                            <div class="time">9:41</div>
+                            <div class="status-icons">
+                                <span>📶</span>
+                                <span>📶</span>
+                                <span>🔋</span>
+                            </div>
+                        </div>
+                        <div class="nav-bar">
+                            <div class="nav-title">Good Morning, Katie</div>
+                        </div>
+                        <div class="content">
+                            <div class="welcome-card">
+                                <h2>You're doing great! 🌟</h2>
+                                <p>You've completed 4 exercise sessions this week. Keep up the amazing progress!</p>
+                            </div>
+                            
+                            <div class="quick-action">
+                                <div class="action-icon coral">💬</div>
+                                <div class="action-content">
+                                    <h3>Chat with Lilly</h3>
+                                    <p>Ask questions, get support</p>
+                                </div>
+                            </div>
+
+                            <div class="quick-action">
+                                <div class="action-icon blue">🏋️</div>
+                                <div class="action-content">
+                                    <h3>Today's Exercises</h3>
+                                    <p>5 exercises • 20 minutes</p>
+                                </div>
+                            </div>
+
+                            <div class="quick-action">
+                                <div class="action-icon green">✓</div>
+                                <div class="action-content">
+                                    <h3>Daily Check-In</h3>
+                                    <p>Log your progress for today</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-bar">
+                            <div class="tab-item active">
+                                <div class="tab-icon">🏠</div>
+                                <div>Home</div>
+                            </div>
+                            <div class="tab-item">
+                                <div class="tab-icon">🏋️</div>
+                                <div>Exercises</div>
+                            </div>
+                            <div class="tab-item">
+                                <div class="tab-icon">💬</div>
+                                <div>Lilly</div>
+                            </div>
+                            <div class="tab-item">
+                                <div class="tab-icon">📊</div>
+                                <div>Progress</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p class="screen-title">Home Dashboard</p>
+            </div>
+
+            <!-- Screen 3: Chat with Lilly -->
+            <div>
+                <div class="phone-frame">
+                    <div class="screen">
+                        <div class="status-bar">
+                            <div class="time">9:41</div>
+                            <div class="status-icons">
+                                <span>📶</span>
+                                <span>📶</span>
+                                <span>🔋</span>
+                            </div>
+                        </div>
+                        <div class="nav-bar">
+                            <div class="nav-title">Chat with Lilly</div>
+                        </div>
+                        <div class="content">
+                            <div class="chat-container">
+                                <div class="chat-messages">
+                                    <div class="message lilly">
+                                        <div class="lilly-avatar">🌸</div>
+                                        <div class="message-bubble">
+                                            Hi Katie! How are you feeling today?
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="message user">
+                                        <div class="message-bubble">
+                                            I'm frustrated. My arm isn't getting better.
+                                        </div>
+                                    </div>
+
+                                    <div class="message lilly">
+                                        <div class="lilly-avatar">🌸</div>
+                                        <div class="message-bubble">
+                                            I hear you. Recovery can feel really slow, especially when you're putting in so much effort. Can you tell me more about what you've noticed? Sometimes progress shows up in small ways we don't immediately recognize.
+                                        </div>
+                                    </div>
+
+                                    <div class="message user">
+                                        <div class="message-bubble">
+                                            I still can't lift it above my shoulder
+                                        </div>
+                                    </div>
+
+                                    <div class="message lilly">
+                                        <div class="lilly-avatar">🌸</div>
+                                        <div class="message-bubble">
+                                            That sounds discouraging. But let's look at this together - can you lift it higher than you could a month ago? Even an inch of progress is still progress. Your brain is rewiring itself, and that takes time.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="chat-input-container">
+                                    <div class="chat-input-wrapper">
+                                        <button class="voice-button">🎤</button>
+                                        <input type="text" class="chat-input" placeholder="Message Lilly...">
+                                        <button class="send-button">↑</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p class="screen-title">Lilly AI Chat</p>
+            </div>
+
+            <!-- Screen 4: Exercises Library -->
+            <div>
+                <div class="phone-frame">
+                    <div class="screen">
+                        <div class="status-bar">
+                            <div class="time">9:41</div>
+                            <div class="status-icons">
+                                <span>📶</span>
+                                <span>📶</span>
+                                <span>🔋</span>
+                            </div>
+                        </div>
+                        <div class="nav-bar">
+                            <div class="nav-title">Exercises</div>
+                        </div>
+                        <div class="content">
+                            <div class="exercise-card">
+                                <div class="exercise-thumbnail">▶️</div>
+                                <div class="exercise-info">
+                                    <h3>Shoulder Flexion</h3>
+                                    <div class="exercise-meta">
+                                        <span>⏱️ 5 min</span>
+                                        <span>🎯 Upper Body</span>
+                                    </div>
+                                    <p style="font-size: 15px; color: #6e6e73; margin-top: 8px;">Gentle range of motion exercise to improve shoulder mobility and strength.</p>
+                                    <span class="difficulty-badge difficulty-beginner">Beginner</span>
+                                </div>
+                            </div>
+
+                            <div class="exercise-card">
+                                <div class="exercise-thumbnail" style="background: linear-gradient(135deg, #FED7AA 0%, #FDBA74 100%);">▶️</div>
+                                <div class="exercise-info">
+                                    <h3>Ankle Pumps</h3>
+                                    <div class="exercise-meta">
+                                        <span>⏱️ 3 min</span>
+                                        <span>🎯 Lower Body</span>
+                                    </div>
+                                    <p style="font-size: 15px; color: #6e6e73; margin-top: 8px;">Simple foot movement to prevent stiffness and improve circulation.</p>
+                                    <span class="difficulty-badge difficulty-beginner">Beginner</span>
+                                </div>
+                            </div>
+
+                            <div class="exercise-card">
+                                <div class="exercise-thumbnail" style="background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);">▶️</div>
+                                <div class="exercise-info">
+                                    <h3>Balance Practice</h3>
+                                    <div class="exercise-meta">
+                                        <span>⏱️ 8 min</span>
+                                        <span>🎯 Balance</span>
+                                    </div>
+                                    <p style="font-size: 15px; color: #6e6e73; margin-top: 8px;">Safe standing exercises to rebuild confidence and stability.</p>
+                                    <span class="difficulty-badge difficulty-beginner">Beginner</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-bar">
+                            <div class="tab-item">
+                                <div class="tab-icon">🏠</div>
+                                <div>Home</div>
+                            </div>
+                            <div class="tab-item active">
+                                <div class="tab-icon">🏋️</div>
+                                <div>Exercises</div>
+                            </div>
+                            <div class="tab-item">
+                                <div class="tab-icon">💬</div>
+                                <div>Lilly</div>
+                            </div>
+                            <div class="tab-item">
+                                <div class="tab-icon">📊</div>
+                                <div>Progress</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p class="screen-title">Exercise Library</p>
+            </div>
+
+            <!-- Screen 5: Daily Check-In -->
+            <div>
+                <div class="phone-frame">
+                    <div class="screen">
+                        <div class="status-bar">
+                            <div class="time">9:41</div>
+                            <div class="status-icons">
+                                <span>📶</span>
+                                <span>📶</span>
+                                <span>🔋</span>
+                            </div>
+                        </div>
+                        <div class="nav-bar">
+                            <div class="nav-title">Daily Check-In</div>
+                        </div>
+                        <div class="content">
+                            <div class="check-in-section">
+                                <div class="section-title">How's your mood today?</div>
+                                <div class="emoji-scale">
+                                    <div class="emoji-option">😄</div>
+                                    <div class="emoji-option">🙂</div>
+                                    <div class="emoji-option selected">😐</div>
+                                    <div class="emoji-option">😞</div>
+                                    <div class="emoji-option">😢</div>
+                                </div>
+                            </div>
+
+                            <div class="check-in-section">
+                                <div class="section-title">Pain Level</div>
+                                <input type="range" class="slider" min="0" max="10" value="3">
+                                <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 14px; color: #6e6e73;">
+                                    <span>No pain</span>
+                                    <span>Worst pain</span>
+                                </div>
+                            </div>
+
+                            <div class="check-in-section">
+                                <div class="section-title">Energy Level</div>
+                                <input type="range" class="slider" min="0" max="10" value="6">
+                                <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 14px; color: #6e6e73;">
+                                    <span>Exhausted</span>
+                                    <span>Energized</span>
+                                </div>
+                            </div>
+
+                            <div class="check-in-section">
+                                <div class="section-title">Any notes for today?</div>
+                                <textarea class="notes" placeholder="How are you feeling? Any wins or challenges to note?"></textarea>
+                            </div>
+
+                            <button class="primary-button">Save Check-In</button>
+                        </div>
+                    </div>
+                </div>
+                <p class="screen-title">Daily Check-In</p>
+            </div>
+
+            <!-- Screen 6: Progress Dashboard -->
+            <div>
+                <div class="phone-frame">
+                    <div class="screen">
+                        <div class="status-bar">
+                            <div class="time">9:41</div>
+                            <div class="status-icons">
+                                <span>📶</span>
+                                <span>📶</span>
+                                <span>🔋</span>
+                            </div>
+                        </div>
+                        <div class="nav-bar">
+                            <div class="nav-title">Your Progress</div>
+                        </div>
+                        <div class="content">
+                            <div class="stat-card">
+                                <div class="stat-header">
+                                    <div class="stat-title">This Week's Goal</div>
+                                    <div class="stat-value">4/5 days</div>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 80%;"></div>
+                                </div>
+                                <p style="font-size: 15px; color: #6e6e73;">You're so close! One more day to hit your goal 💪</p>
+                            </div>
+
+                            <div class="stat-card">
+                                <div class="stat-header">
+                                    <div class="stat-title">Exercise Streak</div>
+                                </div>
+                                <div class="streak-container">
+                                    <div class="streak-item">
+                                        <span class="streak-number">12</span>
+                                        <div class="streak-label">Current streak</div>
+                                    </div>
+                                    <div class="streak-item">
+                                        <span class="streak-number">28</span>
+                                        <div class="streak-label">Longest streak</div>
+                                    </div>
+                                    <div class="streak-item">
+                                        <span class="streak-number">68</span>
+                                        <div class="streak-label">Total days</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="stat-card">
+                                <div class="stat-header">
+                                    <div class="stat-title">Mood Trend</div>
+                                </div>
+                                <div style="height: 120px; background: linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 48px;">
+                                    📈
+                                </div>
+                                <p style="font-size: 15px; color: #6e6e73; margin-top: 12px;">Your mood has been trending positive this month!</p>
+                            </div>
+                        </div>
+                        <div class="tab-bar">
+                            <div class="tab-item">
+                                <div class="tab-icon">🏠</div>
+                                <div>Home</div>
+                            </div>
+                            <div class="tab-item">
+                                <div class="tab-icon">🏋️</div>
+                                <div>Exercises</div>
+                            </div>
+                            <div class="tab-item">
+                                <div class="tab-icon">💬</div>
+                                <div>Lilly</div>
+                            </div>
+                            <div class="tab-item active">
+                                <div class="tab-icon">📊</div>
+                                <div>Progress</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p class="screen-title">Progress Dashboard</p>
+            </div>
+        </div>
+
+        <!-- Design Notes Section -->
+        <div class="design-notes">
+            <h2>Design System & Accessibility Notes</h2>
+            
+            <h3>🎨 Color Palette</h3>
+            <div class="color-palette">
+                <div class="color-swatch" style="background: #3B82F6;">
+                    Primary Blue
+                    <div class="color-name">#3B82F6</div>
+                </div>
+                <div class="color-swatch" style="background: #F97316;">
+                    Warm Coral
+                    <div class="color-name">#F97316</div>
+                </div>
+                <div class="color-swatch" style="background: #10B981;">
+                    Success Green
+                    <div class="color-name">#10B981</div>
+                </div>
+                <div class="color-swatch" style="background: #1d1d1f;">
+                    Text Primary
+                    <div class="color-name">#1d1d1f</div>
+                </div>
+                <div class="color-swatch" style="background: #6e6e73;">
+                    Text Secondary
+                    <div class="color-name">#6e6e73</div>
+                </div>
+                <div class="color-swatch" style="background: #F0F0F3; color: #1d1d1f;">
+                    Background Light
+                    <div class="color-name">#F0F0F3</div>
+                </div>
+            </div>
+
+            <h3>♿ Accessibility Features Built In</h3>
+            <ul>
+                <li><strong>Large Touch Targets:</strong> All buttons and interactive elements are minimum 56x56px (exceeds Apple's 44x44 recommendation)</li>
+                <li><strong>High Contrast:</strong> Text meets WCAG AAA standards (7:1 contrast ratio)</li>
+                <li><strong>Large Text:</strong> Minimum 17px body text, 18-19px for important actions, 28-34px for headings</li>
+                <li><strong>Clear Hierarchy:</strong> Visual weight guides attention naturally</li>
+                <li><strong>Voice Input:</strong> Prominent microphone button in chat for users with typing difficulties</li>
+                <li><strong>Simple Language:</strong> All copy written at 6th grade reading level</li>
+                <li><strong>Emoji Support:</strong> For users with aphasia, emojis supplement text</li>
+                <li><strong>One-Handed Use:</strong> All navigation reachable with thumb, no gestures requiring two hands</li>
+                <li><strong>Generous Spacing:</strong> 16-24px between interactive elements prevents mis-taps</li>
+                <li><strong>Error Forgiveness:</strong> No destructive actions without confirmation</li>
+            </ul>
+
+            <h3>💬 Lilly's Visual Identity</h3>
+            <ul>
+                <li><strong>Avatar:</strong> Warm coral/orange gradient with 🌸 blossom emoji (friendly, approachable)</li>
+                <li><strong>Chat Bubbles:</strong> Light gray background (#F0F0F3) to distinguish from user's blue bubbles</li>
+                <li><strong>Tone:</strong> Messages use warm, conversational language without exclamation overload</li>
+                <li><strong>Response Style:</strong> Validates feelings first, then provides guidance</li>
+            </ul>
+
+            <h3>🎯 Typography Scale</h3>
+            <ul>
+                <li><strong>Large Title:</strong> 34px Bold (Navigation headers)</li>
+                <li><strong>Title 1:</strong> 28-32px Bold (Welcome cards, section titles)</li>
+                <li><strong>Title 2:</strong> 22-24px Semibold (Card headers)</li>
+                <li><strong>Title 3:</strong> 19-21px Semibold (List items, exercise titles)</li>
+                <li><strong>Body:</strong> 17px Regular (Chat messages, descriptions)</li>
+                <li><strong>Caption:</strong> 13-15px Regular (Metadata, labels)</li>
+                <li><strong>Font:</strong> SF Pro Display (iOS system font) for native feel</li>
+            </ul>
+
+            <h3>📐 Layout Principles</h3>
+            <ul>
+                <li><strong>Safe Margins:</strong> 20px horizontal padding on all screens</li>
+                <li><strong>Card Spacing:</strong> 12-16px between cards for clear separation</li>
+                <li><strong>Border Radius:</strong> 16-20px for cards (friendly, modern), 14px for buttons</li>
+                <li><strong>Shadows:</strong> Subtle (0 2px 8px rgba(0,0,0,0.06)) to create depth without distraction</li>
+                <li><strong>Tab Bar:</strong> Always visible for easy navigation (no hamburger menus)</li>
+            </ul>
+
+            <h3>🎭 Emotional Design</h3>
+            <ul>
+                <li><strong>Encouraging Not Punishing:</strong> Progress bars show "you're close!" not "you failed"</li>
+                <li><strong>Celebration Moments:</strong> Gradient welcome cards highlight wins</li>
+                <li><strong>Gentle Reminders:</strong> No aggressive red alerts or guilt-inducing copy</li>
+                <li><strong>Human Touch:</strong> Emoji used purposefully to add warmth (🌸 for Lilly, 🌟 for achievements)</li>
+                <li><strong>Calm Palette:</strong> Blues convey trust and calm, coral adds warmth without aggression</li>
+            </ul>
+
+            <h3>📱 iOS-Specific Considerations</h3>
+            <ul>
+                <li><strong>Status Bar:</strong> Light content on dark notch area</li>
+                <li><strong>Safe Area:</strong> Content respects notch and home indicator</li>
+                <li><strong>Tab Bar:</strong> 83px height includes safe area for home indicator</li>
+                <li><strong>Navigation:</strong> Large title style for familiarity</li>
+                <li><strong>Gestures:</strong> Swipe back to previous screen (iOS standard)</li>
+                <li><strong>Haptics:</strong> Gentle feedback on button taps (to be implemented)</li>
+                <li><strong>VoiceOver Ready:</strong> All elements have descriptive labels</li>
+            </ul>
+
+            <h3>🔧 Implementation Notes for Claude Code</h3>
+            <ul>
+                <li><strong>SwiftUI:</strong> Use SwiftUI for declarative UI that's easier to maintain</li>
+                <li><strong>Accessibility Modifiers:</strong> .accessibilityLabel(), .accessibilityHint(), .accessibilityValue() on all elements</li>
+                <li><strong>Dynamic Type:</strong> Support text size adjustments (some users need even larger text)</li>
+                <li><strong>Color Scheme:</strong> Support both light and dark mode</li>
+                <li><strong>SF Symbols:</strong> Use for icons where appropriate (consistent with iOS)</li>
+                <li><strong>Haptic Feedback:</strong> Use UIImpactFeedbackGenerator for button presses</li>
+                <li><strong>Data Persistence:</strong> UserDefaults for simple settings, Core Data or SwiftData for progress tracking</li>
+                <li><strong>Offline First:</strong> Cache exercise videos locally, sync progress when online</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
