@@ -26,6 +26,7 @@ export default function Home() {
                     color={Colors.actionCoral}
                     title="Chat with Lilly"
                     subtitle="Ask questions, get support"
+                    onPress={() => router.push('/lilly')}
                 />
 
                 <QuickAction
@@ -33,6 +34,7 @@ export default function Home() {
                     color={Colors.actionBlue}
                     title="Today's Exercises"
                     subtitle="5 exercises • 20 minutes"
+                    onPress={() => router.push('/exercises')}
                 />
 
                 <QuickAction
