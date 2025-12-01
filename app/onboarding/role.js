@@ -1,16 +1,17 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 
 export default function RoleSelection() {
     const router = useRouter();
+    const [name, setName] = useState('');
 
     const handleRoleSelect = (role) => {
-        // In a real app, we would save this to state/context
-        console.log('Selected role:', role);
-        router.push({ pathname: '/onboarding/details', params: { role } });
+        console.log('Selected role:', role, 'Name:', name);
+        router.push({ pathname: '/onboarding/details', params: { role, name } });
     };
 
     return (
@@ -20,6 +21,16 @@ export default function RoleSelection() {
                 <Text style={styles.subtitle}>
                     This helps us personalize your experience.
                 </Text>
+
+                <TextInput
+                    style={styles.nameInput}
+                    placeholder="What's your first name?"
+                    placeholderTextColor={Colors.textSecondary}
+                    value={name}
+                    onChangeText={setName}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                />
 
                 <View style={styles.optionsContainer}>
                     <TouchableOpacity
@@ -69,7 +80,17 @@ const styles = StyleSheet.create({
     subtitle: {
         ...Typography.body,
         color: Colors.textSecondary,
-        marginBottom: 32,
+        marginBottom: 20,
+    },
+    nameInput: {
+        backgroundColor: Colors.card,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        borderRadius: 12,
+        padding: 16,
+        fontSize: 17,
+        color: Colors.text,
+        marginBottom: 24,
     },
     optionsContainer: {
         gap: 16,

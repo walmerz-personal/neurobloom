@@ -10,6 +10,7 @@ export default function Details() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const role = params.role || 'survivor';
+    const name = params.name || '';
 
     const [strokeDate, setStrokeDate] = useState('');
     const [impairments, setImpairments] = useState([]);
@@ -25,7 +26,14 @@ export default function Details() {
     const handleNext = () => {
         router.push({
             pathname: '/onboarding/goals',
-            params: { role, strokeDate, impairments: JSON.stringify(impairments) }
+            params: { role, name, strokeDate, impairments: JSON.stringify(impairments) }
+        });
+    };
+
+    const handleSkip = () => {
+        router.push({
+            pathname: '/onboarding/goals',
+            params: { role, name, strokeDate: '', impairments: JSON.stringify([]) }
         });
     };
 
@@ -87,6 +95,9 @@ export default function Details() {
 
                 <View style={styles.buttonContainer}>
                     <PrimaryButton title="Next" onPress={handleNext} />
+                    <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+                        <Text style={styles.skipButtonText}>Skip for now</Text>
+                    </TouchableOpacity>
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -155,5 +166,15 @@ const styles = StyleSheet.create({
     },
     buttonContainer: {
         marginTop: 24,
+    },
+    skipButton: {
+        paddingVertical: 14,
+        alignItems: 'center',
+        marginTop: 12,
+    },
+    skipButtonText: {
+        fontSize: 17,
+        color: Colors.textSecondary,
+        fontWeight: '500',
     },
 });

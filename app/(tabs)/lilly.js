@@ -5,6 +5,8 @@ import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { sendMessage } from '../../services/LillyService';
+import { SupabaseService } from '../../services/SupabaseService';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function Lilly() {
     const [messages, setMessages] = useState([
@@ -12,8 +14,29 @@ export default function Lilly() {
     ]);
     const [inputText, setInputText] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    const [userProfile, setUserProfile] = useState(null);
     const scrollViewRef = useRef(null);
     const router = useRouter();
+    const { user } = useAuth(); // Get authenticated user
+
+    // Load user profile on component mount
+    useEffect(() => {
+        const loadProfile = async () => {
+            if (!user?.id) {
+                console.log('⚠️ Lilly Chat: No user logged in');
+                return;
+            }
+
+            const { profile, error } = await SupabaseService.getUserProfile(user.id);
+            if (!error && profile) {
+                setUserProfile(profile);
+                console.log('📱 Lilly Chat: User profile loaded from Supabase');
+            } else if (error) {
+                console.log('⚠️ Lilly Chat: No profile found (user may not have completed onboarding)');
+            }
+        };
+        loadProfile();
+    }, [user]);
 
     const handleSend = async () => {
         if (!inputText.trim()) return;
@@ -29,7 +52,16 @@ export default function Lilly() {
         setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
         try {
-            const response = await sendMessage(userMsgText);
+            // Pass the current history (excluding the message we just added locally, as it's not in state yet)
+            // Actually, we should include the new message in history for the AI? 
+            // The service takes (message, history).
+            // Let's format history from 'messages' state.
+            const history = messages.map(m => ({
+                role: m.isLilly ? 'assistant' : 'user',
+                content: m.text
+            }));
+
+            const response = await sendMessage(userMsgText, history, userProfile);
 
             const lillyMsg = {
                 id: Date.now() + 1,

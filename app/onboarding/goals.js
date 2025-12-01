@@ -10,18 +10,43 @@ export default function Goals() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const role = params.role || 'survivor';
+    const name = params.name || '';
 
     const [recoveryPhase, setRecoveryPhase] = useState('');
     const [goals, setGoals] = useState('');
 
     const handleComplete = () => {
-        // Here we would save all collected data to the backend/storage
-        console.log('Onboarding Complete:', {
-            ...params,
-            recoveryPhase,
-            goals
+        // Navigate to account creation with all onboarding data
+        const impairments = params.impairments ? JSON.parse(params.impairments) : [];
+
+        router.push({
+            pathname: '/auth/signup',
+            params: {
+                name,
+                role,
+                strokeDate: params.strokeDate || '',
+                impairments: JSON.stringify(impairments),
+                recoveryPhase,
+                goals
+            }
         });
-        router.push('/onboarding/completion');
+    };
+
+    const handleSkip = () => {
+        // Still go to signup, just with empty recovery phase and goals
+        const impairments = params.impairments ? JSON.parse(params.impairments) : [];
+
+        router.push({
+            pathname: '/auth/signup',
+            params: {
+                name,
+                role,
+                strokeDate: params.strokeDate || '',
+                impairments: JSON.stringify(impairments),
+                recoveryPhase: '',
+                goals: ''
+            }
+        });
     };
 
     const phases = [
@@ -82,6 +107,9 @@ export default function Goals() {
 
                     <View style={styles.buttonContainer}>
                         <PrimaryButton title="Complete Setup" onPress={handleComplete} />
+                        <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+                            <Text style={styles.skipButtonText}>Skip for now</Text>
+                        </TouchableOpacity>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -145,5 +173,15 @@ const styles = StyleSheet.create({
     buttonContainer: {
         marginTop: 32,
         marginBottom: 40,
+    },
+    skipButton: {
+        paddingVertical: 14,
+        alignItems: 'center',
+        marginTop: 12,
+    },
+    skipButtonText: {
+        fontSize: 17,
+        color: Colors.textSecondary,
+        fontWeight: '500',
     },
 });

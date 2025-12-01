@@ -1,16 +1,54 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useState, useEffect } from 'react';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
+import { useAuth } from '../../contexts/AuthContext';
+
+const MOTIVATIONAL_QUOTES = [
+    "Every small step forward is progress. You're doing great! 🌟",
+    "Recovery isn't a straight line, and that's okay. Keep going! 💪",
+    "Your brain is amazing - it's rewiring itself every day. 🧠",
+    "Consistency beats perfection. Just showing up matters! ✨",
+    "You're stronger than you think. I believe in you! 💙",
+    "Celebrate the wins, no matter how small. You've earned it! 🎉",
+    "Rest is part of recovery, not a setback. Be kind to yourself. 🌸",
+    "Progress might be slow, but you're moving forward. Keep it up! 🚀",
+];
+
+const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
+};
 
 export default function Home() {
     const router = useRouter();
+    const { userData, signOut } = useAuth();
+    const [motivationalQuote, setMotivationalQuote] = useState('');
+
+    useEffect(() => {
+        // Select random motivational quote daily
+        const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+        setMotivationalQuote(randomQuote);
+    }, []);
+
+    const handleLogout = async () => {
+        await signOut();
+        router.replace('/auth/login');
+    };
 
     return (
         <ScreenWrapper>
             <View style={styles.header}>
-                <Text style={styles.greeting}>Good Morning, Katie</Text>
+                <Text style={styles.greeting}>
+                    {getGreeting()}{userData?.name ? `, ${userData.name}` : ''}
+                </Text>
+                <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+                    <Text style={styles.logoutText}>Logout</Text>
+                </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
@@ -20,6 +58,16 @@ export default function Home() {
                         You've completed 4 exercise sessions this week. Keep up the amazing progress!
                     </Text>
                 </View>
+
+                {motivationalQuote && (
+                    <View style={styles.lillyQuoteCard}>
+                        <View style={styles.lillyHeader}>
+                            <Text style={styles.lillyIcon}>💬</Text>
+                            <Text style={styles.lillyName}>Lilly says:</Text>
+                        </View>
+                        <Text style={styles.lillyQuote}>{motivationalQuote}</Text>
+                    </View>
+                )}
 
                 <QuickAction
                     icon="💬"
@@ -70,9 +118,22 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         borderBottomWidth: 0.5,
         borderBottomColor: Colors.border,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     greeting: {
         ...Typography.title1,
+        flex: 1,
+    },
+    logoutButton: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+    },
+    logoutText: {
+        fontSize: 15,
+        color: Colors.primary,
+        fontWeight: '600',
     },
     content: {
         flex: 1,
@@ -97,6 +158,34 @@ const styles = StyleSheet.create({
         color: 'white',
         opacity: 0.95,
         lineHeight: 24,
+    },
+    lillyQuoteCard: {
+        backgroundColor: Colors.lillyBubble,
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 24,
+        borderLeftWidth: 4,
+        borderLeftColor: Colors.primary,
+    },
+    lillyHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    lillyIcon: {
+        fontSize: 20,
+        marginRight: 8,
+    },
+    lillyName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: Colors.primaryDark,
+    },
+    lillyQuote: {
+        fontSize: 16,
+        color: Colors.text,
+        lineHeight: 24,
+        fontStyle: 'italic',
     },
     quickAction: {
         backgroundColor: 'white',

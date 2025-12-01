@@ -1,0 +1,22 @@
+{
+    "name": "neurobloom-supabase-mcp",
+    "version": "1.0.0",
+    "description": "Model Context Protocol server for NeuroBloom Supabase database",
+    "type": "module",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js"
+    },
+    "keywords": [
+        "mcp",
+        "supabase",
+        "neurobloom"
+    ],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.0.4",
+        "@supabase/supabase-js": "^2.39.0",
+        "dotenv": "^16.3.1"
+    }
+}
