@@ -44,7 +44,7 @@ export default function Home() {
         <ScreenWrapper>
             <View style={styles.header}>
                 <Text style={styles.greeting}>
-                    {getGreeting()}{userData?.name ? `, ${userData.name}` : ''}
+                    {getGreeting()}{userData?.name ? `, ${userData.name.split(' ')[0]}` : ''}
                 </Text>
                 <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
                     <Text style={styles.logoutText}>Logout</Text>
