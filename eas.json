@@ -10,11 +10,7 @@
         "preview": {
             "distribution": "internal"
         },
-        "production": {
-            "env": {
-                "EXPO_ROUTER_APP_ROOT": "./app"
-            }
-        }
+        "production": {}
     },
     "submit": {
         "production": {}
