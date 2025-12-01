@@ -14,6 +14,12 @@ export const AuthProvider = ({ children }) => {
         // Check for existing session on mount
         checkSession();
 
+        // Only set up auth listener if Supabase is initialized
+        if (!SupabaseService.isInitialized()) {
+            console.warn('⚠️ Skipping auth state listener: Supabase not initialized');
+            return;
+        }
+
         // Listen for auth changes
         const { data: authListener } = SupabaseService.onAuthStateChange(
             async (event, session) => {
@@ -37,6 +43,16 @@ export const AuthProvider = ({ children }) => {
 
     const checkSession = async () => {
         try {
+            // Check if Supabase is initialized
+            if (!SupabaseService.isInitialized()) {
+                const initError = SupabaseService.getInitError();
+                console.error('❌ Cannot check session: Supabase not initialized', initError);
+                setLoading(false);
+                // Don't crash, just leave user as logged out
+                // This allows the app to show an error message in the UI
+                return;
+            }
+
             const { session } = await SupabaseService.getSession();
             setSession(session);
             setUser(session?.user ?? null);

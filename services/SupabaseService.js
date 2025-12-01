@@ -3,14 +3,57 @@ import { createClient } from '@supabase/supabase-js';
 import { Config } from '../constants/Config';
 import 'react-native-url-polyfill/auto';
 
-// Initialize Supabase client
-const supabase = createClient(Config.SUPABASE_URL, Config.SUPABASE_ANON_KEY);
+// Initialize Supabase client with error handling
+let supabase = null;
+let initError = null;
+
+try {
+    // Validate credentials exist
+    if (!Config.SUPABASE_URL || Config.SUPABASE_URL === '') {
+        const errorMsg = '❌ CRITICAL: SUPABASE_URL is not configured. Please set EXPO_PUBLIC_SUPABASE_URL environment variable.';
+        console.error(errorMsg);
+        initError = new Error(errorMsg);
+    } else if (!Config.SUPABASE_ANON_KEY || Config.SUPABASE_ANON_KEY === '') {
+        const errorMsg = '❌ CRITICAL: SUPABASE_ANON_KEY is not configured. Please set EXPO_PUBLIC_SUPABASE_ANON_KEY environment variable.';
+        console.error(errorMsg);
+        initError = new Error(errorMsg);
+    } else {
+        // Credentials exist, create client
+        supabase = createClient(Config.SUPABASE_URL, Config.SUPABASE_ANON_KEY);
+        console.log('✅ Supabase client initialized successfully');
+    }
+} catch (error) {
+    const errorMsg = `❌ CRITICAL: Failed to initialize Supabase client: ${error.message}`;
+    console.error(errorMsg);
+    initError = error;
+}
+
 
 /**
  * Supabase Service
  * Central service for all backend operations
  */
 export const SupabaseService = {
+    // =============================================
+    // INITIALIZATION CHECK
+    // =============================================
+
+    /**
+     * Check if Supabase is properly initialized
+     * @returns {boolean} true if initialized, false otherwise
+     */
+    isInitialized() {
+        return supabase !== null && initError === null;
+    },
+
+    /**
+     * Get initialization error if any
+     * @returns {Error|null}
+     */
+    getInitError() {
+        return initError;
+    },
+
     // =============================================
     // AUTHENTICATION
     // =============================================
@@ -24,6 +67,11 @@ export const SupabaseService = {
      * @returns {Promise<{user, error}>}
      */
     async signUp(email, password, name, role) {
+        // Check initialization
+        if (!this.isInitialized()) {
+            return { user: null, error: initError || new Error('Supabase not initialized') };
+        }
+
         try {
             // Create auth user with metadata (trigger will create users table entry)
             const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -58,6 +106,11 @@ export const SupabaseService = {
      * @returns {Promise<{user, session, error}>}
      */
     async signIn(email, password) {
+        // Check initialization
+        if (!this.isInitialized()) {
+            return { user: null, session: null, error: initError || new Error('Supabase not initialized') };
+        }
+
         try {
             const { data, error } = await supabase.auth.signInWithPassword({
                 email,
@@ -81,6 +134,11 @@ export const SupabaseService = {
      * Sign out current user
      */
     async signOut() {
+        // Check initialization
+        if (!this.isInitialized()) {
+            return { error: initError || new Error('Supabase not initialized') };
+        }
+
         try {
             const { error } = await supabase.auth.signOut();
             if (error) {
@@ -100,6 +158,11 @@ export const SupabaseService = {
      * @returns {Promise<{session, error}>}
      */
     async getSession() {
+        // Check initialization
+        if (!this.isInitialized()) {
+            return { session: null, error: initError || new Error('Supabase not initialized') };
+        }
+
         try {
             const { data, error } = await supabase.auth.getSession();
             return { session: data.session, error };
@@ -114,6 +177,11 @@ export const SupabaseService = {
      * @returns {Promise<{user, error}>}
      */
     async getCurrentUser() {
+        // Check initialization
+        if (!this.isInitialized()) {
+            return { user: null, error: initError || new Error('Supabase not initialized') };
+        }
+
         try {
             const { data: { user }, error } = await supabase.auth.getUser();
             return { user, error };
@@ -127,6 +195,11 @@ export const SupabaseService = {
      * Listen to auth state changes
      */
     onAuthStateChange(callback) {
+        // Check initialization
+        if (!this.isInitialized()) {
+            console.error('❌ Cannot listen to auth changes: Supabase not initialized');
+            return { data: { subscription: { unsubscribe: () => { } } } };
+        }
         return supabase.auth.onAuthStateChange(callback);
     },
 
