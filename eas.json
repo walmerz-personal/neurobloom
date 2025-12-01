@@ -12,7 +12,7 @@
         },
         "production": {
             "env": {
-                "EXPO_ROUTER_APP_ROOT": "../../app"
+                "EXPO_ROUTER_APP_ROOT": "./app"
             }
         }
     },
