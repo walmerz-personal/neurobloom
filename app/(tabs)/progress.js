@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
+import { TrendingUp, Calendar, Award } from 'lucide-react-native';
 
 export default function Progress() {
     return (
@@ -10,9 +11,12 @@ export default function Progress() {
                 <Text style={styles.headerTitle}>Your Progress</Text>
             </View>
 
-            <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+            <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
+                        <View style={styles.iconContainer}>
+                            <Award size={24} color={Colors.primary} />
+                        </View>
                         <Text style={styles.cardTitle}>This Week's Goal</Text>
                         <Text style={styles.cardValue}>4/5 days</Text>
                     </View>
@@ -24,6 +28,9 @@ export default function Progress() {
 
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
+                        <View style={[styles.iconContainer, { backgroundColor: Colors.secondaryLight + '20' }]}>
+                            <Calendar size={24} color={Colors.secondary} />
+                        </View>
                         <Text style={styles.cardTitle}>Exercise Streak</Text>
                     </View>
                     <View style={styles.streakContainer}>
@@ -31,10 +38,12 @@ export default function Progress() {
                             <Text style={styles.streakNumber}>12</Text>
                             <Text style={styles.streakLabel}>Current streak</Text>
                         </View>
+                        <View style={styles.divider} />
                         <View style={styles.streakItem}>
                             <Text style={styles.streakNumber}>28</Text>
                             <Text style={styles.streakLabel}>Longest streak</Text>
                         </View>
+                        <View style={styles.divider} />
                         <View style={styles.streakItem}>
                             <Text style={styles.streakNumber}>68</Text>
                             <Text style={styles.streakLabel}>Total days</Text>
@@ -44,10 +53,14 @@ export default function Progress() {
 
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
+                        <View style={[styles.iconContainer, { backgroundColor: Colors.success + '20' }]}>
+                            <TrendingUp size={24} color={Colors.success} />
+                        </View>
                         <Text style={styles.cardTitle}>Mood Trend</Text>
                     </View>
                     <View style={styles.moodChart}>
                         <Text style={styles.moodIcon}>📈</Text>
+                        <Text style={styles.moodText}>Chart Placeholder</Text>
                     </View>
                     <Text style={styles.cardFooter}>Your mood has been trending positive this month!</Text>
                 </View>
@@ -58,52 +71,65 @@ export default function Progress() {
 
 const styles = StyleSheet.create({
     header: {
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        backgroundColor: 'white',
-        borderBottomWidth: 0.5,
+        paddingHorizontal: 24,
+        paddingVertical: 20,
+        backgroundColor: Colors.background,
+        borderBottomWidth: 1,
         borderBottomColor: Colors.border,
     },
     headerTitle: {
-        ...Typography.title1,
+        fontFamily: 'Inter_700Bold',
+        fontSize: 28,
+        color: Colors.text,
     },
     content: {
         flex: 1,
+        backgroundColor: Colors.background,
     },
     scrollContent: {
-        padding: 20,
+        padding: 24,
+        paddingTop: 16,
     },
     card: {
         backgroundColor: 'white',
-        borderRadius: 16,
+        borderRadius: 20,
         padding: 20,
-        marginBottom: 16,
+        marginBottom: 20,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.06,
-        shadowRadius: 8,
-        elevation: 2,
+        shadowRadius: 12,
+        elevation: 3,
     },
     cardHeader: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 16,
     },
+    iconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: Colors.primaryLight + '20',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+    },
     cardTitle: {
-        fontSize: 17,
-        fontWeight: '600',
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 18,
         color: Colors.text,
+        flex: 1,
     },
     cardValue: {
-        fontSize: 15,
-        fontWeight: '600',
+        fontFamily: 'Inter_700Bold',
+        fontSize: 16,
         color: Colors.primary,
     },
     progressBar: {
         width: '100%',
         height: 8,
-        backgroundColor: Colors.lillyBubble,
+        backgroundColor: Colors.surfaceHighlight,
         borderRadius: 4,
         overflow: 'hidden',
         marginBottom: 12,
@@ -114,36 +140,52 @@ const styles = StyleSheet.create({
         borderRadius: 4,
     },
     cardFooter: {
-        fontSize: 15,
+        fontFamily: 'Inter_400Regular',
+        fontSize: 14,
         color: Colors.textSecondary,
+        lineHeight: 20,
     },
     streakContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginTop: 8,
     },
     streakItem: {
         alignItems: 'center',
+        flex: 1,
     },
     streakNumber: {
-        fontSize: 32,
-        fontWeight: '700',
-        color: Colors.primary,
+        fontFamily: 'Inter_700Bold',
+        fontSize: 24,
+        color: Colors.text,
+        marginBottom: 4,
     },
     streakLabel: {
-        fontSize: 13,
+        fontFamily: 'Inter_500Medium',
+        fontSize: 12,
         color: Colors.textSecondary,
-        marginTop: 4,
+    },
+    divider: {
+        width: 1,
+        height: 40,
+        backgroundColor: Colors.border,
     },
     moodChart: {
         height: 120,
-        backgroundColor: Colors.actionBlue,
-        borderRadius: 12,
+        backgroundColor: Colors.surfaceHighlight,
+        borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 12,
     },
     moodIcon: {
-        fontSize: 48,
+        fontSize: 40,
+        marginBottom: 8,
+    },
+    moodText: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 14,
+        color: Colors.textSecondary,
     },
 });

@@ -7,6 +7,7 @@ import { Typography } from '../../constants/Typography';
 import { sendMessage } from '../../services/LillyService';
 import { SupabaseService } from '../../services/SupabaseService';
 import { useAuth } from '../../contexts/AuthContext';
+import { Send, Mic, Flower2, User } from 'lucide-react-native';
 
 export default function Lilly() {
     const [messages, setMessages] = useState([
@@ -17,22 +18,14 @@ export default function Lilly() {
     const [userProfile, setUserProfile] = useState(null);
     const scrollViewRef = useRef(null);
     const router = useRouter();
-    const { user } = useAuth(); // Get authenticated user
+    const { user } = useAuth();
 
-    // Load user profile on component mount
     useEffect(() => {
         const loadProfile = async () => {
-            if (!user?.id) {
-                console.log('⚠️ Lilly Chat: No user logged in');
-                return;
-            }
-
+            if (!user?.id) return;
             const { profile, error } = await SupabaseService.getUserProfile(user.id);
             if (!error && profile) {
                 setUserProfile(profile);
-                console.log('📱 Lilly Chat: User profile loaded from Supabase');
-            } else if (error) {
-                console.log('⚠️ Lilly Chat: No profile found (user may not have completed onboarding)');
             }
         };
         loadProfile();
@@ -48,14 +41,9 @@ export default function Lilly() {
         setInputText('');
         setIsTyping(true);
 
-        // Scroll to bottom
         setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
         try {
-            // Pass the current history (excluding the message we just added locally, as it's not in state yet)
-            // Actually, we should include the new message in history for the AI? 
-            // The service takes (message, history).
-            // Let's format history from 'messages' state.
             const history = messages.map(m => ({
                 role: m.isLilly ? 'assistant' : 'user',
                 content: m.text
@@ -72,10 +60,8 @@ export default function Lilly() {
 
             setMessages(prev => [...prev, lillyMsg]);
 
-            // Handle actions (e.g., navigation)
             if (response.action && response.action.type === 'navigate') {
-                // Add a small delay before navigating so user sees the message
-                // In a real app, maybe show a button instead of auto-navigating
+                // Handle navigation if needed
             }
 
         } catch (error) {
@@ -116,7 +102,9 @@ export default function Lilly() {
                     ))}
                     {isTyping && (
                         <View style={styles.typingContainer}>
-                            <ActivityIndicator size="small" color={Colors.primary} />
+                            <View style={styles.typingBubble}>
+                                <ActivityIndicator size="small" color={Colors.primary} />
+                            </View>
                             <Text style={styles.typingText}>Lilly is typing...</Text>
                         </View>
                     )}
@@ -129,21 +117,25 @@ export default function Lilly() {
                 >
                     <View style={styles.inputWrapper}>
                         <TouchableOpacity style={styles.voiceButton}>
-                            <Text style={styles.voiceIcon}>🎤</Text>
+                            <Mic size={20} color={Colors.textSecondary} />
                         </TouchableOpacity>
 
                         <TextInput
                             style={styles.input}
                             placeholder="Type a message..."
-                            placeholderTextColor={Colors.textSecondary}
+                            placeholderTextColor={Colors.textTertiary}
                             value={inputText}
                             onChangeText={setInputText}
                             returnKeyType="send"
                             onSubmitEditing={handleSend}
                         />
 
-                        <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-                            <Text style={styles.sendIcon}>⬆️</Text>
+                        <TouchableOpacity
+                            style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+                            onPress={handleSend}
+                            disabled={!inputText.trim()}
+                        >
+                            <Send size={20} color="white" />
                         </TouchableOpacity>
                     </View>
                 </KeyboardAvoidingView>
@@ -157,7 +149,7 @@ function Message({ isLilly, text, action, onActionPress }) {
         <View style={[styles.messageRow, isLilly ? styles.lillyRow : styles.userRow]}>
             {isLilly && (
                 <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>🌸</Text>
+                    <Flower2 size={20} color="white" />
                 </View>
             )}
             <View style={[styles.bubble, isLilly ? styles.lillyBubble : styles.userBubble]}>
@@ -178,18 +170,22 @@ function Message({ isLilly, text, action, onActionPress }) {
 
 const styles = StyleSheet.create({
     header: {
-        paddingHorizontal: 20,
+        paddingHorizontal: 24,
         paddingVertical: 16,
-        backgroundColor: 'white',
-        borderBottomWidth: 0.5,
+        backgroundColor: Colors.background,
+        borderBottomWidth: 1,
         borderBottomColor: Colors.border,
     },
     headerTitle: {
-        ...Typography.title1,
+        fontFamily: 'Inter_700Bold',
+        fontSize: 20,
+        color: Colors.text,
+        textAlign: 'center',
     },
     container: {
         flex: 1,
         flexDirection: 'column',
+        backgroundColor: Colors.background,
     },
     messages: {
         flex: 1,
@@ -200,7 +196,7 @@ const styles = StyleSheet.create({
     },
     messageRow: {
         flexDirection: 'row',
-        marginBottom: 16,
+        marginBottom: 20,
         alignItems: 'flex-end',
     },
     lillyRow: {
@@ -215,29 +211,38 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: Colors.lillyAvatarStart,
+        backgroundColor: Colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 8,
-    },
-    avatarText: {
-        fontSize: 18,
+        marginRight: 12,
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
     },
     bubble: {
-        paddingVertical: 14,
-        paddingHorizontal: 18,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
         borderRadius: 20,
+        maxWidth: '100%',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
     },
     lillyBubble: {
-        backgroundColor: Colors.lillyBubble,
+        backgroundColor: 'white',
         borderBottomLeftRadius: 4,
     },
     userBubble: {
-        backgroundColor: Colors.userBubble,
+        backgroundColor: Colors.primary,
         borderBottomRightRadius: 4,
     },
     messageText: {
-        fontSize: 17,
+        fontFamily: 'Inter_400Regular',
+        fontSize: 16,
         lineHeight: 24,
     },
     lillyText: {
@@ -247,35 +252,34 @@ const styles = StyleSheet.create({
         color: 'white',
     },
     inputContainer: {
-        padding: 12,
+        padding: 16,
         backgroundColor: 'white',
-        borderTopWidth: 0.5,
+        borderTopWidth: 1,
         borderTopColor: Colors.border,
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        gap: 12,
     },
     input: {
         flex: 1,
-        backgroundColor: Colors.lillyBubble,
+        backgroundColor: Colors.background,
         borderRadius: 24,
-        paddingHorizontal: 18,
+        paddingHorizontal: 20,
         paddingVertical: 12,
-        fontSize: 17,
+        fontFamily: 'Inter_400Regular',
+        fontSize: 16,
         color: Colors.text,
+        maxHeight: 100,
     },
     voiceButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: Colors.lillyBubble,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: Colors.background,
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    voiceIcon: {
-        fontSize: 20,
     },
     sendButton: {
         width: 44,
@@ -284,34 +288,52 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
     },
-    sendIcon: {
-        fontSize: 20,
-        color: 'white',
+    sendButtonDisabled: {
+        backgroundColor: Colors.textTertiary,
+        shadowOpacity: 0,
     },
     typingContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginLeft: 44,
+        marginLeft: 48,
         marginBottom: 10,
     },
+    typingBubble: {
+        backgroundColor: 'white',
+        padding: 10,
+        borderRadius: 16,
+        borderBottomLeftRadius: 4,
+        marginRight: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+    },
     typingText: {
-        marginLeft: 8,
+        fontFamily: 'Inter_400Regular',
         color: Colors.textSecondary,
-        fontSize: 14,
+        fontSize: 13,
     },
     actionButton: {
-        marginTop: 10,
-        backgroundColor: 'white',
-        paddingVertical: 8,
+        marginTop: 12,
+        backgroundColor: Colors.surfaceHighlight,
+        paddingVertical: 10,
         paddingHorizontal: 16,
-        borderRadius: 16,
+        borderRadius: 12,
         alignSelf: 'flex-start',
         borderWidth: 1,
-        borderColor: Colors.primary,
+        borderColor: Colors.border,
     },
     actionButtonText: {
+        fontFamily: 'Inter_600SemiBold',
         color: Colors.primary,
-        fontWeight: '600',
+        fontSize: 14,
     }
 });

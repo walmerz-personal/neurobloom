@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Colors } from '../constants/Colors';
+import { Home, Dumbbell, MessageCircle, TrendingUp } from 'lucide-react-native';
 
 export function TabBar({ state, descriptors, navigation }) {
     return (
@@ -34,11 +35,13 @@ export function TabBar({ state, descriptors, navigation }) {
                     });
                 };
 
-                let icon = '';
-                if (route.name === 'home') icon = '🏠';
-                else if (route.name === 'exercises') icon = '🏋️';
-                else if (route.name === 'lilly') icon = '💬';
-                else if (route.name === 'progress') icon = '📊';
+                let IconComponent;
+                if (route.name === 'home') IconComponent = Home;
+                else if (route.name === 'exercises') IconComponent = Dumbbell;
+                else if (route.name === 'lilly') IconComponent = MessageCircle;
+                else if (route.name === 'progress') IconComponent = TrendingUp;
+
+                const color = isFocused ? Colors.primary : Colors.textSecondary;
 
                 return (
                     <TouchableOpacity
@@ -51,8 +54,8 @@ export function TabBar({ state, descriptors, navigation }) {
                         onLongPress={onLongPress}
                         style={styles.tabItem}
                     >
-                        <View style={styles.iconContainer}>
-                            <Text style={styles.icon}>{icon}</Text>
+                        <View style={[styles.iconContainer, isFocused && styles.iconContainerFocused]}>
+                            <IconComponent size={24} color={color} strokeWidth={isFocused ? 2.5 : 2} />
                         </View>
                         <Text style={[styles.label, isFocused && styles.labelFocused]}>
                             {label}
@@ -67,33 +70,43 @@ export function TabBar({ state, descriptors, navigation }) {
 const styles = StyleSheet.create({
     tabBar: {
         flexDirection: 'row',
-        height: 83,
-        backgroundColor: 'rgba(255,255,255,0.95)',
-        borderTopWidth: 0.5,
+        height: 88,
+        backgroundColor: 'white',
+        borderTopWidth: 1,
         borderTopColor: Colors.border,
-        paddingBottom: 20,
+        paddingBottom: 24,
+        paddingTop: 12,
         justifyContent: 'space-around',
         alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 5,
     },
     tabItem: {
         alignItems: 'center',
         justifyContent: 'center',
         gap: 4,
+        flex: 1,
     },
     iconContainer: {
-        width: 28,
-        height: 28,
+        width: 40,
+        height: 32,
         alignItems: 'center',
         justifyContent: 'center',
+        borderRadius: 16,
     },
-    icon: {
-        fontSize: 24,
+    iconContainerFocused: {
+        backgroundColor: Colors.primaryLight + '20', // 20% opacity
     },
     label: {
-        fontSize: 10,
+        fontFamily: 'Inter_500Medium',
+        fontSize: 11,
         color: Colors.textSecondary,
     },
     labelFocused: {
+        fontFamily: 'Inter_600SemiBold',
         color: Colors.primary,
     },
 });

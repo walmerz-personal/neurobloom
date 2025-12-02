@@ -6,6 +6,7 @@ import { PrimaryButton } from '../../components/Button';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { useAuth } from '../../contexts/AuthContext';
+import Logo from '../../components/Logo';
 
 export default function Login() {
     const router = useRouter();
@@ -43,7 +44,7 @@ export default function Login() {
                 style={styles.content}
             >
                 <View style={styles.header}>
-                    <Text style={styles.icon}>🌸</Text>
+                    <Logo style={styles.logo} />
                     <Text style={styles.title}>Welcome Back</Text>
                     <Text style={styles.subtitle}>Log in to continue your recovery journey</Text>
                 </View>
@@ -103,9 +104,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 40,
     },
-    icon: {
-        fontSize: 64,
-        marginBottom: 16,
+    logo: {
+        width: 100,
+        height: 100,
+        marginBottom: 24,
     },
     title: {
         ...Typography.title1,

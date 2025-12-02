@@ -5,6 +5,9 @@ import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { useAuth } from '../../contexts/AuthContext';
+import { MessageCircle, PlayCircle, CheckCircle, LogOut, Quote, User } from 'lucide-react-native';
+import Svg, { Circle } from 'react-native-svg';
+import Logo from '../../components/Logo';
 
 const MOTIVATIONAL_QUOTES = [
     "Every small step forward is progress. You're doing great! 🌟",
@@ -24,13 +27,48 @@ const getGreeting = () => {
     return 'Good Evening';
 };
 
+const CircularProgress = ({ progress = 0.75, size = 80, strokeWidth = 8, color = Colors.primary }) => {
+    const radius = (size - strokeWidth) / 2;
+    const circumference = radius * 2 * Math.PI;
+    const strokeDashoffset = circumference - progress * circumference;
+
+    return (
+        <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+            <Svg width={size} height={size}>
+                <Circle
+                    stroke={Colors.border}
+                    fill="none"
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    strokeWidth={strokeWidth}
+                />
+                <Circle
+                    stroke={color}
+                    fill="none"
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    strokeWidth={strokeWidth}
+                    strokeDasharray={`${circumference} ${circumference}`}
+                    strokeDashoffset={strokeDashoffset}
+                    strokeLinecap="round"
+                    transform={`rotate(-90 ${size / 2} ${size / 2})`}
+                />
+            </Svg>
+            <Text style={{ position: 'absolute', fontFamily: 'Inter_700Bold', fontSize: 16, color: Colors.text }}>
+                {Math.round(progress * 100)}%
+            </Text>
+        </View>
+    );
+};
+
 export default function Home() {
     const router = useRouter();
     const { userData, signOut } = useAuth();
     const [motivationalQuote, setMotivationalQuote] = useState('');
 
     useEffect(() => {
-        // Select random motivational quote daily
         const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
         setMotivationalQuote(randomQuote);
     }, []);
@@ -43,69 +81,100 @@ export default function Home() {
     return (
         <ScreenWrapper>
             <View style={styles.header}>
-                <Text style={styles.greeting}>
-                    {getGreeting()}{userData?.name ? `, ${userData.name.split(' ')[0]}` : ''}
-                </Text>
+                <View style={styles.headerLeft}>
+                    <Logo style={styles.headerLogo} />
+                    <View>
+                        <Text style={styles.greetingSub}>Welcome back,</Text>
+                        <Text style={styles.greeting}>
+                            {userData?.name ? userData.name.split(' ')[0] : 'Friend'}
+                        </Text>
+                    </View>
+                </View>
                 <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-                    <Text style={styles.logoutText}>Logout</Text>
+                    <LogOut size={24} color={Colors.textSecondary} />
                 </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
-                <View style={styles.welcomeCard}>
-                    <Text style={styles.welcomeTitle}>You're doing great! 🌟</Text>
-                    <Text style={styles.welcomeText}>
-                        You've completed 4 exercise sessions this week. Keep up the amazing progress!
-                    </Text>
+            <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                <View style={styles.heroCard}>
+                    <View style={styles.heroContent}>
+                        <Text style={styles.heroTitle}>Your Daily Progress</Text>
+                        <Text style={styles.heroSubtitle}>3 of 4 exercises completed</Text>
+                        <Text style={styles.heroMessage}>Keep up the amazing work!</Text>
+                    </View>
+                    <CircularProgress progress={0.75} color={Colors.primary} />
                 </View>
 
                 {motivationalQuote && (
-                    <View style={styles.lillyQuoteCard}>
-                        <View style={styles.lillyHeader}>
-                            <Text style={styles.lillyIcon}>💬</Text>
-                            <Text style={styles.lillyName}>Lilly says:</Text>
-                        </View>
-                        <Text style={styles.lillyQuote}>{motivationalQuote}</Text>
+                    <View style={styles.quoteCard}>
+                        <Quote size={20} color={Colors.primary} style={styles.quoteIcon} />
+                        <Text style={styles.quoteText}>{motivationalQuote}</Text>
                     </View>
                 )}
 
-                <QuickAction
-                    icon="💬"
-                    color={Colors.actionCoral}
-                    title="Chat with Lilly"
-                    subtitle="Ask questions, get support"
-                    onPress={() => router.push('/lilly')}
-                />
+                <Text style={styles.sectionTitle}>Quick Actions</Text>
 
-                <QuickAction
-                    icon="🏋️"
-                    color={Colors.actionBlue}
-                    title="Today's Exercises"
-                    subtitle="5 exercises • 20 minutes"
-                    onPress={() => router.push('/exercises')}
-                />
+                <View style={styles.quickActionsGrid}>
+                    <QuickAction
+                        icon={<MessageCircle size={32} color={Colors.secondary} />}
+                        title="Chat with Lilly"
+                        subtitle="Get support"
+                        onPress={() => router.push('/lilly')}
+                        color={Colors.secondaryLight + '20'} // 20% opacity
+                    />
+                    <QuickAction
+                        icon={<PlayCircle size={32} color={Colors.primary} />}
+                        title="Start Exercises"
+                        subtitle="Continue today's plan"
+                        onPress={() => router.push('/exercises')}
+                        color={Colors.primaryLight + '20'}
+                    />
+                </View>
 
-                <QuickAction
-                    icon="✓"
-                    color={Colors.actionGreen}
+                <QuickActionRow
+                    icon={<CheckCircle size={24} color={Colors.success} />}
                     title="Daily Check-In"
-                    subtitle="Log your progress for today"
+                    subtitle="Log your mood & progress"
                     onPress={() => router.push('/check-in')}
+                />
+
+                <View style={{ height: 16 }} />
+
+                <QuickActionRow
+                    icon={<User size={24} color={Colors.primary} />}
+                    title="About Me"
+                    subtitle="View and edit your profile"
+                    onPress={() => router.push('/profile')}
                 />
             </ScrollView>
         </ScreenWrapper>
     );
 }
 
-function QuickAction({ icon, color, title, subtitle, onPress }) {
+function QuickAction({ icon, title, subtitle, onPress, color }) {
     return (
-        <TouchableOpacity style={styles.quickAction} onPress={onPress}>
-            <View style={[styles.actionIcon, { backgroundColor: color }]}>
-                <Text style={styles.iconText}>{icon}</Text>
+        <TouchableOpacity style={styles.quickActionCard} onPress={onPress}>
+            <View style={[styles.iconContainer, { backgroundColor: color }]}>
+                {icon}
             </View>
-            <View style={styles.actionContent}>
-                <Text style={styles.actionTitle}>{title}</Text>
-                <Text style={styles.actionSubtitle}>{subtitle}</Text>
+            <Text style={styles.actionTitle}>{title}</Text>
+            <Text style={styles.actionSubtitle}>{subtitle}</Text>
+        </TouchableOpacity>
+    );
+}
+
+function QuickActionRow({ icon, title, subtitle, onPress }) {
+    return (
+        <TouchableOpacity style={styles.rowCard} onPress={onPress}>
+            <View style={styles.rowIconContainer}>
+                {icon}
+            </View>
+            <View style={styles.rowContent}>
+                <Text style={styles.rowTitle}>{title}</Text>
+                <Text style={styles.rowSubtitle}>{subtitle}</Text>
+            </View>
+            <View style={styles.arrowContainer}>
+                <Text style={styles.arrow}>→</Text>
             </View>
         </TouchableOpacity>
     );
@@ -113,115 +182,186 @@ function QuickAction({ icon, color, title, subtitle, onPress }) {
 
 const styles = StyleSheet.create({
     header: {
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        backgroundColor: 'white',
-        borderBottomWidth: 0.5,
-        borderBottomColor: Colors.border,
+        paddingHorizontal: 24,
+        paddingVertical: 20,
+        backgroundColor: Colors.background,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    headerLogo: {
+        width: 48,
+        height: 48,
+    },
+    greetingSub: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 14,
+        color: Colors.textSecondary,
+    },
     greeting: {
-        ...Typography.title1,
-        flex: 1,
+        fontFamily: 'Inter_700Bold',
+        fontSize: 24,
+        color: Colors.text,
     },
     logoutButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-    },
-    logoutText: {
-        fontSize: 15,
-        color: Colors.primary,
-        fontWeight: '600',
-    },
-    content: {
-        flex: 1,
-    },
-    scrollContent: {
-        padding: 20,
-    },
-    welcomeCard: {
-        backgroundColor: Colors.primary, // Using primary color for gradient fallback
-        borderRadius: 20,
-        padding: 28,
-        marginBottom: 24,
-    },
-    welcomeTitle: {
-        fontSize: 28,
-        fontWeight: '700',
-        color: 'white',
-        marginBottom: 8,
-    },
-    welcomeText: {
-        fontSize: 17,
-        color: 'white',
-        opacity: 0.95,
-        lineHeight: 24,
-    },
-    lillyQuoteCard: {
-        backgroundColor: Colors.lillyBubble,
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 24,
-        borderLeftWidth: 4,
-        borderLeftColor: Colors.primary,
-    },
-    lillyHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 10,
-    },
-    lillyIcon: {
-        fontSize: 20,
-        marginRight: 8,
-    },
-    lillyName: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: Colors.primaryDark,
-    },
-    lillyQuote: {
-        fontSize: 16,
-        color: Colors.text,
-        lineHeight: 24,
-        fontStyle: 'italic',
-    },
-    quickAction: {
+        padding: 8,
         backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 12,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 16,
+        borderRadius: 12,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
+        shadowOpacity: 0.05,
         shadowRadius: 8,
         elevation: 2,
     },
-    actionIcon: {
-        width: 56,
-        height: 56,
+    content: {
+        flex: 1,
+        backgroundColor: Colors.background,
+    },
+    scrollContent: {
+        padding: 24,
+        paddingTop: 8,
+    },
+    heroCard: {
+        backgroundColor: 'white',
+        borderRadius: 24,
+        padding: 24,
+        marginBottom: 24,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+        elevation: 4,
+    },
+    heroContent: {
+        flex: 1,
+        paddingRight: 16,
+    },
+    heroTitle: {
+        fontFamily: 'Inter_700Bold',
+        fontSize: 18,
+        color: Colors.text,
+        marginBottom: 4,
+    },
+    heroSubtitle: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 14,
+        color: Colors.primary,
+        marginBottom: 8,
+    },
+    heroMessage: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 13,
+        color: Colors.textSecondary,
+    },
+    quoteCard: {
+        backgroundColor: Colors.surfaceHighlight,
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 32,
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+    },
+    quoteIcon: {
+        marginRight: 12,
+        marginTop: 2,
+    },
+    quoteText: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 14,
+        color: Colors.textSecondary,
+        flex: 1,
+        lineHeight: 22,
+        fontStyle: 'italic',
+    },
+    sectionTitle: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 18,
+        color: Colors.text,
+        marginBottom: 16,
+    },
+    quickActionsGrid: {
+        flexDirection: 'row',
+        gap: 16,
+        marginBottom: 16,
+    },
+    quickActionCard: {
+        flex: 1,
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 20,
+        alignItems: 'flex-start',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+        elevation: 3,
+    },
+    iconContainer: {
+        width: 48,
+        height: 48,
         borderRadius: 14,
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    iconText: {
-        fontSize: 28,
-    },
-    actionContent: {
-        flex: 1,
+        marginBottom: 16,
     },
     actionTitle: {
-        fontSize: 18,
-        fontWeight: '600',
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 16,
         color: Colors.text,
-        marginBottom: 2,
+        marginBottom: 4,
     },
     actionSubtitle: {
-        fontSize: 15,
+        fontFamily: 'Inter_400Regular',
+        fontSize: 13,
         color: Colors.textSecondary,
+    },
+    rowCard: {
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+        elevation: 3,
+    },
+    rowIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: Colors.surfaceHighlight,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 16,
+    },
+    rowContent: {
+        flex: 1,
+    },
+    rowTitle: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 16,
+        color: Colors.text,
+    },
+    rowSubtitle: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 13,
+        color: Colors.textSecondary,
+    },
+    arrowContainer: {
+        padding: 8,
+    },
+    arrow: {
+        fontSize: 20,
+        color: Colors.textTertiary,
     },
 });

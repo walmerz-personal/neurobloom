@@ -6,7 +6,7 @@
     "scheme": "neurobloom",
     "main": "expo-router/entry",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/neurobloom-logo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -24,7 +24,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/neurobloom-logo.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,

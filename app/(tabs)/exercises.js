@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
+import { PlayCircle, Clock, Target, ChevronDown, ChevronUp } from 'lucide-react-native';
 
 const CATEGORIES = ['All', 'Arms', 'Legs', 'Core', 'Hands'];
 
@@ -264,7 +265,7 @@ export default function Exercises() {
                 </ScrollView>
             </View>
 
-            <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+            <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {filteredExercises.map((exercise) => (
                     <ExerciseCard
                         key={exercise.id}
@@ -287,7 +288,7 @@ function ExerciseCard({ data, isExpanded, onPress }) {
             activeOpacity={0.9}
         >
             <View style={[styles.thumbnail, { backgroundColor: data.thumbnailColor }]}>
-                <Text style={styles.playIcon}>▶️</Text>
+                <PlayCircle size={40} color={Colors.text} style={{ opacity: 0.6 }} />
                 <View style={styles.categoryBadge}>
                     <Text style={styles.categoryBadgeText}>{data.category}</Text>
                 </View>
@@ -296,12 +297,21 @@ function ExerciseCard({ data, isExpanded, onPress }) {
             <View style={styles.info}>
                 <View style={styles.headerRow}>
                     <Text style={styles.title}>{data.title}</Text>
-                    {isExpanded ? <Text style={styles.chevron}>▲</Text> : <Text style={styles.chevron}>▼</Text>}
+                    {isExpanded ?
+                        <ChevronUp size={20} color={Colors.textSecondary} /> :
+                        <ChevronDown size={20} color={Colors.textSecondary} />
+                    }
                 </View>
 
                 <View style={styles.meta}>
-                    <Text style={styles.metaText}>⏱️ {data.time}</Text>
-                    <Text style={styles.metaText}>🎯 {data.target}</Text>
+                    <View style={styles.metaItem}>
+                        <Clock size={14} color={Colors.textSecondary} />
+                        <Text style={styles.metaText}>{data.time}</Text>
+                    </View>
+                    <View style={styles.metaItem}>
+                        <Target size={14} color={Colors.textSecondary} />
+                        <Text style={styles.metaText}>{data.target}</Text>
+                    </View>
                     <View style={[styles.difficultyBadge,
                     data.difficulty === 'Beginner' ? styles.diffEasy :
                         data.difficulty === 'Intermediate' ? styles.diffMed : styles.diffHard
@@ -331,44 +341,50 @@ function ExerciseCard({ data, isExpanded, onPress }) {
 
 const styles = StyleSheet.create({
     header: {
-        paddingHorizontal: 20,
+        paddingHorizontal: 24,
         paddingTop: 20,
-        paddingBottom: 10,
-        backgroundColor: 'white',
+        paddingBottom: 16,
+        backgroundColor: Colors.background,
     },
     headerTitle: {
-        ...Typography.title1,
+        fontFamily: 'Inter_700Bold',
+        fontSize: 28,
+        color: Colors.text,
         marginBottom: 4,
     },
     headerSubtitle: {
+        fontFamily: 'Inter_400Regular',
         fontSize: 16,
         color: Colors.textSecondary,
     },
     categoryContainer: {
-        backgroundColor: 'white',
-        paddingBottom: 12,
-        borderBottomWidth: 0.5,
-        borderBottomColor: Colors.border,
+        backgroundColor: Colors.background,
+        paddingBottom: 16,
     },
     categoryContent: {
-        paddingHorizontal: 20,
-        gap: 10,
+        paddingHorizontal: 24,
+        gap: 12,
     },
     categoryChip: {
         paddingHorizontal: 20,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: '#F3F4F6',
+        paddingVertical: 10,
+        borderRadius: 24,
+        backgroundColor: 'white',
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: Colors.border,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
     },
     categoryChipActive: {
         backgroundColor: Colors.primary,
         borderColor: Colors.primary,
     },
     categoryText: {
-        fontSize: 15,
-        fontWeight: '600',
+        fontFamily: 'Inter_500Medium',
+        fontSize: 14,
         color: Colors.textSecondary,
     },
     categoryTextActive: {
@@ -376,24 +392,25 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: Colors.background,
     },
     scrollContent: {
-        padding: 20,
+        padding: 24,
+        paddingTop: 8,
     },
     footerSpacer: {
         height: 40,
     },
     card: {
         backgroundColor: 'white',
-        borderRadius: 16,
+        borderRadius: 20,
         overflow: 'hidden',
-        marginBottom: 16,
+        marginBottom: 20,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.06,
-        shadowRadius: 8,
-        elevation: 2,
+        shadowRadius: 12,
+        elevation: 3,
         borderWidth: 1,
         borderColor: 'transparent',
     },
@@ -403,109 +420,107 @@ const styles = StyleSheet.create({
     },
     thumbnail: {
         width: '100%',
-        height: 140,
+        height: 160,
         alignItems: 'center',
         justifyContent: 'center',
         position: 'relative',
     },
-    playIcon: {
-        fontSize: 40,
-        opacity: 0.9,
-    },
     categoryBadge: {
         position: 'absolute',
-        top: 12,
-        right: 12,
-        backgroundColor: 'rgba(255,255,255,0.9)',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
+        top: 16,
+        right: 16,
+        backgroundColor: 'rgba(255,255,255,0.95)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
         borderRadius: 12,
     },
     categoryBadgeText: {
+        fontFamily: 'Inter_600SemiBold',
         fontSize: 12,
-        fontWeight: '600',
         color: Colors.text,
     },
     info: {
-        padding: 16,
+        padding: 20,
     },
     headerRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        marginBottom: 8,
-    },
-    chevron: {
-        fontSize: 14,
-        color: Colors.textSecondary,
-        marginTop: 4,
+        marginBottom: 12,
     },
     title: {
-        fontSize: 19,
-        fontWeight: '700',
+        fontFamily: 'Inter_700Bold',
+        fontSize: 18,
         color: Colors.text,
         flex: 1,
-        marginRight: 8,
+        marginRight: 12,
     },
     meta: {
         flexDirection: 'row',
         alignItems: 'center',
         flexWrap: 'wrap',
-        gap: 12,
-        marginBottom: 12,
+        gap: 16,
+        marginBottom: 16,
+    },
+    metaItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
     },
     metaText: {
-        fontSize: 14,
+        fontFamily: 'Inter_500Medium',
+        fontSize: 13,
         color: Colors.textSecondary,
-        fontWeight: '500',
     },
     difficultyBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
     },
     diffEasy: { backgroundColor: '#DCFCE7' },
     diffMed: { backgroundColor: '#FEF9C3' },
     diffHard: { backgroundColor: '#FEE2E2' },
     difficultyText: {
-        fontSize: 12,
-        fontWeight: '600',
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 11,
         color: Colors.text,
     },
     description: {
+        fontFamily: 'Inter_400Regular',
         fontSize: 15,
         color: Colors.textSecondary,
-        lineHeight: 22,
+        lineHeight: 24,
     },
     instructionsContainer: {
-        marginTop: 16,
+        marginTop: 20,
     },
     divider: {
         height: 1,
         backgroundColor: Colors.border,
-        marginBottom: 16,
+        marginBottom: 20,
     },
     instructionsTitle: {
+        fontFamily: 'Inter_600SemiBold',
         fontSize: 16,
-        fontWeight: '600',
         color: Colors.text,
         marginBottom: 12,
     },
     stepRow: {
         flexDirection: 'row',
-        marginBottom: 8,
+        marginBottom: 12,
         paddingRight: 10,
     },
     stepNumber: {
+        fontFamily: 'Inter_600SemiBold',
         fontSize: 15,
-        fontWeight: '600',
         color: Colors.primary,
-        width: 24,
+        width: 28,
     },
     stepText: {
+        fontFamily: 'Inter_400Regular',
         fontSize: 15,
         color: Colors.text,
-        lineHeight: 22,
+        lineHeight: 24,
         flex: 1,
     },
 });

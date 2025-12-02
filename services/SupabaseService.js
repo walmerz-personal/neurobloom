@@ -291,6 +291,33 @@ export const SupabaseService = {
         }
     },
 
+    /**
+     * Update user data (in users table)
+     * @param {string} userId 
+     * @param {Object} updates - { name, etc }
+     * @returns {Promise<{user, error}>}
+     */
+    async updateUserData(userId, updates) {
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .update(updates)
+                .eq('id', userId)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Update user data error:', error);
+                return { user: null, error };
+            }
+
+            return { user: data, error: null };
+        } catch (error) {
+            console.error('❌ Update user data error:', error);
+            return { user: null, error };
+        }
+    },
+
     // =============================================
     // DAILY LOGS
     // =============================================
