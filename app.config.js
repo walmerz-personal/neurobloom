@@ -1,5 +1,9 @@
 require('dotenv').config({ path: '.env.local' });
 
+if (!process.env.EXPO_PUBLIC_OPENAI_API_KEY) {
+    console.warn('⚠️  WARNING: EXPO_PUBLIC_OPENAI_API_KEY is not defined. AI features will not work in production builds unless set in EAS Secrets.');
+}
+
 
 export default {
     expo: {
@@ -9,7 +13,7 @@ export default {
         scheme: "neurobloom",
         main: "expo-router/entry",
         orientation: "portrait",
-        icon: "./assets/icon.png",
+        icon: "./assets/neurobloom-logo.png",
         userInterfaceStyle: "light",
         newArchEnabled: true,
         splash: {
@@ -20,14 +24,14 @@ export default {
         ios: {
             supportsTablet: true,
             bundleIdentifier: "com.neurobloom.app",
-            buildNumber: "3",
+            buildNumber: "7",
             infoPlist: {
                 ITSAppUsesNonExemptEncryption: false
             }
         },
         android: {
             adaptiveIcon: {
-                foregroundImage: "./assets/adaptive-icon.png",
+                foregroundImage: "./assets/neurobloom-logo.png",
                 backgroundColor: "#ffffff"
             },
             edgeToEdgeEnabled: true,

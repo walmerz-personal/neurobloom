@@ -51,6 +51,7 @@ export default function Lilly() {
 
             const response = await sendMessage(userMsgText, history, userProfile);
 
+            // LillyService always returns a valid response object with helpful fallback messages
             const lillyMsg = {
                 id: Date.now() + 1,
                 isLilly: true,
@@ -65,8 +66,13 @@ export default function Lilly() {
             }
 
         } catch (error) {
-            console.error("Error getting response:", error);
-            setMessages(prev => [...prev, { id: Date.now() + 1, isLilly: true, text: "I'm having a little trouble thinking right now. Can you try again?" }]);
+            // Only catch true network errors, not API failures (those are handled by LillyService)
+            console.error("Network error in Lilly chat:", error);
+            setMessages(prev => [...prev, {
+                id: Date.now() + 1,
+                isLilly: true,
+                text: "I'm having trouble connecting right now. Please check your internet connection and try again."
+            }]);
         } finally {
             setIsTyping(false);
             setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
