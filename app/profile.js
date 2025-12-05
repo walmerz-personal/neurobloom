@@ -1,16 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, Switch, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper } from '../components/ScreenWrapper';
 import { Colors } from '../constants/Colors';
 import { Typography } from '../constants/Typography';
 import { useAuth } from '../contexts/AuthContext';
+import { usePreferences } from '../contexts/PreferencesContext';
 import { SupabaseService } from '../services/SupabaseService';
-import { ArrowLeft, Save, User, Calendar, Activity, Target, Mail, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Save, User, Calendar, Activity, Target, Mail, Trash2, Bell } from 'lucide-react-native';
 
 export default function Profile() {
     const router = useRouter();
     const { user, deleteAccount } = useAuth();
+    const {
+        notificationPrefs,
+        hasNotificationPermission,
+        enableDailyReminder,
+        disableDailyReminder,
+        updateNotificationPreferences,
+        sendTestNotification,
+        requestNotificationPermissions
+    } = usePreferences();
+
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -21,9 +33,23 @@ export default function Profile() {
     const [impairments, setImpairments] = useState('');
     const [goals, setGoals] = useState('');
 
+    // Notification State
+    const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+    const [reminderTime, setReminderTime] = useState(new Date());
+    const [showTimePicker, setShowTimePicker] = useState(false);
+
     useEffect(() => {
         loadProfile();
     }, [user]);
+
+    useEffect(() => {
+        // Load notification preferences
+        setNotificationsEnabled(notificationPrefs.enabled);
+        const time = new Date();
+        time.setHours(notificationPrefs.hour);
+        time.setMinutes(notificationPrefs.minute);
+        setReminderTime(time);
+    }, [notificationPrefs]);
 
     const loadProfile = async () => {
         if (!user?.id) return;
@@ -106,6 +132,60 @@ export default function Profile() {
                 },
             ]
         );
+    };
+
+    const handleNotificationToggle = async (value) => {
+        if (value) {
+            // Turning on notifications
+            if (!hasNotificationPermission) {
+                const granted = await requestNotificationPermissions();
+                if (!granted) {
+                    Alert.alert(
+                        'Permissions Required',
+                        'Please enable notifications in your device settings to receive daily reminders.'
+                    );
+                    return;
+                }
+            }
+
+            const hour = reminderTime.getHours();
+            const minute = reminderTime.getMinutes();
+            const success = await enableDailyReminder(hour, minute);
+
+            if (success) {
+                setNotificationsEnabled(true);
+                Alert.alert('Success', 'Daily reminders enabled! You will receive a notification at your chosen time.');
+            } else {
+                Alert.alert('Error', 'Failed to enable notifications. Please try again.');
+            }
+        } else {
+            // Turning off notifications
+            await disableDailyReminder();
+            setNotificationsEnabled(false);
+            Alert.alert('Disabled', 'Daily reminders have been turned off.');
+        }
+    };
+
+    const handleTimeChange = async (event, selectedTime) => {
+        if (Platform.OS === 'android') {
+            setShowTimePicker(false);
+        }
+
+        if (selectedTime) {
+            setReminderTime(selectedTime);
+
+            // If notifications are enabled, update the scheduled time
+            if (notificationsEnabled) {
+                const hour = selectedTime.getHours();
+                const minute = selectedTime.getMinutes();
+                await enableDailyReminder(hour, minute);
+            }
+        }
+    };
+
+    const handleTestNotification = async () => {
+        await sendTestNotification();
+        Alert.alert('Test Sent', 'Check your notifications! If you don\'t see it, make sure notifications are enabled in your device settings.');
     };
 
 
@@ -215,6 +295,79 @@ export default function Profile() {
                             multiline
                             numberOfLines={3}
                         />
+                    </View>
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Notification Settings</Text>
+
+                    <View style={styles.notificationCard}>
+                        <View style={styles.notificationHeader}>
+                            <View style={styles.labelContainer}>
+                                <Bell size={18} color={Colors.primary} />
+                                <Text style={styles.label}>Daily Recovery Reminder</Text>
+                            </View>
+                            <Switch
+                                value={notificationsEnabled}
+                                onValueChange={handleNotificationToggle}
+                                trackColor={{ false: Colors.border, true: Colors.primary + '40' }}
+                                thumbColor={notificationsEnabled ? Colors.primary : Colors.textTertiary}
+                            />
+                        </View>
+
+                        {notificationsEnabled && (
+                            <View style={styles.notificationOptions}>
+                                <Text style={styles.helperText} style={[styles.helperText, { marginBottom: 12 }]}>
+                                    Get a daily reminder to continue your recovery journey
+                                </Text>
+
+                                <View style={styles.timePickerContainer}>
+                                    <Text style={styles.timeLabel}>Reminder Time:</Text>
+                                    {Platform.OS === 'ios' ? (
+                                        <DateTimePicker
+                                            value={reminderTime}
+                                            mode="time"
+                                            display="spinner"
+                                            onChange={handleTimeChange}
+                                            style={styles.timePicker}
+                                        />
+                                    ) : (
+                                        <TouchableOpacity
+                                            style={styles.timeButton}
+                                            onPress={() => setShowTimePicker(true)}
+                                        >
+                                            <Text style={styles.timeButtonText}>
+                                                {reminderTime.toLocaleTimeString('en-US', {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                })}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    )}
+                                    {Platform.OS === 'android' && showTimePicker && (
+                                        <DateTimePicker
+                                            value={reminderTime}
+                                            mode="time"
+                                            display="default"
+                                            onChange={handleTimeChange}
+                                        />
+                                    )}
+                                </View>
+
+                                <TouchableOpacity
+                                    style={styles.testButton}
+                                    onPress={handleTestNotification}
+                                >
+                                    <Text style={styles.testButtonText}>Send Test Notification</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                        {!hasNotificationPermission && !notificationsEnabled && (
+                            <Text style={[styles.helperText, { marginTop: 8, color: Colors.error }]}>
+                                Notification permissions not granted. Enable the switch to request permissions.
+                            </Text>
+                        )}
                     </View>
                 </View>
 
@@ -357,5 +510,62 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter_600SemiBold',
         fontSize: 16,
         color: 'white',
+    },
+    notificationCard: {
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: Colors.border,
+        borderRadius: 12,
+        padding: 16,
+    },
+    notificationHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    notificationOptions: {
+        marginTop: 16,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: Colors.border,
+    },
+    timePickerContainer: {
+        marginTop: 8,
+    },
+    timeLabel: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 14,
+        color: Colors.textSecondary,
+        marginBottom: 8,
+    },
+    timePicker: {
+        width: '100%',
+        backgroundColor: Colors.surfaceHighlight,
+        borderRadius: 12,
+    },
+    timeButton: {
+        backgroundColor: Colors.surfaceHighlight,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        borderRadius: 12,
+        padding: 16,
+        alignItems: 'center',
+    },
+    timeButtonText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 16,
+        color: Colors.text,
+    },
+    testButton: {
+        backgroundColor: Colors.primaryLight + '20',
+        borderRadius: 12,
+        padding: 14,
+        alignItems: 'center',
+        marginTop: 16,
+    },
+    testButtonText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 14,
+        color: Colors.primary,
     },
 });

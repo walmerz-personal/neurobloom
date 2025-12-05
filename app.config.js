@@ -13,7 +13,15 @@ export default {
         userInterfaceStyle: "light",
         newArchEnabled: true,
         plugins: [
-            "expo-router"
+            "expo-router",
+            [
+                "expo-notifications",
+                {
+                    icon: "./assets/notification-icon.png",
+                    color: "#6B4CE6",
+                    sounds: ["./assets/notification.wav"]
+                }
+            ]
         ],
         splash: {
             image: "./assets/splash-icon.png",
@@ -26,7 +34,15 @@ export default {
             buildNumber: "10",
             infoPlist: {
                 ITSAppUsesNonExemptEncryption: false
+            },
+            config: {
+                usesNonExemptEncryption: false
             }
+        },
+        notification: {
+            icon: "./assets/notification-icon.png",
+            color: "#6B4CE6",
+            iosDisplayInForeground: true
         },
         android: {
             adaptiveIcon: {

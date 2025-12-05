@@ -1,12 +1,54 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { PrimaryButton } from '../../components/Button';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
+import { usePreferences } from '../../contexts/PreferencesContext';
 
 export default function Completion() {
     const router = useRouter();
+    const { requestNotificationPermissions, enableDailyReminder } = usePreferences();
+    const [permissionRequested, setPermissionRequested] = useState(false);
+
+    useEffect(() => {
+        // Request notification permissions when onboarding is complete
+        requestNotificationPermission();
+    }, []);
+
+    const requestNotificationPermission = async () => {
+        if (permissionRequested) return;
+        setPermissionRequested(true);
+
+        // Wait a moment for the screen to render
+        setTimeout(async () => {
+            Alert.alert(
+                '🌱 Stay on Track',
+                'Would you like to receive daily reminders to continue your recovery journey? You can change this anytime in your profile.',
+                [
+                    {
+                        text: 'Not Now',
+                        style: 'cancel',
+                    },
+                    {
+                        text: 'Enable Reminders',
+                        onPress: async () => {
+                            const granted = await requestNotificationPermissions();
+                            if (granted) {
+                                // Enable default reminder at 9:00 AM
+                                await enableDailyReminder(9, 0);
+                                Alert.alert(
+                                    'Success!',
+                                    'Daily reminders enabled at 9:00 AM. You can adjust the time in your profile settings.'
+                                );
+                            }
+                        },
+                    },
+                ]
+            );
+        }, 500);
+    };
 
     const handleGoHome = () => {
         router.replace('/(tabs)/home');
