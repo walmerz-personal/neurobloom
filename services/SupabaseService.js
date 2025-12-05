@@ -100,6 +100,96 @@ export const SupabaseService = {
     },
 
     /**
+     * Send password reset email
+     * @param {string} email
+     * @returns {Promise<{data, error}>}
+     */
+    async resetPasswordForEmail(email) {
+        // Check initialization
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: 'neurobloom://auth/reset-password',
+            });
+
+            if (error) {
+                console.error('❌ Reset password error:', error);
+                return { data: null, error };
+            }
+
+            console.log('✅ Password reset email sent to:', email);
+            return { data, error: null };
+        } catch (error) {
+            console.error('❌ Reset password error:', error);
+            return { data: null, error };
+        }
+    },
+
+
+
+    /**
+     * Set session manually (e.g. from deep link)
+     * @param {string} accessToken 
+     * @param {string} refreshToken 
+     * @returns {Promise<{data, error}>}
+     */
+    async setSession(accessToken, refreshToken) {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { data, error } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+            });
+
+            if (error) {
+                console.error('❌ Set session error:', error);
+                return { data: null, error };
+            }
+
+            console.log('✅ Session set manually');
+            return { data, error: null };
+        } catch (error) {
+            console.error('❌ Set session error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
+     * Update user password
+     * @param {string} newPassword
+     * @returns {Promise<{data, error}>}
+     */
+    async updatePassword(newPassword) {
+        // Check initialization
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { data, error } = await supabase.auth.updateUser({
+                password: newPassword
+            });
+
+            if (error) {
+                console.error('❌ Update password error:', error);
+                return { data: null, error };
+            }
+
+            console.log('✅ Password updated successfully');
+            return { data, error: null };
+        } catch (error) {
+            console.error('❌ Update password error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
      * Sign in existing user
      * @param {string} email 
      * @param {string} password 
@@ -413,6 +503,69 @@ export const SupabaseService = {
         }
     },
 
+    /**
+     * Toggle exercise completion status for today
+     * @param {string} userId 
+     * @param {string} exerciseId 
+     * @returns {Promise<{data, error}>}
+     */
+    async toggleExerciseCompletion(userId, exerciseId) {
+        try {
+            const today = new Date().toISOString().split('T')[0];
+
+            // 1. Get today's log
+            const { log, error: getError } = await this.getTodayLog(userId);
+
+            if (getError) return { data: null, error: getError };
+
+            let exercises = [];
+            let logData = {};
+
+            if (log) {
+                // Log exists, update it
+                exercises = log.exercises_completed || [];
+                const exists = exercises.includes(exerciseId);
+
+                if (exists) {
+                    exercises = exercises.filter(id => id !== exerciseId);
+                } else {
+                    exercises.push(exerciseId);
+                }
+
+                logData = {
+                    ...log,
+                    exercises_completed: exercises
+                };
+            } else {
+                // Create new log
+                exercises = [exerciseId];
+                logData = {
+                    user_id: userId,
+                    log_date: today,
+                    exercises_completed: exercises
+                };
+            }
+
+            // 2. Save updated log
+            const { data, error: saveError } = await this.saveDailyLog(userId, {
+                logDate: today,
+                mood: logData.mood,
+                painLevel: logData.pain_level,
+                energyLevel: logData.energy_level,
+                exercisesCompleted: exercises,
+                notes: logData.notes
+            });
+
+            if (saveError) return { data: null, error: saveError };
+
+            return { data, error: null };
+
+        } catch (error) {
+            console.error('❌ Toggle exercise error:', error);
+            return { data: null, error };
+        }
+    },
+
     // =============================================
     // CONVERSATIONS
     // =============================================
@@ -514,6 +667,322 @@ export const SupabaseService = {
         } catch (error) {
             console.error('❌ Get latest conversation error:', error);
             return { conversation: null, error };
+        }
+    },
+
+    // =============================================
+    // GAMIFICATION (GARDEN)
+    // =============================================
+
+    /**
+     * Get user points
+     * @param {string} userId 
+     * @returns {Promise<{points, error}>}
+     */
+    async getUserPoints(userId) {
+        try {
+            const { data, error } = await supabase
+                .from('user_profiles')
+                .select('points')
+                .eq('user_id', userId)
+                .single();
+
+            if (error) {
+                console.error('❌ Get points error:', error);
+                return { points: 0, error };
+            }
+
+            return { points: data?.points || 0, error: null };
+        } catch (error) {
+            console.error('❌ Get points error:', error);
+            return { points: 0, error };
+        }
+    },
+
+    /**
+     * Update user points
+     * @param {string} userId 
+     * @param {number} points 
+     * @returns {Promise<{data, error}>}
+     */
+    async updateUserPoints(userId, points) {
+        try {
+            const { data, error } = await supabase
+                .from('user_profiles')
+                .update({ points })
+                .eq('user_id', userId)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Update points error:', error);
+                return { data: null, error };
+            }
+
+            return { data, error: null };
+        } catch (error) {
+            console.error('❌ Update points error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
+     * Get all available items (seeds)
+     * @returns {Promise<{items, error}>}
+     */
+    async getItems() {
+        try {
+            const { data, error } = await supabase
+                .from('items')
+                .select('*')
+                .order('cost', { ascending: true });
+
+            if (error) {
+                console.error('❌ Get items error:', error);
+                return { items: [], error };
+            }
+
+            return { items: data, error: null };
+        } catch (error) {
+            console.error('❌ Get items error:', error);
+            return { items: [], error };
+        }
+    },
+
+    /**
+     * Get user inventory
+     * @param {string} userId 
+     * @returns {Promise<{inventory, error}>}
+     */
+    async getInventory(userId) {
+        try {
+            const { data, error } = await supabase
+                .from('user_inventory')
+                .select('*, items(*)')
+                .eq('user_id', userId);
+
+            if (error) {
+                console.error('❌ Get inventory error:', error);
+                return { inventory: [], error };
+            }
+
+            return { inventory: data, error: null };
+        } catch (error) {
+            console.error('❌ Get inventory error:', error);
+            return { inventory: [], error };
+        }
+    },
+
+    /**
+     * Buy an item
+     * @param {string} userId 
+     * @param {string} itemId 
+     * @param {number} cost 
+     * @returns {Promise<{success, error}>}
+     */
+    async buyItem(userId, itemId, cost) {
+        try {
+            // 1. Check points
+            const { points, error: pointsError } = await this.getUserPoints(userId);
+            if (pointsError) return { success: false, error: pointsError };
+
+            if (points < cost) {
+                return { success: false, error: new Error('Insufficient points') };
+            }
+
+            // 2. Deduct points
+            const { error: updateError } = await this.updateUserPoints(userId, points - cost);
+            if (updateError) return { success: false, error: updateError };
+
+            // 3. Add to inventory
+            // Check if already owns
+            const { data: existing } = await supabase
+                .from('user_inventory')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('item_id', itemId)
+                .single();
+
+            let inventoryError;
+            if (existing) {
+                const { error } = await supabase
+                    .from('user_inventory')
+                    .update({ quantity: existing.quantity + 1 })
+                    .eq('id', existing.id);
+                inventoryError = error;
+            } else {
+                const { error } = await supabase
+                    .from('user_inventory')
+                    .insert([{ user_id: userId, item_id: itemId, quantity: 1 }]);
+                inventoryError = error;
+            }
+
+            if (inventoryError) {
+                // Rollback points (simplified)
+                await this.updateUserPoints(userId, points);
+                return { success: false, error: inventoryError };
+            }
+
+            return { success: true, error: null };
+
+        } catch (error) {
+            console.error('❌ Buy item error:', error);
+            return { success: false, error };
+        }
+    },
+
+    /**
+     * Get garden plants
+     * @param {string} userId 
+     * @returns {Promise<{plants, error}>}
+     */
+    async getGardenPlants(userId) {
+        try {
+            const { data, error } = await supabase
+                .from('garden_plants')
+                .select('*, items(*)')
+                .eq('user_id', userId)
+                .order('box_index', { ascending: true });
+
+            if (error) {
+                console.error('❌ Get garden plants error:', error);
+                return { plants: [], error };
+            }
+
+            return { plants: data, error: null };
+        } catch (error) {
+            console.error('❌ Get garden plants error:', error);
+            return { plants: [], error };
+        }
+    },
+
+    /**
+     * Plant a seed
+     * @param {string} userId 
+     * @param {string} itemId 
+     * @param {number} boxIndex 
+     * @returns {Promise<{success, error}>}
+     */
+    async plantSeed(userId, itemId, boxIndex) {
+        try {
+            // 1. Check inventory
+            const { data: inventoryItem } = await supabase
+                .from('user_inventory')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('item_id', itemId)
+                .single();
+
+            if (!inventoryItem || inventoryItem.quantity < 1) {
+                return { success: false, error: new Error('Item not in inventory') };
+            }
+
+            // 2. Plant it
+            const { error: plantError } = await supabase
+                .from('garden_plants')
+                .insert([{
+                    user_id: userId,
+                    item_id: itemId,
+                    box_index: boxIndex,
+                    planted_at: new Date().toISOString()
+                }]);
+
+            if (plantError) return { success: false, error: plantError };
+
+            // 3. Decrement inventory
+            if (inventoryItem.quantity > 1) {
+                await supabase
+                    .from('user_inventory')
+                    .update({ quantity: inventoryItem.quantity - 1 })
+                    .eq('id', inventoryItem.id);
+            } else {
+                await supabase
+                    .from('user_inventory')
+                    .delete()
+                    .eq('id', inventoryItem.id);
+            }
+
+            return { success: true, error: null };
+
+        } catch (error) {
+            console.error('❌ Plant seed error:', error);
+            return { success: false, error };
+        }
+    },
+
+    // =============================================
+    // ACCOUNT MANAGEMENT
+    // =============================================
+
+    /**
+     * Delete user account and all associated data
+     * WARNING: This is a destructive operation that cannot be undone
+     * @param {string} userId 
+     * @returns {Promise<{success, error}>}
+     */
+    async deleteUserAccount(userId) {
+        // Check initialization
+        if (!this.isInitialized()) {
+            return { success: false, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            console.log('🗑️ Starting account deletion for user:', userId);
+
+            // Delete user from auth.users
+            // This will CASCADE delete from all tables due to ON DELETE CASCADE foreign keys
+            // Tables affected: users, user_profiles, daily_logs, conversations, user_inventory, garden_plants
+            const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+
+            if (authError) {
+                // If we don't have admin access, try deleting from the tables directly
+                console.warn('⚠️ Auth admin delete not available, deleting data manually');
+
+                // Delete in correct order (children first, parents last)
+                await supabase.from('user_inventory').delete().eq('user_id', userId);
+                await supabase.from('garden_plants').delete().eq('user_id', userId);
+                await supabase.from('conversations').delete().eq('user_id', userId);
+                await supabase.from('daily_logs').delete().eq('user_id', userId);
+                await supabase.from('user_profiles').delete().eq('user_id', userId);
+                await supabase.from('users').delete().eq('id', userId);
+
+                // Note: Without admin access, we cannot delete from auth.users
+                // The user will need to contact support or the auth record will remain orphaned
+                console.log('✅ User data deleted from database tables');
+            } else {
+                console.log('✅ User account and all data deleted successfully');
+            }
+
+            return { success: true, error: null };
+        } catch (error) {
+            console.error('❌ Delete account error:', error);
+            return { success: false, error };
+        }
+    },
+
+    /**
+     * Call a Supabase Edge Function with automatic authentication
+     * @param {string} functionName - Name of the Edge Function
+     * @param {object} body - Request body to send to the function
+     * @returns {Promise<{data: any, error: any}>}
+     */
+    async callEdgeFunction(functionName, body) {
+        if (!supabase) {
+            return {
+                data: null,
+                error: new Error('Supabase client not initialized')
+            };
+        }
+
+        try {
+            const { data, error } = await supabase.functions.invoke(functionName, {
+                body
+            });
+
+            return { data, error };
+        } catch (error) {
+            console.error(`❌ Error calling Edge Function ${functionName}:`, error);
+            return { data: null, error };
         }
     },
 };

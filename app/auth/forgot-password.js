@@ -8,33 +8,31 @@ import { Typography } from '../../constants/Typography';
 import { useAuth } from '../../contexts/AuthContext';
 import Logo from '../../components/Logo';
 
-export default function Login() {
+export default function ForgotPassword() {
     const router = useRouter();
-    const { signIn } = useAuth();
+    const { resetPassword } = useAuth();
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleLogin = async () => {
-        if (!email || !password) {
-            Alert.alert('Error', 'Please enter both email and password');
+    const handleResetPassword = async () => {
+        if (!email) {
+            Alert.alert('Error', 'Please enter your email address');
             return;
         }
 
         setLoading(true);
-        const { error } = await signIn(email, password);
+        const { error } = await resetPassword(email);
         setLoading(false);
 
         if (error) {
-            Alert.alert('Login Failed', error.message || 'Invalid email or password');
+            Alert.alert('Error', error.message || 'Failed to send reset instructions');
         } else {
-            // Navigation handled by auth state in _layout
-            router.replace('/(tabs)/home');
+            Alert.alert(
+                'Success',
+                'Password reset instructions have been sent to your email.',
+                [{ text: 'OK', onPress: () => router.back() }]
+            );
         }
-    };
-
-    const handleSignUp = () => {
-        router.push('/onboarding/welcome');
     };
 
     return (
@@ -44,10 +42,9 @@ export default function Login() {
                 style={styles.content}
             >
                 <View style={styles.header}>
-                    <Text style={styles.appName}>NeuroBloom</Text>
                     <Logo style={styles.logo} />
-                    <Text style={styles.title}>Welcome Back</Text>
-                    <Text style={styles.subtitle}>Log in to continue your recovery journey</Text>
+                    <Text style={styles.title}>Reset Password</Text>
+                    <Text style={styles.subtitle}>Enter your email to receive reset instructions</Text>
                 </View>
 
                 <View style={styles.form}>
@@ -62,35 +59,15 @@ export default function Login() {
                         autoCorrect={false}
                     />
 
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Password"
-                        placeholderTextColor={Colors.textSecondary}
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                    />
-
-                    <View style={styles.forgotPasswordContainer}>
-                        <TouchableOpacity onPress={() => router.push('/auth/forgot-password')}>
-                            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-                        </TouchableOpacity>
-                    </View>
-
                     <PrimaryButton
-                        title={loading ? "Logging in..." : "Log In"}
-                        onPress={handleLogin}
+                        title={loading ? "Sending..." : "Send Instructions"}
+                        onPress={handleResetPassword}
                         disabled={loading}
                     />
 
-                    <View style={styles.signupContainer}>
-                        <Text style={styles.signupText}>Don't have an account? </Text>
-                        <TouchableOpacity onPress={handleSignUp}>
-                            <Text style={styles.signupLink}>Sign Up</Text>
-                        </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                        <Text style={styles.backLink}>Back to Login</Text>
+                    </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -116,12 +93,6 @@ const styles = StyleSheet.create({
         height: 100,
         marginBottom: 24,
     },
-    appName: {
-        ...Typography.title1,
-        color: Colors.primary,
-        marginBottom: 24,
-        textAlign: 'center',
-    },
     title: {
         ...Typography.title1,
         marginBottom: 8,
@@ -143,25 +114,11 @@ const styles = StyleSheet.create({
         fontSize: 17,
         color: Colors.text,
     },
-    forgotPasswordContainer: {
-        alignItems: 'flex-end',
-        marginBottom: 24,
-    },
-    forgotPasswordText: {
-        ...Typography.body,
-        color: Colors.primary,
-        fontWeight: '600',
-    },
-    signupContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
+    backButton: {
+        alignItems: 'center',
         marginTop: 16,
     },
-    signupText: {
-        ...Typography.body,
-        color: Colors.textSecondary,
-    },
-    signupLink: {
+    backLink: {
         ...Typography.body,
         color: Colors.primary,
         fontWeight: '600',

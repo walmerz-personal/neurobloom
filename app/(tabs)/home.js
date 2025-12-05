@@ -1,11 +1,12 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useState, useEffect, useCallback } from 'react';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { useAuth } from '../../contexts/AuthContext';
-import { MessageCircle, PlayCircle, CheckCircle, LogOut, Quote, User } from 'lucide-react-native';
+import { SupabaseService } from '../../services/SupabaseService';
+import { MessageCircle, PlayCircle, CheckCircle, LogOut, Quote, User, Flower } from 'lucide-react-native';
 import Svg, { Circle } from 'react-native-svg';
 import Logo from '../../components/Logo';
 
@@ -65,18 +66,45 @@ const CircularProgress = ({ progress = 0.75, size = 80, strokeWidth = 8, color =
 
 export default function Home() {
     const router = useRouter();
-    const { userData, signOut } = useAuth();
+    const { userData, user, signOut } = useAuth();
     const [motivationalQuote, setMotivationalQuote] = useState('');
+    const [dailyProgress, setDailyProgress] = useState({ completed: 0, total: 4 }); // Default goal of 4
 
     useEffect(() => {
         const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
         setMotivationalQuote(randomQuote);
     }, []);
 
+    useFocusEffect(
+        useCallback(() => {
+            if (user) {
+                fetchDailyProgress();
+            }
+        }, [user])
+    );
+
+    const fetchDailyProgress = async () => {
+        try {
+            const { log, error } = await SupabaseService.getTodayLog(user.id);
+            if (log && log.exercises_completed) {
+                setDailyProgress({
+                    completed: log.exercises_completed.length,
+                    total: 4 // Keeping the goal at 4 for now as per design
+                });
+            } else {
+                setDailyProgress({ completed: 0, total: 4 });
+            }
+        } catch (error) {
+            console.error('Error fetching daily progress:', error);
+        }
+    };
+
     const handleLogout = async () => {
         await signOut();
         router.replace('/auth/login');
     };
+
+    const progressPercentage = Math.min(dailyProgress.completed / dailyProgress.total, 1);
 
     return (
         <ScreenWrapper>
@@ -99,10 +127,16 @@ export default function Home() {
                 <View style={styles.heroCard}>
                     <View style={styles.heroContent}>
                         <Text style={styles.heroTitle}>Your Daily Progress</Text>
-                        <Text style={styles.heroSubtitle}>3 of 4 exercises completed</Text>
-                        <Text style={styles.heroMessage}>Keep up the amazing work!</Text>
+                        <Text style={styles.heroSubtitle}>
+                            {dailyProgress.completed} of {dailyProgress.total} exercises completed
+                        </Text>
+                        <Text style={styles.heroMessage}>
+                            {dailyProgress.completed >= dailyProgress.total
+                                ? "You hit your daily goal! 🎉"
+                                : "Keep up the amazing work!"}
+                        </Text>
                     </View>
-                    <CircularProgress progress={0.75} color={Colors.primary} />
+                    <CircularProgress progress={progressPercentage} color={Colors.primary} />
                 </View>
 
                 {motivationalQuote && (
@@ -130,6 +164,15 @@ export default function Home() {
                         color={Colors.primaryLight + '20'}
                     />
                 </View>
+
+                <QuickActionRow
+                    icon={<Flower size={24} color={Colors.success} />}
+                    title="My Garden"
+                    subtitle="Visit your peace garden"
+                    onPress={() => router.push('/garden')}
+                />
+
+                <View style={{ height: 16 }} />
 
                 <QuickActionRow
                     icon={<CheckCircle size={24} color={Colors.success} />}

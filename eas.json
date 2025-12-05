@@ -10,11 +10,7 @@
         "preview": {
             "distribution": "internal"
         },
-        "production": {
-            "env": {
-                "EXPO_PUBLIC_OPENAI_API_KEY": "@EXPO_PUBLIC_OPENAI_API_KEY"
-            }
-        }
+        "production": {}
     },
     "submit": {
         "production": {}

@@ -52,6 +52,7 @@ export default function Lilly() {
             const response = await sendMessage(userMsgText, history, userProfile);
 
             // LillyService always returns a valid response object with helpful fallback messages
+            // It never throws - it handles all errors internally and returns helpful messages
             const lillyMsg = {
                 id: Date.now() + 1,
                 isLilly: true,
@@ -66,8 +67,8 @@ export default function Lilly() {
             }
 
         } catch (error) {
-            // Only catch true network errors, not API failures (those are handled by LillyService)
-            console.error("Network error in Lilly chat:", error);
+            // This should only catch true network errors (extremely rare - usually means no internet at all)
+            console.error("Critical network error in Lilly chat:", error);
             setMessages(prev => [...prev, {
                 id: Date.now() + 1,
                 isLilly: true,

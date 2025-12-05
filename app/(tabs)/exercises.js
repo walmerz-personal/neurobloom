@@ -1,9 +1,11 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
+import { useState, useEffect } from 'react';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
-import { PlayCircle, Clock, Target, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { PlayCircle, Clock, Target, ChevronDown, ChevronUp, CheckCircle, Circle } from 'lucide-react-native';
+import { useAuth } from '../../contexts/AuthContext';
+import { SupabaseService } from '../../services/SupabaseService';
 
 const CATEGORIES = ['All', 'Arms', 'Legs', 'Core', 'Hands'];
 
@@ -221,8 +223,69 @@ const EXERCISES_DATA = [
 ];
 
 export default function Exercises() {
+    const { user } = useAuth();
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [expandedCardId, setExpandedCardId] = useState(null);
+    const [completedExercises, setCompletedExercises] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (user) {
+            fetchCompletedExercises();
+        }
+    }, [user]);
+
+    const fetchCompletedExercises = async () => {
+        try {
+            const { log, error } = await SupabaseService.getTodayLog(user.id);
+            if (log && log.exercises_completed) {
+                setCompletedExercises(log.exercises_completed);
+            } else {
+                setCompletedExercises([]);
+            }
+        } catch (error) {
+            console.error('Error fetching completed exercises:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const toggleCompletion = async (exerciseId) => {
+        if (!user) {
+            // Should not happen in normal flow if protected, but safe guard
+            console.warn('User not logged in, cannot toggle completion');
+            return;
+        }
+
+        // Optimistic update
+        const isCompleted = completedExercises.includes(exerciseId);
+        let newCompleted = [];
+
+        if (isCompleted) {
+            newCompleted = completedExercises.filter(id => id !== exerciseId);
+        } else {
+            newCompleted = [...completedExercises, exerciseId];
+        }
+
+        setCompletedExercises(newCompleted);
+
+        // API call
+        const { error } = await SupabaseService.toggleExerciseCompletion(user.id, exerciseId);
+
+        if (error) {
+            // Revert on error
+            console.error('Error toggling completion:', error);
+            setCompletedExercises(completedExercises);
+            alert('Failed to update status. Please try again.');
+        } else {
+            // Success! If we just completed it (was not completed before), award points
+            if (!isCompleted) {
+                const { points } = await SupabaseService.getUserPoints(user.id);
+                await SupabaseService.updateUserPoints(user.id, points + 10);
+                Alert.alert('Great Job!', 'You earned 10 points! 🌱');
+            }
+        }
+    };
 
     const filteredExercises = selectedCategory === 'All'
         ? EXERCISES_DATA
@@ -271,7 +334,9 @@ export default function Exercises() {
                         key={exercise.id}
                         data={exercise}
                         isExpanded={expandedCardId === exercise.id}
+                        isCompleted={completedExercises.includes(exercise.id)}
                         onPress={() => toggleExpand(exercise.id)}
+                        onToggleComplete={() => toggleCompletion(exercise.id)}
                     />
                 ))}
                 <View style={styles.footerSpacer} />
@@ -280,7 +345,7 @@ export default function Exercises() {
     );
 }
 
-function ExerciseCard({ data, isExpanded, onPress }) {
+function ExerciseCard({ data, isExpanded, isCompleted, onPress, onToggleComplete }) {
     return (
         <TouchableOpacity
             style={[styles.card, isExpanded && styles.cardExpanded]}
@@ -292,6 +357,20 @@ function ExerciseCard({ data, isExpanded, onPress }) {
                 <View style={styles.categoryBadge}>
                     <Text style={styles.categoryBadgeText}>{data.category}</Text>
                 </View>
+
+                <TouchableOpacity
+                    style={styles.checkboxContainer}
+                    onPress={(e) => {
+                        e.stopPropagation();
+                        onToggleComplete();
+                    }}
+                >
+                    {isCompleted ? (
+                        <CheckCircle size={28} color={Colors.primary} fill="white" />
+                    ) : (
+                        <Circle size={28} color="rgba(0,0,0,0.3)" fill="rgba(255,255,255,0.8)" />
+                    )}
+                </TouchableOpacity>
             </View>
 
             <View style={styles.info}>
@@ -438,6 +517,12 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter_600SemiBold',
         fontSize: 12,
         color: Colors.text,
+    },
+    checkboxContainer: {
+        position: 'absolute',
+        top: 16,
+        left: 16,
+        zIndex: 10,
     },
     info: {
         padding: 20,

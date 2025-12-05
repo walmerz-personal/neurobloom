@@ -46,6 +46,11 @@ export default function CheckIn() {
         try {
             const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
+            // 1. Fetch existing log to calculate points
+            const { log: existingLog } = await SupabaseService.getTodayLog(user.id);
+            const previouslyCompleted = existingLog?.exercises_completed || [];
+
+            // 2. Save the new log
             const { data, error } = await SupabaseService.saveDailyLog(user.id, {
                 logDate: today,
                 mood,
@@ -60,7 +65,19 @@ export default function CheckIn() {
                 Alert.alert('Error', 'Failed to save check-in. Please try again.');
             } else {
                 console.log('✅ Check-in saved:', data);
-                Alert.alert('Success', 'Check-in saved!', [
+
+                // 3. Calculate and award points for NEW exercises
+                const newExercises = completedExercises.filter(id => !previouslyCompleted.includes(id));
+                let successMessage = 'Check-in saved!';
+
+                if (newExercises.length > 0) {
+                    const pointsEarned = newExercises.length * 10;
+                    const { points } = await SupabaseService.getUserPoints(user.id);
+                    await SupabaseService.updateUserPoints(user.id, points + pointsEarned);
+                    successMessage = `Check-in saved! You earned ${pointsEarned} points! 🌱`;
+                }
+
+                Alert.alert('Success', successMessage, [
                     { text: 'OK', onPress: () => router.back() }
                 ]);
             }

@@ -129,6 +129,50 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const resetPassword = async (email) => {
+        try {
+            const { data, error } = await SupabaseService.resetPasswordForEmail(email);
+            if (error) return { error };
+            return { data, error: null };
+        } catch (error) {
+            return { error };
+        }
+    };
+
+    const updatePassword = async (newPassword) => {
+        try {
+            const { data, error } = await SupabaseService.updatePassword(newPassword);
+            if (error) return { error };
+            return { data, error: null };
+        } catch (error) {
+            return { error };
+        }
+    };
+
+    const deleteAccount = async () => {
+        try {
+            if (!user?.id) {
+                return { error: new Error('No user logged in') };
+            }
+
+            // Delete all user data from database
+            const { success, error } = await SupabaseService.deleteUserAccount(user.id);
+
+            if (error) {
+                console.error('❌ Delete account error:', error);
+                return { error };
+            }
+
+            // Sign out the user
+            await signOut();
+
+            return { error: null };
+        } catch (error) {
+            console.error('❌ Delete account error:', error);
+            return { error };
+        }
+    };
+
     const value = {
         user,
         session,
@@ -137,6 +181,9 @@ export const AuthProvider = ({ children }) => {
         signIn,
         signUp,
         signOut,
+        resetPassword,
+        updatePassword,
+        deleteAccount,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

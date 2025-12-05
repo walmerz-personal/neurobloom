@@ -1,9 +1,5 @@
 require('dotenv').config({ path: '.env.local' });
 
-if (!process.env.EXPO_PUBLIC_OPENAI_API_KEY) {
-    console.warn('⚠️  WARNING: EXPO_PUBLIC_OPENAI_API_KEY is not defined. AI features will not work in production builds unless set in EAS Secrets.');
-}
-
 
 export default {
     expo: {
@@ -16,6 +12,9 @@ export default {
         icon: "./assets/neurobloom-logo.png",
         userInterfaceStyle: "light",
         newArchEnabled: true,
+        plugins: [
+            "expo-router"
+        ],
         splash: {
             image: "./assets/splash-icon.png",
             resizeMode: "contain",
@@ -24,7 +23,7 @@ export default {
         ios: {
             supportsTablet: true,
             bundleIdentifier: "com.neurobloom.app",
-            buildNumber: "7",
+            buildNumber: "10",
             infoPlist: {
                 ITSAppUsesNonExemptEncryption: false
             }
@@ -45,7 +44,6 @@ export default {
                 projectId: "14af3de7-c021-483c-a233-4ff53245bcc1"
             },
             // Environment variables loaded from .env.local
-            openaiApiKey: process.env.EXPO_PUBLIC_OPENAI_API_KEY,
             supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
             supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
         },

@@ -6,11 +6,11 @@ import { Colors } from '../constants/Colors';
 import { Typography } from '../constants/Typography';
 import { useAuth } from '../contexts/AuthContext';
 import { SupabaseService } from '../services/SupabaseService';
-import { ArrowLeft, Save, User, Calendar, Activity, Target, Mail } from 'lucide-react-native';
+import { ArrowLeft, Save, User, Calendar, Activity, Target, Mail, Trash2 } from 'lucide-react-native';
 
 export default function Profile() {
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, deleteAccount } = useAuth();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -75,6 +75,39 @@ export default function Profile() {
             setSaving(false);
         }
     };
+
+    const handleDeleteAccount = async () => {
+        Alert.alert(
+            'Delete Account',
+            'Are you sure you want to delete your account? This will permanently remove all your data, including your profile, progress, conversations, and garden. This action cannot be undone.',
+            [
+                {
+                    text: 'Cancel',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            const { error } = await deleteAccount();
+                            if (error) {
+                                Alert.alert('Error', 'Failed to delete account. Please try again.');
+                                console.error('Delete account error:', error);
+                            } else {
+                                Alert.alert('Account Deleted', 'Your account has been permanently deleted.');
+                                // User will be automatically signed out and redirected by AuthContext
+                            }
+                        } catch (error) {
+                            Alert.alert('Error', 'An unexpected error occurred.');
+                            console.error('Delete account error:', error);
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
 
     if (loading) {
         return (
@@ -184,6 +217,24 @@ export default function Profile() {
                         />
                     </View>
                 </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Account Management</Text>
+
+                    <View style={styles.dangerZone}>
+                        <Text style={styles.dangerWarning}>
+                            Deleting your account is permanent and cannot be undone. All your data will be removed.
+                        </Text>
+
+                        <TouchableOpacity
+                            style={styles.deleteButton}
+                            onPress={handleDeleteAccount}
+                        >
+                            <Trash2 size={20} color="white" />
+                            <Text style={styles.deleteButtonText}>Delete My Account</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </ScrollView>
         </ScreenWrapper>
     );
@@ -278,5 +329,33 @@ const styles = StyleSheet.create({
         color: Colors.textTertiary,
         marginTop: 6,
         marginLeft: 4,
+    },
+    dangerZone: {
+        backgroundColor: '#FEF2F2',
+        borderWidth: 1,
+        borderColor: '#FEE2E2',
+        borderRadius: 12,
+        padding: 16,
+    },
+    dangerWarning: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 14,
+        color: '#991B1B',
+        marginBottom: 16,
+        lineHeight: 20,
+    },
+    deleteButton: {
+        backgroundColor: '#DC2626',
+        borderRadius: 12,
+        padding: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+    },
+    deleteButtonText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 16,
+        color: 'white',
     },
 });
