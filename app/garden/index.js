@@ -13,6 +13,7 @@ export default function GardenScreen() {
     const { user } = useAuth();
     const [points, setPoints] = useState(0);
     const [plants, setPlants] = useState(Array(6).fill(null)); // 6 garden slots
+    const [inventory, setInventory] = useState([]); // User's seed inventory
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
@@ -23,7 +24,11 @@ export default function GardenScreen() {
             const { points: userPoints } = await SupabaseService.getUserPoints(user.id);
             setPoints(userPoints);
 
-            // 2. Fetch Plants
+            // 2. Fetch Inventory
+            const { inventory: userInventory } = await SupabaseService.getInventory(user.id);
+            setInventory(userInventory || []);
+
+            // 3. Fetch Plants
             const { plants: gardenPlants } = await SupabaseService.getGardenPlants(user.id);
 
             // Map to slots (0-5)
@@ -62,16 +67,36 @@ export default function GardenScreen() {
             // View plant details (future feature)
             Alert.alert(plant.items?.name || 'Plant', 'This plant is growing beautifully!');
         } else {
-            // Plant a seed
-            // For now, just navigate to shop or show alert
-            Alert.alert(
-                'Empty Plot',
-                'Would you like to plant a seed here?',
-                [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Go to Shop', onPress: () => router.push('/garden/shop') }
-                ]
-            );
+            // Show inventory to plant a seed
+            if (inventory.length === 0) {
+                Alert.alert(
+                    'No Seeds',
+                    'You don\'t have any seeds to plant. Visit the shop to buy some!',
+                    [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Go to Shop', onPress: () => router.push('/garden/shop') }
+                    ]
+                );
+            } else {
+                // Show seed selection dialog
+                const buttons = inventory.map(item => ({
+                    text: `${item.items.name} (${item.quantity})`,
+                    onPress: () => handlePlantSeed(item.item_id, index)
+                }));
+                buttons.push({ text: 'Cancel', style: 'cancel' });
+
+                Alert.alert('Choose a Seed', 'Select which seed to plant:', buttons);
+            }
+        }
+    };
+
+    const handlePlantSeed = async (itemId, boxIndex) => {
+        const { success, error } = await SupabaseService.plantSeed(user.id, itemId, boxIndex);
+        if (success) {
+            Alert.alert('Success', 'Your seed has been planted! 🌱');
+            fetchData(); // Refresh the garden
+        } else {
+            Alert.alert('Error', error?.message || 'Failed to plant seed.');
         }
     };
 

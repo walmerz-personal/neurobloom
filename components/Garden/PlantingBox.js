@@ -1,26 +1,63 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Colors } from '../../constants/Colors';
-import { Sprout, Flower, TreeDeciduous, Plus } from 'lucide-react-native';
+import { Sprout, Flower, Plus } from 'lucide-react-native';
 
 export const PlantingBox = ({ plant, onPress, disabled }) => {
     const isPlanted = !!plant;
 
-    // Determine growth stage icon
-    const getPlantIcon = () => {
-        if (!plant) return <Plus size={24} color={Colors.textTertiary} />;
+    // Calculate growth stage based on days elapsed (0-3+)
+    const getGrowthStage = () => {
+        if (!plant) return null;
 
-        // Simple logic for now: check duration vs time elapsed
-        // In a real app, we'd calculate this more precisely
         const plantedAt = new Date(plant.planted_at);
         const now = new Date();
         const hoursElapsed = (now - plantedAt) / (1000 * 60 * 60);
-        const duration = plant.items?.growth_duration_hours || 24;
-        const progress = Math.min(hoursElapsed / duration, 1);
+        const daysElapsed = Math.floor(hoursElapsed / 24);
 
-        if (progress < 0.3) return <Sprout size={32} color={Colors.success} />;
-        if (progress < 0.8) return <Sprout size={40} color={Colors.success} />; // Bigger sprout
-        return <Flower size={48} color={Colors.primary} />; // Bloom
+        return Math.min(daysElapsed, 3); // Cap at stage 3 (full bloom)
+    };
+
+    // Render plant based on growth stage
+    const renderPlant = () => {
+        if (!plant) return <Plus size={24} color={Colors.textTertiary} />;
+
+        const stage = getGrowthStage();
+
+        switch (stage) {
+            case 0: // Day 0: Tiny sprout peeking out
+                return (
+                    <View style={styles.plantContainer}>
+                        <Sprout size={20} color="#4CAF50" style={styles.tinySprout} />
+                    </View>
+                );
+            case 1: // Day 1: Small sprout growing
+                return (
+                    <View style={styles.plantContainer}>
+                        <Sprout size={32} color="#66BB6A" />
+                    </View>
+                );
+            case 2: // Day 2: Larger sprout with stems/leaves
+                return (
+                    <View style={styles.plantContainer}>
+                        <Sprout size={44} color="#81C784" />
+                    </View>
+                );
+            case 3: // Day 3+: Full bloom
+            default:
+                return (
+                    <View style={styles.plantContainer}>
+                        <Flower size={52} color={Colors.primary} />
+                    </View>
+                );
+        }
+    };
+
+    // Show wood covering only on Day 0
+    const showWoodCovering = () => {
+        if (!plant) return false;
+        const stage = getGrowthStage();
+        return stage === 0;
     };
 
     return (
@@ -32,13 +69,21 @@ export const PlantingBox = ({ plant, onPress, disabled }) => {
         >
             <View style={styles.boxFront}>
                 <View style={styles.soil}>
-                    {getPlantIcon()}
+                    {renderPlant()}
                 </View>
+                {/* Wood covering for Day 0 (newly planted) */}
+                {showWoodCovering() && (
+                    <View style={styles.woodCovering}>
+                        <View style={styles.woodPlank} />
+                        <View style={[styles.woodPlank, styles.woodPlank2]} />
+                    </View>
+                )}
             </View>
             <View style={styles.boxLip} />
         </TouchableOpacity>
     );
 };
+
 
 const styles = StyleSheet.create({
     container: {
@@ -60,7 +105,7 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: '#5D4037',
         overflow: 'hidden',
-        justifyContent: 'flex-start', // Align soil to top/middle
+        position: 'relative',
     },
     soil: {
         height: '100%',
@@ -80,5 +125,39 @@ const styles = StyleSheet.create({
         borderRadius: 4,
         borderWidth: 2,
         borderColor: '#5D4037',
+    },
+    plantContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    tinySprout: {
+        marginBottom: 10,
+    },
+    // Wood covering overlay (Day 0 only)
+    woodCovering: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '40%', // Covers top portion of box
+        backgroundColor: '#8D6E63',
+        borderBottomWidth: 2,
+        borderBottomColor: '#5D4037',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 8,
+    },
+    woodPlank: {
+        width: '100%',
+        height: 6,
+        backgroundColor: '#6D4C41',
+        borderRadius: 2,
+        marginVertical: 2,
+        borderWidth: 1,
+        borderColor: '#5D4037',
+    },
+    woodPlank2: {
+        backgroundColor: '#795548',
+        width: '90%',
     },
 });

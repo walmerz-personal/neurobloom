@@ -42,10 +42,10 @@ CREATE TABLE IF NOT EXISTS garden_plants (
 -- 5. Seed some initial items
 INSERT INTO items (name, description, cost, growth_duration_hours, image_asset)
 VALUES
-  ('Lavender', 'A calming purple flower.', 50, 24, 'lavender'),
-  ('Sunflower', 'Bright and cheerful.', 100, 48, 'sunflower'),
-  ('Rose', 'Classic beauty.', 150, 72, 'rose'),
-  ('Oak Tree', 'Strong and steady.', 500, 168, 'oak_tree')
+  ('Lavender', 'A calming purple flower.', 10, 24, 'lavender'),
+  ('Sunflower', 'Bright and cheerful.', 30, 48, 'sunflower'),
+  ('Rose', 'Classic beauty.', 50, 72, 'rose'),
+  ('Oak Tree', 'Strong and steady.', 100, 168, 'oak_tree')
 ON CONFLICT DO NOTHING;
 
 -- 6. Enable RLS (Row Level Security)
