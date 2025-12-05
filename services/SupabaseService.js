@@ -1,7 +1,36 @@
 // services/SupabaseService.js
 import { createClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Config } from '../constants/Config';
 import 'react-native-url-polyfill/auto';
+
+// Custom storage adapter for React Native using AsyncStorage
+// This ensures sessions persist across app restarts
+const customStorage = {
+    getItem: async (key) => {
+        try {
+            const value = await AsyncStorage.getItem(key);
+            return value;
+        } catch (error) {
+            console.error('Error getting item from AsyncStorage:', error);
+            return null;
+        }
+    },
+    setItem: async (key, value) => {
+        try {
+            await AsyncStorage.setItem(key, value);
+        } catch (error) {
+            console.error('Error setting item in AsyncStorage:', error);
+        }
+    },
+    removeItem: async (key) => {
+        try {
+            await AsyncStorage.removeItem(key);
+        } catch (error) {
+            console.error('Error removing item from AsyncStorage:', error);
+        }
+    },
+};
 
 // Initialize Supabase client with error handling
 let supabase = null;
@@ -18,9 +47,16 @@ try {
         console.error(errorMsg);
         initError = new Error(errorMsg);
     } else {
-        // Credentials exist, create client
-        supabase = createClient(Config.SUPABASE_URL, Config.SUPABASE_ANON_KEY);
-        console.log('✅ Supabase client initialized successfully');
+        // Credentials exist, create client with AsyncStorage for session persistence
+        supabase = createClient(Config.SUPABASE_URL, Config.SUPABASE_ANON_KEY, {
+            auth: {
+                storage: customStorage,
+                autoRefreshToken: true,
+                persistSession: true,
+                detectSessionInUrl: false, // We handle deep links manually
+            },
+        });
+        console.log('✅ Supabase client initialized successfully with AsyncStorage');
     }
 } catch (error) {
     const errorMsg = `❌ CRITICAL: Failed to initialize Supabase client: ${error.message}`;
