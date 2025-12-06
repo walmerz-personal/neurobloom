@@ -1,12 +1,14 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, SafeAreaView, Dimensions, Platform } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { PlantingBox } from '../../components/Garden/PlantingBox';
 import { SupabaseService } from '../../services/SupabaseService';
 import { useAuth } from '../../contexts/AuthContext';
-import { ShoppingBag, Coins, ArrowLeft } from 'lucide-react-native';
+import { ShoppingBag, Coins, ArrowLeft, Leaf } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { width } = Dimensions.get('window');
 
 export default function GardenScreen() {
     const router = useRouter();
@@ -56,11 +58,6 @@ export default function GardenScreen() {
         }, [user])
     );
 
-    const onRefresh = () => {
-        setRefreshing(true);
-        fetchData();
-    };
-
     const handleBoxPress = (index) => {
         const plant = plants[index];
         if (plant) {
@@ -101,131 +98,192 @@ export default function GardenScreen() {
     };
 
     return (
-        <ScreenWrapper>
-            <View style={styles.header}>
-                <View style={styles.headerLeft}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                        <ArrowLeft size={24} color={Colors.text} />
-                    </TouchableOpacity>
-                    <View style={styles.pointsContainer}>
-                        <Coins size={20} color={Colors.primary} />
-                        <Text style={styles.pointsText}>{points} Points</Text>
+        <View style={styles.container}>
+            {/* Sky Background */}
+            <LinearGradient
+                colors={['#D1C4E9', '#F3E5F5', '#FFF3E0']} // Purple -> Pink -> Orange/Peach
+                style={styles.sky}
+            >
+                {/* Header */}
+                <SafeAreaView style={styles.safeArea}>
+                    <View style={styles.header}>
+                        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                            {/*           <ArrowLeft size={24} color="#5D4037" /> */}
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>NeuroBloom</Text>
+                        <TouchableOpacity
+                            style={styles.shopButton}
+                            onPress={() => router.push('/garden/shop')}
+                        >
+                            {/*           <ShoppingBag size={24} color="#5D4037" /> */}
+                        </TouchableOpacity>
                     </View>
+
+                    {/* Stats Pills */}
+                    <View style={styles.statsContainer}>
+                        <View style={styles.statPill}>
+                            <Leaf size={16} color="#8D6E63" fill="#8D6E63" />
+                            <Text style={styles.statText}>Seeds: {inventory.reduce((acc, curr) => acc + curr.quantity, 0)}</Text>
+                        </View>
+                        <View style={styles.statPill}>
+                            <Coins size={16} color="#FFD54F" fill="#FFD54F" />
+                            <Text style={styles.statText}>Points: {points}</Text>
+                        </View>
+                    </View>
+                </SafeAreaView>
+
+                {/* Hills Background Layers */}
+                <View style={styles.hillsContainer}>
+                    <View style={[styles.hill, styles.hillBack]} />
+                    <View style={[styles.hill, styles.hillFront]} />
                 </View>
-                <TouchableOpacity
-                    style={styles.shopButton}
-                    onPress={() => router.push('/garden/shop')}
+
+            </LinearGradient>
+
+            {/* Garden Area (Soil) */}
+            <View style={styles.ground}>
+                {/* Soil Textures/Details could go here */}
+
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.scrollContent}
+                    style={styles.scrollView}
                 >
-                    <ShoppingBag size={20} color="white" />
-                    <Text style={styles.shopButtonText}>Seed Shop</Text>
-                </TouchableOpacity>
+                    <View style={styles.paddingStart} />
+                    {plants.map((plant, index) => (
+                        <PlantingBox
+                            key={index}
+                            plant={plant}
+                            onPress={() => handleBoxPress(index)}
+                            index={index}
+                        />
+                    ))}
+                    <View style={styles.paddingEnd} />
+                </ScrollView>
             </View>
 
-            <View style={styles.gardenContainer}>
-                {/* Sky Background */}
-                <View style={styles.sky}>
-                    <Text style={styles.gardenTitle}>My Peace Garden</Text>
-                    <Text style={styles.gardenSubtitle}>Watch your progress bloom</Text>
-                </View>
-
-                {/* Garden Area */}
-                <View style={styles.ground}>
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.scrollContent}
-                    >
-                        {plants.map((plant, index) => (
-                            <PlantingBox
-                                key={index}
-                                plant={plant}
-                                onPress={() => handleBoxPress(index)}
-                            />
-                        ))}
-                    </ScrollView>
-                </View>
-            </View>
-        </ScreenWrapper>
+            {/* Bottom Navigation Placeholder (Visual only, actual nav handled by Tabs) */}
+            {/* The tab bar covers the bottom, so we just need ensure soil goes down enough */}
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        backgroundColor: 'white',
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.border,
-        zIndex: 10,
-    },
-    headerLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    backButton: {
-        padding: 4,
-    },
-    pointsContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        backgroundColor: Colors.surfaceHighlight,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
-    },
-    pointsText: {
-        fontFamily: 'Inter_600SemiBold',
-        fontSize: 14,
-        color: Colors.primary,
-    },
-    shopButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        backgroundColor: Colors.primary,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-    },
-    shopButtonText: {
-        fontFamily: 'Inter_600SemiBold',
-        fontSize: 14,
-        color: 'white',
-    },
-    gardenContainer: {
+    container: {
         flex: 1,
-        backgroundColor: '#E3F2FD', // Light sky blue
+        backgroundColor: '#FFF3E0',
     },
     sky: {
         flex: 1,
+        width: '100%',
+    },
+    safeArea: {
+        width: '100%',
+        zIndex: 10,
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between', // Centered title, but we need buttons on sides potentially
         alignItems: 'center',
-        paddingTop: 40,
+        paddingHorizontal: 20,
+        paddingTop: Platform.OS === 'android' ? 40 : 10,
+        marginBottom: 10,
     },
-    gardenTitle: {
-        fontFamily: 'Inter_700Bold',
+    headerTitle: {
+        fontFamily: 'Inter_700Bold', // Assuming this font exists from previous analysis
         fontSize: 24,
-        color: '#1565C0', // Darker blue
-        marginBottom: 8,
+        color: '#2E1A16', // Dark Brown
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        textAlign: 'center',
+        zIndex: -1,
     },
-    gardenSubtitle: {
-        fontFamily: 'Inter_400Regular',
-        fontSize: 16,
-        color: '#546E7A',
+    backButton: {
+        padding: 8,
     },
+    shopButton: {
+        padding: 8,
+    },
+    statsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 16,
+        marginTop: 10,
+    },
+    statPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        gap: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    statText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 14,
+        color: '#4E342E',
+    },
+
+    // Hills
+    hillsContainer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 200, // Height of hills area
+        zIndex: 0,
+    },
+    hill: {
+        position: 'absolute',
+        bottom: -50, // Push down slightly
+        width: width * 1.5,
+        height: 200,
+        borderTopLeftRadius: 300,
+        borderTopRightRadius: 300,
+    },
+    hillBack: {
+        backgroundColor: 'rgba(126, 87, 194, 0.3)', // Purpleish
+        left: -100,
+        bottom: 20,
+        transform: [{ scaleX: 1.5 }],
+    },
+    hillFront: {
+        backgroundColor: 'rgba(149, 117, 205, 0.4)', // Lighter purple
+        right: -50,
+        bottom: 0,
+        transform: [{ scaleX: 1.2 }],
+    },
+
+    // Ground
     ground: {
-        height: 180,
-        backgroundColor: '#5D4037', // Dark brown soil
-        justifyContent: 'flex-end',
-        paddingBottom: 20,
+        height: 300, // Fixed height for soil area
+        backgroundColor: '#4E342E', // Dark Brown Soil
+        borderTopWidth: 8,
+        borderTopColor: '#5D4037', // Slightly lighter top edge
+        width: '100%',
+        justifyContent: 'flex-start', // Plants sit on top of soil? No, they sit IN soil line.
+        // Actually, in the image, the boxes SIT ON the soil line.
+        // So the scrollview should be overlapping the sky/ground boundary.
+        // Let's adjust.
+        zIndex: 1,
+    },
+    // We want the ScrollView to float over the boundary of Sky/Ground
+    scrollView: {
+        marginTop: -60, // Pull up to overlap sky
+        paddingTop: 0,
     },
     scrollContent: {
-        paddingHorizontal: 20,
-        alignItems: 'flex-end', // Align boxes to bottom of scroll view
-        paddingBottom: 10,
+        alignItems: 'flex-end', // Align items to bottom of scroll area
+        paddingBottom: 40, // Space from bottom
     },
+    paddingStart: { width: 20 },
+    paddingEnd: { width: 20 },
 });

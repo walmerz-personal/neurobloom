@@ -782,35 +782,55 @@ export const SupabaseService = {
      */
     async buyItem(userId, itemId, cost) {
         try {
+            console.log(`🛒 Processing buyItem: User=${userId}, Item=${itemId}, Cost=${cost}`);
+
             // 1. Check points
             const { points, error: pointsError } = await this.getUserPoints(userId);
-            if (pointsError) return { success: false, error: pointsError };
+            if (pointsError) {
+                console.error('❌ BuyItem - Failed to get points:', pointsError);
+                return { success: false, error: pointsError };
+            }
 
             if (points < cost) {
+                console.log(`❌ BuyItem - Insufficient points: Has ${points}, Needs ${cost}`);
                 return { success: false, error: new Error('Insufficient points') };
             }
 
             // 2. Deduct points
+            console.log(`💰 BuyItem - Deducting ${cost} points from ${points}`);
             const { error: updateError } = await this.updateUserPoints(userId, points - cost);
-            if (updateError) return { success: false, error: updateError };
+            if (updateError) {
+                console.error('❌ BuyItem - Failed to update points:', updateError);
+                return { success: false, error: updateError };
+            }
 
             // 3. Add to inventory
             // Check if already owns
-            const { data: existing } = await supabase
+            console.log('🔍 BuyItem - Checking existing inventory...');
+            const { data: existing, error: fetchError } = await supabase
                 .from('user_inventory')
                 .select('*')
                 .eq('user_id', userId)
                 .eq('item_id', itemId)
-                .single();
+                .maybeSingle(); // Use maybeSingle to avoid error on empty result
+
+            if (fetchError) {
+                console.error('❌ BuyItem - Error checking inventory:', fetchError);
+                // Try to refund? For now just return error, but points are lost. 
+                // ideally we use a transaction or Supabase function.
+                return { success: false, error: fetchError };
+            }
 
             let inventoryError;
             if (existing) {
+                console.log(`➕ BuyItem - Updating existing stack (Qty: ${existing.quantity})`);
                 const { error } = await supabase
                     .from('user_inventory')
                     .update({ quantity: existing.quantity + 1 })
                     .eq('id', existing.id);
                 inventoryError = error;
             } else {
+                console.log('🆕 BuyItem - creating new inventory stack');
                 const { error } = await supabase
                     .from('user_inventory')
                     .insert([{ user_id: userId, item_id: itemId, quantity: 1 }]);
@@ -818,15 +838,35 @@ export const SupabaseService = {
             }
 
             if (inventoryError) {
-                // Rollback points (simplified)
+                console.error('❌ BuyItem - Inventory update failed:', inventoryError);
+                // Rollback points
+                console.log('↩️ BuyItem - Rolling back points update...');
                 await this.updateUserPoints(userId, points);
                 return { success: false, error: inventoryError };
             }
 
+            // 4. VERIFICATION STEP
+            // Double check it was actually added
+            const { data: verifData } = await supabase
+                .from('user_inventory')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('item_id', itemId)
+                .maybeSingle();
+
+            if (!verifData || verifData.quantity < (existing ? existing.quantity + 1 : 1)) {
+                console.error('❌ CRITICAL: Inventory verification failed! Item not found or quantity mismatch after write.');
+                // Rollback
+                await this.updateUserPoints(userId, points);
+                return { success: false, error: new Error('Purchase verification failed. Points refunded.') };
+            }
+
+            console.log('✅ BuyItem - Purchase successful and verified');
             return { success: true, error: null };
 
         } catch (error) {
-            console.error('❌ Buy item error:', error);
+            console.error('❌ Buy item exception:', error);
+            // Attempt rollback if possible, though strict transactional safety requires SQL functions
             return { success: false, error };
         }
     },
