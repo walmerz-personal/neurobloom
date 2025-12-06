@@ -11,7 +11,7 @@ export default {
         orientation: "portrait",
         icon: "./assets/neurobloom-logo.png",
         userInterfaceStyle: "light",
-        newArchEnabled: true,
+        newArchEnabled: false,
         plugins: [
             "expo-router"
         ],
@@ -23,7 +23,7 @@ export default {
         ios: {
             supportsTablet: true,
             bundleIdentifier: "com.neurobloom.app",
-            buildNumber: "11",
+            buildNumber: "12",
             infoPlist: {
                 ITSAppUsesNonExemptEncryption: false
             }
