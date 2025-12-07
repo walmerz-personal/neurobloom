@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper } from '../components/ScreenWrapper';
 import { Colors } from '../constants/Colors';
@@ -20,6 +21,7 @@ export default function Profile() {
     const [strokeDate, setStrokeDate] = useState('');
     const [impairments, setImpairments] = useState('');
     const [goals, setGoals] = useState('');
+    const [showDatePicker, setShowDatePicker] = useState(false);
 
     useEffect(() => {
         loadProfile();
@@ -175,13 +177,39 @@ export default function Profile() {
                             <Calendar size={18} color={Colors.primary} />
                             <Text style={styles.label}>Date of Stroke</Text>
                         </View>
-                        <TextInput
+                        <TouchableOpacity
                             style={styles.input}
-                            value={strokeDate}
-                            onChangeText={setStrokeDate}
-                            placeholder="YYYY-MM-DD"
-                            placeholderTextColor={Colors.textTertiary}
-                        />
+                            onPress={() => setShowDatePicker(true)}
+                        >
+                            <Text style={strokeDate ? styles.dateText : styles.datePlaceholder}>
+                                {strokeDate || 'Select date'}
+                            </Text>
+                        </TouchableOpacity>
+                        {showDatePicker && (
+                            <DateTimePicker
+                                value={strokeDate ? new Date(strokeDate) : new Date()}
+                                mode="date"
+                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                maximumDate={new Date()}
+                                onChange={(event, selectedDate) => {
+                                    if (Platform.OS === 'android') {
+                                        setShowDatePicker(false);
+                                    }
+                                    if (selectedDate && event.type !== 'dismissed') {
+                                        const formattedDate = selectedDate.toISOString().split('T')[0];
+                                        setStrokeDate(formattedDate);
+                                    }
+                                }}
+                            />
+                        )}
+                        {Platform.OS === 'ios' && showDatePicker && (
+                            <TouchableOpacity
+                                style={styles.datePickerDone}
+                                onPress={() => setShowDatePicker(false)}
+                            >
+                                <Text style={styles.datePickerDoneText}>Done</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
 
                     <View style={styles.inputGroup}>
@@ -357,5 +385,26 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter_600SemiBold',
         fontSize: 16,
         color: 'white',
+    },
+    dateText: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 16,
+        color: Colors.text,
+    },
+    datePlaceholder: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 16,
+        color: Colors.textTertiary,
+    },
+    datePickerDone: {
+        alignSelf: 'flex-end',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        marginTop: 8,
+    },
+    datePickerDoneText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 16,
+        color: Colors.primary,
     },
 });

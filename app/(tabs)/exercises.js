@@ -8,12 +8,14 @@ import { useAuth } from '../../contexts/AuthContext';
 import { SupabaseService } from '../../services/SupabaseService';
 
 const CATEGORIES = ['All', 'Arms', 'Legs', 'Core', 'Hands'];
+const MODE_TYPES = ['All', 'Solo', 'Partner'];
 
 const EXERCISES_DATA = [
     // Arms & Shoulders
     {
         id: 'a1',
         category: 'Arms',
+        mode: 'solo', // Can do independently
         title: 'Shoulder Shrugs',
         time: '3 min',
         target: 'Upper Traps',
@@ -31,6 +33,7 @@ const EXERCISES_DATA = [
     {
         id: 'a2',
         category: 'Arms',
+        mode: 'partner', // Benefits from partner assistance for guiding arm movement
         title: 'Table Push',
         time: '5 min',
         target: 'Shoulder/Elbow',
@@ -48,6 +51,7 @@ const EXERCISES_DATA = [
     {
         id: 'a3',
         category: 'Arms',
+        mode: 'solo', // Can do independently
         title: 'Bicep Curls',
         time: '5 min',
         target: 'Biceps',
@@ -67,6 +71,7 @@ const EXERCISES_DATA = [
     {
         id: 'l1',
         category: 'Legs',
+        mode: 'solo', // Can do independently
         title: 'Ankle Pumps',
         time: '3 min',
         target: 'Calves/Shins',
@@ -84,6 +89,7 @@ const EXERCISES_DATA = [
     {
         id: 'l2',
         category: 'Legs',
+        mode: 'solo', // Can do independently
         title: 'Seated Marching',
         time: '5 min',
         target: 'Hip Flexors',
@@ -101,6 +107,7 @@ const EXERCISES_DATA = [
     {
         id: 'l3',
         category: 'Legs',
+        mode: 'partner', // Benefits from partner spotting for safety
         title: 'Sit-to-Stand',
         time: '8 min',
         target: 'Full Leg',
@@ -120,6 +127,7 @@ const EXERCISES_DATA = [
     {
         id: 'c1',
         category: 'Core',
+        mode: 'solo', // Can do independently
         title: 'Trunk Rotations',
         time: '4 min',
         target: 'Obliques',
@@ -137,6 +145,7 @@ const EXERCISES_DATA = [
     {
         id: 'c2',
         category: 'Core',
+        mode: 'partner', // Partner can help guide the stretch
         title: 'Lateral Flexion',
         time: '4 min',
         target: 'Side Core',
@@ -154,6 +163,7 @@ const EXERCISES_DATA = [
     {
         id: 'c3',
         category: 'Core',
+        mode: 'partner', // Benefits from partner for safety during balance work
         title: 'Seated Balance',
         time: '5 min',
         target: 'Core Stabilizers',
@@ -172,6 +182,7 @@ const EXERCISES_DATA = [
     {
         id: 'h1',
         category: 'Hands',
+        mode: 'solo', // Can do independently
         title: 'Fist Clenches',
         time: '3 min',
         target: 'Hand Grip',
@@ -189,6 +200,7 @@ const EXERCISES_DATA = [
     {
         id: 'h2',
         category: 'Hands',
+        mode: 'partner', // Partner can assist with passive stretching
         title: 'Towel Scrunch',
         time: '5 min',
         target: 'Finger Dexterity',
@@ -206,6 +218,7 @@ const EXERCISES_DATA = [
     {
         id: 'h3',
         category: 'Hands',
+        mode: 'solo', // Can do independently
         title: 'Thumb Touch',
         time: '4 min',
         target: 'Coordination',
@@ -225,6 +238,7 @@ const EXERCISES_DATA = [
 export default function Exercises() {
     const { user } = useAuth();
     const [selectedCategory, setSelectedCategory] = useState('All');
+    const [selectedMode, setSelectedMode] = useState('All');
     const [expandedCardId, setExpandedCardId] = useState(null);
     const [completedExercises, setCompletedExercises] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -287,9 +301,11 @@ export default function Exercises() {
         }
     };
 
-    const filteredExercises = selectedCategory === 'All'
-        ? EXERCISES_DATA
-        : EXERCISES_DATA.filter(ex => ex.category === selectedCategory);
+    const filteredExercises = EXERCISES_DATA.filter(ex => {
+        const categoryMatch = selectedCategory === 'All' || ex.category === selectedCategory;
+        const modeMatch = selectedMode === 'All' || ex.mode === selectedMode.toLowerCase();
+        return categoryMatch && modeMatch;
+    });
 
     const toggleExpand = (id) => {
         setExpandedCardId(expandedCardId === id ? null : id);
@@ -322,6 +338,32 @@ export default function Exercises() {
                                 selectedCategory === cat && styles.categoryTextActive
                             ]}>
                                 {cat}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
+
+            <View style={styles.modeContainer}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.modeContent}
+                >
+                    {MODE_TYPES.map((mode) => (
+                        <TouchableOpacity
+                            key={mode}
+                            style={[
+                                styles.modeChip,
+                                selectedMode === mode && styles.modeChipActive
+                            ]}
+                            onPress={() => setSelectedMode(mode)}
+                        >
+                            <Text style={[
+                                styles.modeText,
+                                selectedMode === mode && styles.modeTextActive
+                            ]}>
+                                {mode === 'Solo' ? '🧍 Solo' : mode === 'Partner' ? '🤝 Partner' : mode}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -467,6 +509,39 @@ const styles = StyleSheet.create({
         color: Colors.textSecondary,
     },
     categoryTextActive: {
+        color: 'white',
+    },
+    modeContainer: {
+        backgroundColor: Colors.background,
+        paddingBottom: 12,
+    },
+    modeContent: {
+        paddingHorizontal: 24,
+        gap: 10,
+    },
+    modeChip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: Colors.border,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.03,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    modeChipActive: {
+        backgroundColor: '#10B981',
+        borderColor: '#10B981',
+    },
+    modeText: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 13,
+        color: Colors.textSecondary,
+    },
+    modeTextActive: {
         color: 'white',
     },
     content: {

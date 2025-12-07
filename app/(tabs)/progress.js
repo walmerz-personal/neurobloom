@@ -106,20 +106,23 @@ export default function Progress() {
             );
         }
 
-        const height = 120;
-        const width = 280; // Approximate width of the card content
-        const padding = 20;
-        const chartHeight = height - padding * 2;
-        const chartWidth = width - padding * 2;
+        const height = 160;
+        const width = 320; // Approximate width of the card content
+        const paddingLeft = 35; // Extra space for Y-axis labels
+        const paddingRight = 15;
+        const paddingTop = 15;
+        const paddingBottom = 30; // Extra space for X-axis labels
+        const chartHeight = height - paddingTop - paddingBottom;
+        const chartWidth = width - paddingLeft - paddingRight;
 
         // X scale
         const xStep = data.length > 1 ? chartWidth / (data.length - 1) : 0;
 
         // Y scale (1-5)
-        const yScale = (val) => chartHeight - ((val - 1) / 4) * chartHeight + padding;
+        const yScale = (val) => chartHeight - ((val - 1) / 4) * chartHeight + paddingTop;
         const xScale = (index) => {
-            if (data.length === 1) return width / 2; // Center if only 1 point
-            return index * xStep + padding;
+            if (data.length === 1) return paddingLeft + chartWidth / 2; // Center if only 1 point
+            return index * xStep + paddingLeft;
         };
 
         // Generate path
@@ -127,15 +130,37 @@ export default function Progress() {
             `${i === 0 ? 'M' : 'L'} ${xScale(i)} ${yScale(point.value)}`
         ).join(' ') : '';
 
+        // Format date for display (e.g., "12/7" for Dec 7)
+        const formatDate = (dateStr) => {
+            const date = new Date(dateStr + 'T00:00:00');
+            return `${date.getMonth() + 1}/${date.getDate()}`;
+        };
+
+        // Y-axis labels (mood levels)
+        const yAxisLabels = [5, 4, 3, 2, 1];
+
         return (
             <Svg height={height} width="100%" viewBox={`0 0 ${width} ${height}`}>
+                {/* Y-axis labels (emoji faces) */}
+                {yAxisLabels.map(val => (
+                    <SvgText
+                        key={`y-${val}`}
+                        x={paddingLeft - 8}
+                        y={yScale(val) + 5}
+                        fontSize="14"
+                        textAnchor="end"
+                    >
+                        {REVERSE_MOOD_MAP[val]}
+                    </SvgText>
+                ))}
+
                 {/* Grid lines */}
                 {[1, 2, 3, 4, 5].map(val => (
                     <Line
                         key={val}
-                        x1={padding}
+                        x1={paddingLeft}
                         y1={yScale(val)}
-                        x2={width - padding}
+                        x2={width - paddingRight}
                         y2={yScale(val)}
                         stroke={Colors.border}
                         strokeWidth="1"
@@ -165,6 +190,21 @@ export default function Progress() {
                         stroke={Colors.primary}
                         strokeWidth="2"
                     />
+                ))}
+
+                {/* X-axis labels (dates) */}
+                {data.map((point, i) => (
+                    <SvgText
+                        key={`x-${i}`}
+                        x={xScale(i)}
+                        y={height - paddingBottom + 16}
+                        fontSize="10"
+                        fill={Colors.textSecondary}
+                        textAnchor="middle"
+                        fontFamily="Inter_500Medium"
+                    >
+                        {formatDate(point.date)}
+                    </SvgText>
                 ))}
             </Svg>
         );
@@ -350,7 +390,7 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.border,
     },
     chartContainer: {
-        height: 140,
+        height: 180,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 12,

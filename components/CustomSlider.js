@@ -1,7 +1,7 @@
 // components/CustomSlider.js
 // A simple slider component that works with Old Architecture
 import React, { useState, useRef } from 'react';
-import { View, PanResponder, StyleSheet, Animated } from 'react-native';
+import { View, PanResponder, StyleSheet } from 'react-native';
 import { Colors } from '../constants/Colors';
 
 export function CustomSlider({
@@ -17,17 +17,25 @@ export function CustomSlider({
 }) {
     const [sliderWidth, setSliderWidth] = useState(0);
     const [currentValue, setCurrentValue] = useState(value);
-    const animatedValue = useRef(new Animated.Value(0)).current;
 
-    const valueToPosition = (val) => {
-        if (sliderWidth === 0) return 0;
-        const percentage = (val - minimumValue) / (maximumValue - minimumValue);
-        return percentage * sliderWidth;
-    };
+    // Use refs to store current values that PanResponder needs to access
+    // This avoids stale closure issues where PanResponder captures initial values
+    const sliderWidthRef = useRef(0);
+    const onValueChangeRef = useRef(onValueChange);
+
+    // Keep refs in sync with state/props
+    React.useEffect(() => {
+        sliderWidthRef.current = sliderWidth;
+    }, [sliderWidth]);
+
+    React.useEffect(() => {
+        onValueChangeRef.current = onValueChange;
+    }, [onValueChange]);
 
     const positionToValue = (position) => {
-        if (sliderWidth === 0) return minimumValue;
-        const percentage = Math.max(0, Math.min(1, position / sliderWidth));
+        const width = sliderWidthRef.current;
+        if (width === 0) return minimumValue;
+        const percentage = Math.max(0, Math.min(1, position / width));
         let val = minimumValue + percentage * (maximumValue - minimumValue);
 
         // Apply step
@@ -46,18 +54,21 @@ export function CustomSlider({
                 const touchX = evt.nativeEvent.locationX;
                 const newValue = positionToValue(touchX);
                 setCurrentValue(newValue);
-                onValueChange?.(newValue);
+                onValueChangeRef.current?.(newValue);
             },
             onPanResponderMove: (evt) => {
                 const touchX = evt.nativeEvent.locationX;
                 const newValue = positionToValue(touchX);
                 setCurrentValue(newValue);
-                onValueChange?.(newValue);
+                onValueChangeRef.current?.(newValue);
             },
         })
     ).current;
 
-    const thumbPosition = valueToPosition(currentValue);
+    // Calculate positions based on state directly for rendering (triggers re-renders)
+    const thumbPosition = sliderWidth > 0
+        ? ((currentValue - minimumValue) / (maximumValue - minimumValue)) * sliderWidth
+        : 0;
     const trackPercentage = ((currentValue - minimumValue) / (maximumValue - minimumValue)) * 100;
 
     // Sync with external value changes

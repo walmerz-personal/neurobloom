@@ -108,7 +108,7 @@ export default function GardenScreen() {
                 <SafeAreaView style={styles.safeArea}>
                     <View style={styles.header}>
                         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                            {/*           <ArrowLeft size={24} color="#5D4037" /> */}
+                            <ArrowLeft size={24} color="#5D4037" />
                         </TouchableOpacity>
                         <Text style={styles.headerTitle}>NeuroBloom</Text>
                         <TouchableOpacity
