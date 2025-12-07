@@ -5,7 +5,7 @@ import { PrimaryButton } from '../components/Button';
 import { Colors } from '../constants/Colors';
 import { Typography } from '../constants/Typography';
 import { useState } from 'react';
-import Slider from '@react-native-community/slider';
+import { CustomSlider as Slider } from '../components/CustomSlider';
 import { useAuth } from '../contexts/AuthContext';
 import { SupabaseService } from '../services/SupabaseService';
 
