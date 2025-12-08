@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Audio } from 'expo-av';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { sendMessage } from '../../services/LillyService';
+import { transcribeAudio } from '../../services/TranscriptionService';
 import { SupabaseService } from '../../services/SupabaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import { Send, Mic, Flower2, User } from 'lucide-react-native';
@@ -15,8 +17,11 @@ export default function Lilly() {
     ]);
     const [inputText, setInputText] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
+    const [isTranscribing, setIsTranscribing] = useState(false);
     const [userProfile, setUserProfile] = useState(null);
     const scrollViewRef = useRef(null);
+    const recordingRef = useRef(null);
     const router = useRouter();
     const { user } = useAuth();
 
@@ -30,6 +35,94 @@ export default function Lilly() {
         };
         loadProfile();
     }, [user]);
+
+    const startRecording = async () => {
+        try {
+            console.log('🎤 Requesting microphone permissions...');
+            const permission = await Audio.requestPermissionsAsync();
+
+            if (!permission.granted) {
+                Alert.alert(
+                    'Permission Required',
+                    'Please allow microphone access to use voice input.',
+                    [{ text: 'OK' }]
+                );
+                return;
+            }
+
+            console.log('🎤 Configuring audio mode...');
+            await Audio.setAudioModeAsync({
+                allowsRecordingIOS: true,
+                playsInSilentModeIOS: true,
+            });
+
+            console.log('🎤 Starting recording...');
+            const { recording } = await Audio.Recording.createAsync(
+                Audio.RecordingOptionsPresets.HIGH_QUALITY
+            );
+
+            recordingRef.current = recording;
+            setIsRecording(true);
+            console.log('✅ Recording started');
+        } catch (error) {
+            console.error('❌ Failed to start recording:', error);
+            Alert.alert('Error', 'Failed to start recording. Please try again.');
+        }
+    };
+
+    const stopRecording = async () => {
+        try {
+            console.log('🎤 Stopping recording...');
+            setIsRecording(false);
+
+            if (!recordingRef.current) {
+                return;
+            }
+
+            await recordingRef.current.stopAndUnloadAsync();
+            await Audio.setAudioModeAsync({
+                allowsRecordingIOS: false,
+            });
+
+            const uri = recordingRef.current.getURI();
+            recordingRef.current = null;
+
+            console.log('✅ Recording stopped, URI:', uri);
+
+            if (uri) {
+                setIsTranscribing(true);
+                console.log('🎤 Transcribing audio...');
+
+                const { text, error } = await transcribeAudio(uri);
+
+                setIsTranscribing(false);
+
+                if (error) {
+                    console.error('❌ Transcription failed:', error);
+                    Alert.alert('Error', 'Failed to transcribe audio. Please try again.');
+                    return;
+                }
+
+                if (text) {
+                    console.log('✅ Transcription successful:', text);
+                    setInputText(text);
+                }
+            }
+        } catch (error) {
+            console.error('❌ Failed to stop recording:', error);
+            setIsRecording(false);
+            setIsTranscribing(false);
+            Alert.alert('Error', 'Failed to process recording. Please try again.');
+        }
+    };
+
+    const handleVoicePress = () => {
+        if (isRecording) {
+            stopRecording();
+        } else {
+            startRecording();
+        }
+    };
 
     const handleSend = async () => {
         if (!inputText.trim()) return;
@@ -122,25 +215,43 @@ export default function Lilly() {
                     keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
                     style={styles.inputContainer}
                 >
+                    {isTranscribing && (
+                        <View style={styles.transcribingIndicator}>
+                            <ActivityIndicator size="small" color={Colors.primary} />
+                            <Text style={styles.transcribingText}>Transcribing...</Text>
+                        </View>
+                    )}
                     <View style={styles.inputWrapper}>
-                        <TouchableOpacity style={styles.voiceButton}>
-                            <Mic size={20} color={Colors.textSecondary} />
+                        <TouchableOpacity
+                            style={[
+                                styles.voiceButton,
+                                isRecording && styles.voiceButtonRecording
+                            ]}
+                            onPress={handleVoicePress}
+                            disabled={isTranscribing}
+                        >
+                            {isRecording ? (
+                                <View style={styles.recordingIndicator} />
+                            ) : (
+                                <Mic size={20} color={isTranscribing ? Colors.textTertiary : Colors.textSecondary} />
+                            )}
                         </TouchableOpacity>
 
                         <TextInput
                             style={styles.input}
-                            placeholder="Type a message..."
+                            placeholder={isRecording ? "Recording..." : "Type a message..."}
                             placeholderTextColor={Colors.textTertiary}
                             value={inputText}
                             onChangeText={setInputText}
                             returnKeyType="send"
                             onSubmitEditing={handleSend}
+                            editable={!isRecording && !isTranscribing}
                         />
 
                         <TouchableOpacity
                             style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
                             onPress={handleSend}
-                            disabled={!inputText.trim()}
+                            disabled={!inputText.trim() || isRecording || isTranscribing}
                         >
                             <Send size={20} color="white" />
                         </TouchableOpacity>
@@ -287,6 +398,29 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.background,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    voiceButtonRecording: {
+        backgroundColor: '#FEE2E2',
+        borderWidth: 2,
+        borderColor: '#EF4444',
+    },
+    recordingIndicator: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: '#EF4444',
+    },
+    transcribingIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 8,
+        gap: 8,
+    },
+    transcribingText: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 14,
+        color: Colors.textSecondary,
     },
     sendButton: {
         width: 44,
