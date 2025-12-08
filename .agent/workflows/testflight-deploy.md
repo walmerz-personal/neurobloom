@@ -5,58 +5,12 @@ description: Build and submit the NeuroBloom iOS app to Apple TestFlight
 # TestFlight Deployment Workflow
 
 This workflow builds and submits the NeuroBloom iOS app to Apple TestFlight.
-Two methods are available: **Remote Build (EAS)** or **Local Build (xcodebuild)**.
+**Standard Method:** Local Build (xcodebuild) - Uses local machine resources.
+**Alternative Method:** Remote Build (EAS Cloud) - Uses Expo servers.
 
-## Prerequisites
+## Method 1: Local Build (xcodebuild) - Standard
 
-- All code changes committed to git
-- Apple Developer account credentials available
-- No pending Apple Terms of Service agreements
-
----
-
-## Method 1: Remote Build (EAS Cloud) - Recommended
-
-Use this method when you have EAS build credits available.
-
-### 1. Increment Build Number
-
-Open `app.config.js` and increment the `buildNumber`:
-
-```javascript
-ios: {
-  buildNumber: "12"  // Increment this for each submission
-}
-```
-
-### 2. Commit Changes
-
-```bash
-git add -A
-git commit -m "Prepare for TestFlight build X"
-```
-
-// turbo
-
-### 3. Build for iOS Production
-
-```bash
-eas build --platform ios --profile production
-```
-
-// turbo
-
-### 4. Submit to TestFlight
-
-```bash
-eas submit --platform ios --latest
-```
-
----
-
-## Method 2: Local Build (xcodebuild) - When EAS Credits Exhausted
-
-Use this method for local iOS builds when EAS cloud credits are unavailable.
+This is the preferred method for deploying NeuroBloom.
 
 ### Prerequisites (One-Time Setup)
 
@@ -125,6 +79,7 @@ npx expo prebuild --platform ios --clean
 The project needs manual signing configured. After prebuild, run:
 
 ```bash
+// turbo
 # Add ProvisioningStyle = Manual to target attributes
 sed -i '' 's/13B07F861A680F5B00A75B9A = {/13B07F861A680F5B00A75B9A = {\n                                                DevelopmentTeam = Y885MQBBP4;\n                                                ProvisioningStyle = Manual;/g' ios/NeuroBloom.xcodeproj/project.pbxproj
 
@@ -210,14 +165,44 @@ Check <https://appstoreconnect.apple.com> - the build should appear in TestFligh
 
 ---
 
+## Method 2: Remote Build (EAS Cloud) - Alternative
+
+Use this method only if local build fails or environments change.
+
+### 1. Increment Build Number
+
+Open `app.config.js` and increment the `buildNumber`.
+
+### 2. Commit Changes
+
+```bash
+git add -A
+git commit -m "Prepare for TestFlight build X"
+```
+
+// turbo
+
+### 3. Build for iOS Production
+
+```bash
+eas build --platform ios --profile production
+```
+
+// turbo
+
+### 4. Submit to TestFlight
+
+```bash
+eas submit --platform ios --latest
+```
+
+---
+
 ## Quick Reference
 
 ```bash
 # Check current build number
 grep buildNumber app.config.js
-
-# List EAS builds
-eas build:list --platform ios --limit 5
 
 # Check local archive
 ls -la ios/build/NeuroBloom.xcarchive
@@ -242,9 +227,3 @@ security find-identity -p codesigning -v
 ### "Conflicting provisioning settings"
 
 - Run the sed commands in step 3 to set manual signing
-
-## Notes
-
-- Build numbers must increment for each submission
-- Local builds bypass EAS credit limits
-- Total local build time: ~25-40 minutes
