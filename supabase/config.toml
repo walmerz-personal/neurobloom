@@ -391,3 +391,9 @@ entrypoint = "./functions/lilly-chat/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/lilly-chat/*.html" ]
+
+[functions.transcribe-audio]
+enabled = true
+verify_jwt = true
+import_map = "./functions/transcribe-audio/deno.json"
+entrypoint = "./functions/transcribe-audio/index.ts"
