@@ -8,22 +8,26 @@ set -x
 
 echo "🔍 CI Script started running..."
 
+# 1. Install Node.js (required for npm install)
+echo "🍺 Installing Node.js..."
+brew install node
 
-# Navigate to the workspace root (one level up from ci_scripts)
-cd ..
+# 2. Navigate to the project root (where package.json is)
+# Script is in: /Volumes/workspace/repository/ios/ci_scripts
+# cd ..   -> /Volumes/workspace/repository/ios
+# cd ../.. -> /Volumes/workspace/repository
+cd ../..
 
-# Log current node version
-node -v
-npm -v
+echo "📂 Current directory: $(pwd)"
 
-# Install dependencies
+# 3. Install dependencies
 echo "📦 Installing Node dependencies..."
 npm install
 
-# Navigate to iOS directory
+# 4. Navigate back to iOS directory for Pods
 cd ios
 
-# Install CocoaPods
+# 5. Install CocoaPods
 echo "🍎 Installing CocoaPods..."
 pod install
 
