@@ -6,6 +6,9 @@ set -e
 # Turn on verbose command logging
 set -x
 
+echo "🔍 CI Script started running..."
+
+
 # Navigate to the workspace root (one level up from ci_scripts)
 cd ..
 
