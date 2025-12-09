@@ -1025,6 +1025,211 @@ export const SupabaseService = {
             return { data: null, error };
         }
     },
+
+    // =============================================
+    // CARE TEAM MANAGEMENT
+    // =============================================
+
+    /**
+     * Create a care team link (invitation)
+     * @param {Object} linkData - {survivor_id, relationship, invitation_code, status}
+     * @returns {Promise<{data, error}>}
+     */
+    async createCareTeamLink(linkData) {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('care_team_links')
+                .insert([linkData])
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Create care team link error:', error);
+                return { data: null, error };
+            }
+
+            console.log('✅ Care team link created:', data.id);
+            return { data, error: null };
+        } catch (error) {
+            console.error('❌ Create care team link error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
+     * Get care team links for a user
+     * @param {string} userId - User ID
+     * @param {string} role - 'survivor' or 'caregiver'
+     * @returns {Promise<{data, error}>}
+     */
+    async getCareTeamLinks(userId, role) {
+        if (!this.isInitialized()) {
+            return { data: [], error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            let query = supabase.from('care_team_links').select(`
+                *,
+                survivor:survivor_id(id, name, email),
+                caregiver:caregiver_id(id, name, email)
+            `);
+
+            if (role === 'survivor') {
+                query = query.eq('survivor_id', userId);
+            } else if (role === 'caregiver') {
+                query = query.eq('caregiver_id', userId);
+            }
+
+            const { data, error } = await query;
+
+            if (error) {
+                console.error('❌ Get care team links error:', error);
+                return { data: [], error };
+            }
+
+            return { data, error: null };
+        } catch (error) {
+            console.error('❌ Get care team links error:', error);
+            return { data: [], error };
+        }
+    },
+
+    /**
+     * Get a specific care team link between caregiver and survivor
+     * @param {string} caregiverId 
+     * @param {string} survivorId 
+     * @returns {Promise<{data, error}>}
+     */
+    async getCareTeamLink(caregiverId, survivorId) {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('care_team_links')
+                .select('*')
+                .eq('caregiver_id', caregiverId)
+                .eq('survivor_id', survivorId)
+                .single();
+
+            if (error && error.code !== 'PGRST116') {
+                console.error('❌ Get care team link error:', error);
+                return { data: null, error };
+            }
+
+            return { data, error: null };
+        } catch (error) {
+            console.error('❌ Get care team link error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
+     * Get invitation by code
+     * @param {string} code - Invitation code
+     * @returns {Promise<{data, error}>}
+     */
+    async getInvitationByCode(code) {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('care_team_links')
+                .select(`
+                    *,
+                    survivor:survivor_id(id, name, email)
+                `)
+                .eq('invitation_code', code)
+                .single();
+
+            if (error) {
+                if (error.code === 'PGRST116') {
+                    return { data: null, error: new Error('Invitation not found') };
+                }
+                console.error('❌ Get invitation by code error:', error);
+                return { data: null, error };
+            }
+
+            // Flatten survivor data for easier consumption
+            const invitation = {
+                ...data,
+                survivor_name: data.survivor?.name || 'Unknown',
+            };
+
+            return { data: invitation, error: null };
+        } catch (error) {
+            console.error('❌ Get invitation by code error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
+     * Update a care team link
+     * @param {string} linkId - Link ID
+     * @param {Object} updates - Fields to update
+     * @returns {Promise<{data, error}>}
+     */
+    async updateCareTeamLink(linkId, updates) {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('care_team_links')
+                .update(updates)
+                .eq('id', linkId)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Update care team link error:', error);
+                return { data: null, error };
+            }
+
+            console.log('✅ Care team link updated:', linkId);
+            return { data, error: null };
+        } catch (error) {
+            console.error('❌ Update care team link error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
+     * Delete a care team link
+     * @param {string} linkId - Link ID
+     * @returns {Promise<{error}>}
+     */
+    async deleteCareTeamLink(linkId) {
+        if (!this.isInitialized()) {
+            return { error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { error } = await supabase
+                .from('care_team_links')
+                .delete()
+                .eq('id', linkId);
+
+            if (error) {
+                console.error('❌ Delete care team link error:', error);
+                return { error };
+            }
+
+            console.log('✅ Care team link deleted:', linkId);
+            return { error: null };
+        } catch (error) {
+            console.error('❌ Delete care team link error:', error);
+            return { error };
+        }
+    },
 };
 
 export default SupabaseService;

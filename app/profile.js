@@ -8,10 +8,11 @@ import { Typography } from '../constants/Typography';
 import { useAuth } from '../contexts/AuthContext';
 import { SupabaseService } from '../services/SupabaseService';
 import { ArrowLeft, Save, User, Calendar, Activity, Target, Mail, Trash2 } from 'lucide-react-native';
+import { CareTeamSection } from '../components/CareTeamSection';
 
 export default function Profile() {
     const router = useRouter();
-    const { user, deleteAccount } = useAuth();
+    const { user, userData, deleteAccount } = useAuth();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -245,6 +246,22 @@ export default function Profile() {
                         />
                     </View>
                 </View>
+
+                {/* Care Team Section */}
+                <CareTeamSection
+                    userId={user?.id}
+                    userRole={userData?.role || 'survivor'}
+                    onNavigateToCaregiver={(screen, data) => {
+                        if (screen === 'accept-invitation') {
+                            router.push('/caregiver/accept-invitation');
+                        } else if (screen === 'survivor-progress' && data) {
+                            router.push({
+                                pathname: '/caregiver/survivor-progress',
+                                params: { survivorId: data.id, survivorName: data.name },
+                            });
+                        }
+                    }}
+                />
 
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Account Management</Text>
