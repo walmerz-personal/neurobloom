@@ -34,7 +34,7 @@ export default function Login() {
     };
 
     const handleSignUp = () => {
-        router.push('/onboarding/welcome');
+        router.push('/onboarding/intro');
     };
 
     return (
