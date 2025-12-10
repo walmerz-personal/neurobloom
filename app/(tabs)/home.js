@@ -10,7 +10,7 @@ import { MessageCircle, PlayCircle, CheckCircle, LogOut, Quote, User, Flower } f
 import Svg, { Circle } from 'react-native-svg';
 import Logo from '../../components/Logo';
 
-const MOTIVATIONAL_QUOTES = [
+const SURVIVOR_QUOTES = [
     "Every small step forward is progress. You're doing great! 🌟",
     "Recovery isn't a straight line, and that's okay. Keep going! 💪",
     "Your brain is amazing - it's rewiring itself every day. 🧠",
@@ -19,6 +19,17 @@ const MOTIVATIONAL_QUOTES = [
     "Celebrate the wins, no matter how small. You've earned it! 🎉",
     "Rest is part of recovery, not a setback. Be kind to yourself. 🌸",
     "Progress might be slow, but you're moving forward. Keep it up! 🚀",
+];
+
+const CAREGIVER_QUOTES = [
+    "Caring for yourself is part of caring for others. 💙",
+    "Your patience and love are making a difference. ✨",
+    "Take it one day at a time. You've got this! 💪",
+    "Remember to fill your own cup too. ☕",
+    "You are doing an incredible job. Don't forget that! 🌟",
+    "It's okay to ask for help. You're not alone. 🤝",
+    "Small moments of joy matter. Find them today! 🌸",
+    "Your strength inspires everyone around you. ❤️",
 ];
 
 const getGreeting = () => {
@@ -71,9 +82,12 @@ export default function Home() {
     const [dailyProgress, setDailyProgress] = useState({ completed: 0, total: 4 }); // Default goal of 4
 
     useEffect(() => {
-        const randomQuote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+        if (!userData) return;
+
+        const quotes = userData.role === 'caregiver' ? CAREGIVER_QUOTES : SURVIVOR_QUOTES;
+        const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
         setMotivationalQuote(randomQuote);
-    }, []);
+    }, [userData]);
 
     useFocusEffect(
         useCallback(() => {

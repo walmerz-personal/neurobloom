@@ -1,11 +1,73 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Image } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Animated, Easing } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { SupabaseService } from '../../services/SupabaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import { Coins, ArrowLeft } from 'lucide-react-native';
+
+const BuyButton = ({ item, userPoints, onBuy }) => {
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+    const canBuy = userPoints >= item.cost;
+
+    const handlePressIn = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 0.95,
+            useNativeDriver: true,
+        }).start();
+    };
+
+    const handlePressOut = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 1,
+            useNativeDriver: true,
+        }).start();
+    };
+
+    const triggerSuccessAnimation = () => {
+        // Sequence: Scale up, then back to normal with a bit of a bounce
+        Animated.sequence([
+            Animated.timing(scaleAnim, {
+                toValue: 1.2,
+                duration: 150,
+                easing: Easing.out(Easing.ease),
+                useNativeDriver: true,
+            }),
+            Animated.spring(scaleAnim, {
+                toValue: 1,
+                friction: 4,
+                tension: 40,
+                useNativeDriver: true,
+            })
+        ]).start();
+    };
+
+    const handlePress = () => {
+        onBuy(item, triggerSuccessAnimation);
+    };
+
+    return (
+        <TouchableOpacity
+            onPress={handlePress}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            disabled={!canBuy}
+            activeOpacity={0.9}
+        >
+            <Animated.View
+                style={[
+                    styles.buyButton,
+                    !canBuy && styles.disabledButton,
+                    { transform: [{ scale: scaleAnim }] }
+                ]}
+            >
+                <Text style={styles.buyButtonText}>{item.cost}</Text>
+                <Coins size={14} color={!canBuy ? Colors.textTertiary : "white"} />
+            </Animated.View>
+        </TouchableOpacity>
+    );
+};
 
 export default function ShopScreen() {
     const router = useRouter();
@@ -33,7 +95,7 @@ export default function ShopScreen() {
         }
     };
 
-    const handleBuy = async (item) => {
+    const handleBuy = async (item, onSuccessAnimation) => {
         if (points < item.cost) {
             Alert.alert('Insufficient Points', `You need ${item.cost - points} more points to buy this.`);
             return;
@@ -49,6 +111,9 @@ export default function ShopScreen() {
                     onPress: async () => {
                         const { success, error } = await SupabaseService.buyItem(user.id, item.id, item.cost);
                         if (success) {
+                            // Run the success animation on the button
+                            if (onSuccessAnimation) onSuccessAnimation();
+
                             Alert.alert('Success', `You bought a ${item.name} seed!`);
                             fetchData(); // Refresh points
                         } else {
@@ -71,14 +136,11 @@ export default function ShopScreen() {
                 <Text style={styles.itemDesc}>{item.description}</Text>
                 <Text style={styles.itemDuration}>Grows in {item.growth_duration_hours} hours</Text>
             </View>
-            <TouchableOpacity
-                style={[styles.buyButton, points < item.cost && styles.disabledButton]}
-                onPress={() => handleBuy(item)}
-                disabled={points < item.cost}
-            >
-                <Text style={styles.buyButtonText}>{item.cost}</Text>
-                <Coins size={14} color={points < item.cost ? Colors.textTertiary : "white"} />
-            </TouchableOpacity>
+            <BuyButton
+                item={item}
+                userPoints={points}
+                onBuy={handleBuy}
+            />
         </View>
     );
 
@@ -208,6 +270,7 @@ const styles = StyleSheet.create({
     emptyContainer: {
         padding: 40,
         alignItems: 'center',
+        justifyContent: 'center',
     },
     emptyText: {
         fontFamily: 'Inter_400Regular',
@@ -215,3 +278,4 @@ const styles = StyleSheet.create({
         color: Colors.textSecondary,
     },
 });
+

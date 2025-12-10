@@ -19,6 +19,7 @@ export default function Profile() {
     // Form State
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
+    const [role, setRole] = useState('survivor');
     const [strokeDate, setStrokeDate] = useState('');
     const [impairments, setImpairments] = useState('');
     const [goals, setGoals] = useState('');
@@ -37,6 +38,7 @@ export default function Profile() {
             if (userData) {
                 setName(userData.name || '');
                 setEmail(userData.email || '');
+                setRole(userData.role || 'survivor');
             }
 
             // Fetch profile data (stroke date, impairments, etc)
@@ -59,7 +61,7 @@ export default function Profile() {
         setSaving(true);
         try {
             // Update User Data (Name)
-            await SupabaseService.updateUserData(user.id, { name });
+            await SupabaseService.updateUserData(user.id, { name, role });
 
             // Update Profile Data
             const profileUpdates = {
@@ -156,6 +158,41 @@ export default function Profile() {
                         />
                     </View>
 
+
+
+                    <View style={styles.inputGroup}>
+                        <View style={styles.labelContainer}>
+                            <User size={18} color={Colors.primary} />
+                            <Text style={styles.label}>Role</Text>
+                        </View>
+                        <View style={styles.roleContainer}>
+                            <TouchableOpacity
+                                style={[
+                                    styles.roleOption,
+                                    role === 'survivor' && styles.roleOptionSelected
+                                ]}
+                                onPress={() => setRole('survivor')}
+                            >
+                                <Text style={[
+                                    styles.roleText,
+                                    role === 'survivor' && styles.roleTextSelected
+                                ]}>Survivor</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[
+                                    styles.roleOption,
+                                    role === 'caregiver' && styles.roleOptionSelected
+                                ]}
+                                onPress={() => setRole('caregiver')}
+                            >
+                                <Text style={[
+                                    styles.roleText,
+                                    role === 'caregiver' && styles.roleTextSelected
+                                ]}>Caregiver</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
                     <View style={styles.inputGroup}>
                         <View style={styles.labelContainer}>
                             <Mail size={18} color={Colors.primary} />
@@ -250,7 +287,7 @@ export default function Profile() {
                 {/* Care Team Section */}
                 <CareTeamSection
                     userId={user?.id}
-                    userRole={userData?.role || 'survivor'}
+                    userRole={role || 'survivor'}
                     onNavigateToCaregiver={(screen, data) => {
                         if (screen === 'accept-invitation') {
                             router.push('/caregiver/accept-invitation');
@@ -281,7 +318,7 @@ export default function Profile() {
                     </View>
                 </View>
             </ScrollView>
-        </ScreenWrapper>
+        </ScreenWrapper >
     );
 }
 
@@ -401,6 +438,31 @@ const styles = StyleSheet.create({
     deleteButtonText: {
         fontFamily: 'Inter_600SemiBold',
         fontSize: 16,
+        color: 'white',
+    },
+    roleContainer: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    roleOption: {
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        backgroundColor: 'white',
+        alignItems: 'center',
+    },
+    roleOptionSelected: {
+        backgroundColor: Colors.primary,
+        borderColor: Colors.primary,
+    },
+    roleText: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 16,
+        color: Colors.text,
+    },
+    roleTextSelected: {
         color: 'white',
     },
     dateText: {

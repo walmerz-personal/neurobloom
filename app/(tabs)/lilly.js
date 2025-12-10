@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Audio } from 'expo-av';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
@@ -182,7 +182,14 @@ export default function Lilly() {
     return (
         <ScreenWrapper>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Chat with Lilly</Text>
+                <View style={styles.headerContent}>
+                    <Text style={styles.headerTitle}>Chat with Lilly</Text>
+                    <Image
+                        source={require('../../assets/images/lilly-character.png')}
+                        style={styles.headerImage}
+                        resizeMode="cover"
+                    />
+                </View>
             </View>
 
             <View style={styles.container}>
@@ -267,7 +274,11 @@ function Message({ isLilly, text, action, onActionPress }) {
         <View style={[styles.messageRow, isLilly ? styles.lillyRow : styles.userRow]}>
             {isLilly && (
                 <View style={styles.avatar}>
-                    <Flower2 size={20} color="white" />
+                    <Image
+                        source={require('../../assets/images/lilly-character.png')}
+                        style={{ width: '100%', height: '100%', borderRadius: 18 }}
+                        resizeMode="cover"
+                    />
                 </View>
             )}
             <View style={[styles.bubble, isLilly ? styles.lillyBubble : styles.userBubble]}>
@@ -289,16 +300,27 @@ function Message({ isLilly, text, action, onActionPress }) {
 const styles = StyleSheet.create({
     header: {
         paddingHorizontal: 24,
-        paddingVertical: 16,
+        paddingVertical: 12,
         backgroundColor: Colors.background,
         borderBottomWidth: 1,
         borderBottomColor: Colors.border,
+    },
+    headerContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
     },
     headerTitle: {
         fontFamily: 'Inter_700Bold',
         fontSize: 20,
         color: Colors.text,
         textAlign: 'center',
+    },
+    headerImage: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
     },
     container: {
         flex: 1,

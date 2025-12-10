@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, SafeAreaVi
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Colors } from '../../constants/Colors';
 import { PlantingBox } from '../../components/Garden/PlantingBox';
+import { SeedBankModal } from '../../components/Garden/SeedBankModal';
 import { SupabaseService } from '../../services/SupabaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import { ShoppingBag, Coins, ArrowLeft, Leaf } from 'lucide-react-native';
@@ -16,6 +17,7 @@ export default function GardenScreen() {
     const [points, setPoints] = useState(0);
     const [plants, setPlants] = useState(Array(6).fill(null)); // 6 garden slots
     const [inventory, setInventory] = useState([]); // User's seed inventory
+    const [seedBankVisible, setSeedBankVisible] = useState(false);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
@@ -121,10 +123,10 @@ export default function GardenScreen() {
 
                     {/* Stats Pills */}
                     <View style={styles.statsContainer}>
-                        <View style={styles.statPill}>
+                        <TouchableOpacity style={styles.statPill} onPress={() => setSeedBankVisible(true)}>
                             <Leaf size={16} color="#8D6E63" fill="#8D6E63" />
                             <Text style={styles.statText}>Seeds: {inventory.reduce((acc, curr) => acc + curr.quantity, 0)}</Text>
-                        </View>
+                        </TouchableOpacity>
                         <View style={styles.statPill}>
                             <Coins size={16} color="#FFD54F" fill="#FFD54F" />
                             <Text style={styles.statText}>Points: {points}</Text>
@@ -165,6 +167,11 @@ export default function GardenScreen() {
 
             {/* Bottom Navigation Placeholder (Visual only, actual nav handled by Tabs) */}
             {/* The tab bar covers the bottom, so we just need ensure soil goes down enough */}
+            <SeedBankModal
+                visible={seedBankVisible}
+                onClose={() => setSeedBankVisible(false)}
+                inventory={inventory}
+            />
         </View>
     );
 }

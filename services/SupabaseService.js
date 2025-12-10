@@ -1140,28 +1140,20 @@ export const SupabaseService = {
         }
 
         try {
-            const { data, error } = await supabase
-                .from('care_team_links')
-                .select(`
-                    *,
-                    survivor:survivor_id(id, name, email)
-                `)
-                .eq('invitation_code', code)
-                .single();
+            // Use RPC function to bypass RLS for pending invitations
+            const { data, error } = await supabase.rpc('get_invitation_by_code', { code });
 
             if (error) {
-                if (error.code === 'PGRST116') {
-                    return { data: null, error: new Error('Invitation not found') };
-                }
                 console.error('❌ Get invitation by code error:', error);
                 return { data: null, error };
             }
 
-            // Flatten survivor data for easier consumption
-            const invitation = {
-                ...data,
-                survivor_name: data.survivor?.name || 'Unknown',
-            };
+            if (!data || data.length === 0) {
+                return { data: null, error: new Error('Invitation not found') };
+            }
+
+            // RPC returns an array, take the first item
+            const invitation = data[0];
 
             return { data: invitation, error: null };
         } catch (error) {

@@ -143,7 +143,7 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
                 <View style={styles.sectionHeader}>
                     <View style={styles.titleRow}>
                         <Users size={20} color={Colors.primary} />
-                        <Text style={styles.sectionTitle}>My Care Team</Text>
+                        <Text style={styles.sectionTitle}>My Caregivers</Text>
                     </View>
                     <TouchableOpacity
                         style={styles.addButton}
@@ -164,7 +164,7 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
                 {caregivers.length === 0 && pendingInvitations.length === 0 ? (
                     <View style={styles.emptyState}>
                         <Text style={styles.emptyText}>
-                            No caregivers connected yet. Tap "Invite" to add someone to your care team.
+                            No caregivers connected, invite them below
                         </Text>
                     </View>
                 ) : (
