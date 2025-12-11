@@ -1,8 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions, ScrollView, Animated, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, ScrollView, Animated, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop, Line } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../../constants/Colors';
 
@@ -87,7 +87,7 @@ export default function Intro() {
     );
 
     const handleContinue = () => {
-        router.replace('/onboarding/welcome');
+        router.replace('/onboarding/role');
     };
 
     const renderDot = (index) => {
@@ -155,14 +155,11 @@ export default function Intro() {
                     <AnimatedView style={[styles.pulseRing, { transform: [{ scale: Animated.multiply(pulseAnim, 0.8) }], opacity: 0.2 }]} />
 
                     <FadeUpView index={0}>
-                        <Text style={styles.statNumber}>795K</Text>
+                        <Text style={styles.statNumber}>800,000</Text>
                     </FadeUpView>
                     <FadeUpView index={1}>
-                        <Text style={styles.statUnit}>people every year</Text>
-                    </FadeUpView>
-                    <FadeUpView index={2}>
                         <Text style={styles.statDescription}>
-                            In the US alone, nearly <Text style={styles.statEmphasis}>800,000 people</Text> experience a stroke each year—that's one person every 40 seconds.
+                            That's how many people have strokes in the US alone - that's one person every 40 seconds.
                         </Text>
                     </FadeUpView>
 
@@ -174,50 +171,7 @@ export default function Intro() {
                     </View>
                 </View>
 
-                {/* Screen 2: The People */}
-                <View style={[styles.slide, styles.slide2]}>
-                    <View style={styles.peopleVisual}>
-                        {/* Survivor */}
-                        <FadeUpView index={0} style={[styles.personIcon, { top: 0, left: '50%', transform: [{ translateX: -40 }] }]}>
-                            <Svg width="80" height="80" viewBox="0 0 48 48" fill="none">
-                                <Circle cx="24" cy="24" r="22" fill="#FDF9F7" stroke={BRAND.bloomMagenta} strokeWidth="2.5" />
-                                <Circle cx="24" cy="18" r="6" fill={BRAND.bloomMagenta} />
-                                <Path d="M12 38C12 31.373 17.373 26 24 26C30.627 26 36 31.373 36 38" stroke={BRAND.bloomMagenta} strokeWidth="2.5" strokeLinecap="round" />
-                            </Svg>
-                            <Text style={styles.personLabel}>Survivor</Text>
-                        </FadeUpView>
-
-                        {/* Caregivers */}
-                        <FadeUpView index={1} style={[styles.personIcon, { top: '50%', left: 20 }]}>
-                            <Svg width="60" height="60" viewBox="0 0 40 40" fill="none">
-                                <Circle cx="20" cy="20" r="18" fill="#F0F7F8" stroke={BRAND.leafTeal} strokeWidth="2" />
-                                <Circle cx="20" cy="15" r="4" fill={BRAND.leafTeal} />
-                                <Path d="M10 32C10 26.477 14.477 22 20 22C25.523 22 30 26.477 30 32" stroke={BRAND.leafTeal} strokeWidth="2" strokeLinecap="round" />
-                            </Svg>
-                            <Text style={styles.personLabel}>Total Care</Text>
-                        </FadeUpView>
-
-                        <FadeUpView index={2} style={[styles.personIcon, { top: '50%', right: 20 }]}>
-                            <Svg width="60" height="60" viewBox="0 0 40 40" fill="none">
-                                <Circle cx="20" cy="20" r="18" fill="#F0F7F8" stroke={BRAND.leafTeal} strokeWidth="2" />
-                                <Circle cx="20" cy="15" r="4" fill={BRAND.leafTeal} />
-                                <Path d="M10 32C10 26.477 14.477 22 20 22C25.523 22 30 26.477 30 32" stroke={BRAND.leafTeal} strokeWidth="2" strokeLinecap="round" />
-                            </Svg>
-                            <Text style={styles.personLabel}>Family</Text>
-                        </FadeUpView>
-                    </View>
-
-                    <FadeUpView index={3}>
-                        <Text style={styles.slideTitle}>Recovery is a Team Sport</Text>
-                    </FadeUpView>
-                    <FadeUpView index={4}>
-                        <Text style={styles.slideDescription}>
-                            Survivors rely on a network of people. We help you coordinate care and keep everyone connected.
-                        </Text>
-                    </FadeUpView>
-                </View>
-
-                {/* Screen 3: The Research */}
+                {/* Screen 2: The Research (Moved here) */}
                 <View style={[styles.slide, styles.slide3]}>
                     <View style={styles.chartContainer}>
                         <View style={styles.chartBarGroup}>
@@ -234,12 +188,86 @@ export default function Intro() {
 
                     <FadeUpView index={2}>
                         <Text style={styles.slideTitle}>
-                            Consistency is <Text style={styles.highlight}>Key</Text>
+                            Consistency is key for <Text style={styles.highlight}>recovery</Text>
                         </Text>
                     </FadeUpView>
                     <FadeUpView index={3}>
                         <Text style={styles.slideDescription}>
                             Research shows that consistent rehabilitation leads to significantly better outcomes and faster recovery.
+                        </Text>
+                    </FadeUpView>
+                </View>
+
+                {/* Screen 3: The People (Moved here) */}
+                <View style={[styles.slide, styles.slide2]}>
+                    <View style={styles.peopleVisual}>
+                        {/* Connecting Ring - transparent with dashed teal border */}
+                        <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
+                            <Circle cx="150" cy="150" r="80" fill="none" stroke={BRAND.leafTeal} strokeWidth="2" strokeDasharray="8 8" opacity="0.6" />
+                        </Svg>
+
+                        {/* Survivor (Center) */}
+                        <FadeUpView index={0} style={[styles.personIcon, styles.survivorCenter]}>
+                            <Svg width="80" height="80" viewBox="0 0 48 48" fill="none">
+                                <Circle cx="24" cy="24" r="22" fill="#FDF9F7" stroke={BRAND.bloomMagenta} strokeWidth="2.5" />
+                                <Circle cx="24" cy="18" r="6" fill={BRAND.bloomMagenta} />
+                                <Path d="M12 38C12 31.373 17.373 26 24 26C30.627 26 36 31.373 36 38" stroke={BRAND.bloomMagenta} strokeWidth="2.5" strokeLinecap="round" />
+                            </Svg>
+                            <Text style={[styles.personLabel, { color: BRAND.bloomMagenta }]}>Survivor</Text>
+                        </FadeUpView>
+
+                        {/* Medical Staff (Top Left) - Cross/Plus icon */}
+                        <FadeUpView index={1} style={[styles.personIcon, { top: 10, left: 10 }]}>
+                            <Svg width="60" height="60" viewBox="0 0 40 40" fill="none">
+                                <Circle cx="20" cy="20" r="18" fill="#F0F7F8" stroke={BRAND.leafTeal} strokeWidth="2" />
+                                {/* Medical Cross */}
+                                <Path d="M20 10V30M10 20H30" stroke={BRAND.leafTeal} strokeWidth="3" strokeLinecap="round" />
+                            </Svg>
+                            <Text style={styles.personLabel}>Medical Staff</Text>
+                        </FadeUpView>
+
+                        {/* Caregivers (Top Right) - Dumbbell icon */}
+                        <FadeUpView index={2} style={[styles.personIcon, { top: 10, right: 10 }]}>
+                            <Svg width="60" height="60" viewBox="0 0 40 40" fill="none">
+                                <Circle cx="20" cy="20" r="18" fill="#F0F7F8" stroke={BRAND.leafTeal} strokeWidth="2" />
+                                {/* Dumbbell */}
+                                <Path d="M10 17v6M12 15v10M14 20h12M28 15v10M30 17v6" stroke={BRAND.leafTeal} strokeWidth="2.5" strokeLinecap="round" />
+                            </Svg>
+                            <Text style={styles.personLabel}>Caregivers</Text>
+                        </FadeUpView>
+
+                        {/* Family (Bottom Left) - Heart icon */}
+                        <FadeUpView index={3} style={[styles.personIcon, { bottom: 10, left: 10 }]}>
+                            <Svg width="60" height="60" viewBox="0 0 40 40" fill="none">
+                                <Circle cx="20" cy="20" r="18" fill="#F0F7F8" stroke={BRAND.leafTeal} strokeWidth="2" />
+                                {/* Heart */}
+                                <Path d="M20 28l-7-7c-2-2-2-5 0-7s5-2 7 0c2-2 5-2 7 0s2 5 0 7l-7 7z" stroke={BRAND.leafTeal} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                            </Svg>
+                            <Text style={styles.personLabel}>Family</Text>
+                        </FadeUpView>
+
+                        {/* Friends (Bottom Right) - Two people group */}
+                        <FadeUpView index={4} style={[styles.personIcon, { bottom: 10, right: 10 }]}>
+                            <Svg width="60" height="60" viewBox="0 0 40 40" fill="none">
+                                <Circle cx="20" cy="20" r="18" fill="#F0F7F8" stroke={BRAND.leafTeal} strokeWidth="2" />
+                                {/* Two overlapping people - front person */}
+                                <Circle cx="22" cy="16" r="4" stroke={BRAND.leafTeal} strokeWidth="2" fill="none" />
+                                <Path d="M15 30c0-5 3-8 7-8s7 3 7 8" stroke={BRAND.leafTeal} strokeWidth="2" strokeLinecap="round" fill="none" />
+                                {/* Back person (partial, behind) */}
+                                <Path d="M14 14a4 4 0 1 1 4 0" stroke={BRAND.leafTeal} strokeWidth="2" strokeLinecap="round" fill="none" />
+                                <Path d="M10 28c0-4 2-6 5-7" stroke={BRAND.leafTeal} strokeWidth="2" strokeLinecap="round" fill="none" />
+                            </Svg>
+                            <Text style={styles.personLabel}>Friends</Text>
+                        </FadeUpView>
+                    </View>
+
+
+                    <FadeUpView index={5}>
+                        <Text style={styles.slideTitle} numberOfLines={1} adjustsFontSizeToFit>Recovery is a Team Sport</Text>
+                    </FadeUpView>
+                    <FadeUpView index={6}>
+                        <Text style={styles.slideDescription}>
+                            NeuroBloom helps survivors with personalized rehab ideas, and engages your circle of support.
                         </Text>
                     </FadeUpView>
                 </View>
@@ -296,8 +324,10 @@ export default function Intro() {
 
                     <FadeUpView index={0}>
                         <View style={styles.finalLogos}>
-                            {/* Bloom Logo Placeholder */}
-                            <Text style={{ fontSize: 80, marginBottom: 20 }}>🌸</Text>
+                            <Image
+                                source={require('../../assets/NeuroBloom Logo high res.png')}
+                                style={{ width: 120, height: 120, resizeMode: 'contain', marginBottom: 20 }}
+                            />
                         </View>
                     </FadeUpView>
 
@@ -307,8 +337,8 @@ export default function Intro() {
                     <FadeUpView index={2}>
                         <Text style={styles.brandName}>NeuroBloom</Text>
                     </FadeUpView>
-                    <FadeUpView index={3}>
-                        <Text style={styles.tagline}>
+                    <FadeUpView index={3} style={{ alignItems: 'center' }}>
+                        <Text style={[styles.tagline, { textAlign: 'center' }]}>
                             <Text style={{ color: BRAND.bloomPink }}>Survivors</Text> and <Text style={{ color: BRAND.leafCyan }}>Caregivers</Text>
                         </Text>
                         <Text style={styles.subTagline}>growing together.</Text>
@@ -361,27 +391,28 @@ const styles = StyleSheet.create({
     // Slide 1 details
     statNumber: {
         fontSize: 96,
-        fontFamily: 'System', // Use default if fonts not loaded, but try to be bold
-        fontWeight: '300',
+        fontFamily: 'DMSerifDisplay_400Regular',
         color: BRAND.deepNavy,
         lineHeight: 100,
         textAlign: 'center',
     },
     statUnit: {
         fontSize: 32,
+        fontFamily: 'DMSerifDisplay_400Regular',
         color: BRAND.navyBlue,
         marginBottom: 30,
         textAlign: 'center',
     },
     statDescription: {
         fontSize: 20,
+        fontFamily: 'SourceSans3_400Regular',
         color: BRAND.textSecondary,
         textAlign: 'center',
         lineHeight: 30,
     },
     statEmphasis: {
         color: BRAND.bloomMagenta,
-        fontWeight: '700',
+        fontFamily: 'SourceSans3_600SemiBold',
     },
     pulseRing: {
         position: 'absolute',
@@ -395,38 +426,47 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 80,
         alignItems: 'center',
+        flexDirection: 'row',
+        gap: 8,
     },
     swipeText: {
         color: BRAND.textSecondary,
-        marginBottom: 5,
+        fontFamily: 'SourceSans3_400Regular',
     },
 
     // Slide 2 details
     peopleVisual: {
         width: 300,
-        height: 250,
-        marginBottom: 40,
+        height: 300,
+        marginBottom: 20,
         position: 'relative',
     },
     personIcon: {
         position: 'absolute',
         alignItems: 'center',
     },
+    survivorCenter: {
+        top: '50%',
+        left: '50%',
+        marginLeft: -40,
+        marginTop: -50,
+    },
     personLabel: {
         fontSize: 12,
         color: BRAND.textSecondary,
         marginTop: 4,
-        fontWeight: '600',
+        fontFamily: 'SourceSans3_600SemiBold',
     },
     slideTitle: {
         fontSize: 28,
+        fontFamily: 'DMSerifDisplay_400Regular',
         color: BRAND.textPrimary,
         textAlign: 'center',
         marginBottom: 16,
-        fontWeight: 'bold',
     },
     slideDescription: {
         fontSize: 18,
+        fontFamily: 'SourceSans3_400Regular',
         color: BRAND.textSecondary,
         textAlign: 'center',
         lineHeight: 28,
@@ -463,7 +503,7 @@ const styles = StyleSheet.create({
     chartLabel: {
         fontSize: 13,
         color: BRAND.textSecondary,
-        fontWeight: '500',
+        fontFamily: 'SourceSans3_600SemiBold',
     },
     highlight: {
         color: BRAND.deepNavy,
@@ -499,7 +539,7 @@ const styles = StyleSheet.create({
     },
     pillarLabel: {
         fontSize: 14,
-        fontWeight: '600',
+        fontFamily: 'SourceSans3_600SemiBold',
         color: BRAND.textPrimary,
     },
     togetherText: {
@@ -517,6 +557,7 @@ const styles = StyleSheet.create({
     },
     welcomeText: {
         fontSize: 18,
+        fontFamily: 'DMSerifDisplay_400Regular',
         color: 'rgba(255,255,255,0.8)',
         letterSpacing: 3,
         textAlign: 'center',
@@ -524,8 +565,8 @@ const styles = StyleSheet.create({
     },
     brandName: {
         fontSize: 48,
+        fontFamily: 'DMSerifDisplay_400Regular',
         color: '#FFFFFF',
-        fontWeight: 'bold',
         marginBottom: 16,
         textAlign: 'center',
     },
@@ -533,10 +574,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         fontSize: 18,
         marginBottom: 4,
+        color: 'rgba(255,255,255,0.9)',
+        fontFamily: 'SourceSans3_400Regular',
     },
     subTagline: {
         fontSize: 18,
         color: 'rgba(255,255,255,0.9)',
+        fontFamily: 'SourceSans3_400Regular',
     },
     getStartedBtn: {
         marginTop: 60,
@@ -557,7 +601,7 @@ const styles = StyleSheet.create({
     btnText: {
         color: '#FFF',
         fontSize: 18,
-        fontWeight: '600',
+        fontFamily: 'SourceSans3_600SemiBold',
     },
     bgPattern: {
         position: 'absolute',

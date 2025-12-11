@@ -1,8 +1,9 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { PrimaryButton } from '../../components/Button';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
@@ -14,6 +15,7 @@ export default function Details() {
     const name = params.name || '';
 
     const [strokeDate, setStrokeDate] = useState('');
+    const [showDatePicker, setShowDatePicker] = useState(false);
     const [impairments, setImpairments] = useState([]);
 
     const toggleImpairment = (impairment) => {
@@ -58,14 +60,39 @@ export default function Details() {
                         : "When did your loved one have their stroke?"}
                 </Text>
 
-                <TextInput
-                    style={styles.input}
-                    placeholder="MM/DD/YYYY"
-                    placeholderTextColor={Colors.textSecondary}
-                    value={strokeDate}
-                    onChangeText={setStrokeDate}
-                    keyboardType="numeric"
-                />
+                <TouchableOpacity
+                    style={styles.dateInputContainer}
+                    onPress={() => setShowDatePicker(true)}
+                >
+                    <Text style={strokeDate ? styles.dateText : styles.datePlaceholder}>
+                        {strokeDate || 'Select date'}
+                    </Text>
+                </TouchableOpacity>
+                {showDatePicker && (
+                    <DateTimePicker
+                        value={strokeDate ? new Date(strokeDate) : new Date()}
+                        mode="date"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        maximumDate={new Date()}
+                        onChange={(event, selectedDate) => {
+                            if (Platform.OS === 'android') {
+                                setShowDatePicker(false);
+                            }
+                            if (selectedDate && event.type !== 'dismissed') {
+                                const formattedDate = selectedDate.toISOString().split('T')[0];
+                                setStrokeDate(formattedDate);
+                            }
+                        }}
+                    />
+                )}
+                {Platform.OS === 'ios' && showDatePicker && (
+                    <TouchableOpacity
+                        style={styles.datePickerDone}
+                        onPress={() => setShowDatePicker(false)}
+                    >
+                        <Text style={styles.datePickerDoneText}>Done</Text>
+                    </TouchableOpacity>
+                )}
 
                 <Text style={[styles.subtitle, { marginTop: 24 }]}>
                     {role === 'survivor'
@@ -186,5 +213,31 @@ const styles = StyleSheet.create({
         fontSize: 17,
         color: Colors.textSecondary,
         fontWeight: '500',
+    },
+    dateInputContainer: {
+        backgroundColor: Colors.card,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        borderRadius: 12,
+        padding: 16,
+    },
+    dateText: {
+        fontSize: 17,
+        color: Colors.text,
+    },
+    datePlaceholder: {
+        fontSize: 17,
+        color: Colors.textSecondary,
+    },
+    datePickerDone: {
+        alignSelf: 'flex-end',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        marginTop: 8,
+    },
+    datePickerDoneText: {
+        fontWeight: '600',
+        fontSize: 16,
+        color: Colors.primary,
     },
 });

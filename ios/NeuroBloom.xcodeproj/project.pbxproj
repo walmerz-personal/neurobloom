@@ -7,26 +7,26 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		02F2383E143553C2D1877CE4 /* libPods-NeuroBloom.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A8FF15294F626556FB9A2A4E /* libPods-NeuroBloom.a */; };
-		0D45D8878DFE19C0AD02D92A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = EB166047952082B4E3D36337 /* PrivacyInfo.xcprivacy */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		3AFC1F1EEA9A2B585C8915FA /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 86D29E368A4CF4D04B967E04 /* PrivacyInfo.xcprivacy */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		5083DFF3D81F26E3E9168892 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 022754E82CA04CD39A110DA4 /* ExpoModulesProvider.swift */; };
+		A69F6E5E90ADD574C670E039 /* libPods-NeuroBloom.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 88B72B3D5F8AE8C5B21A3C41 /* libPods-NeuroBloom.a */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
+		E82EBFB76249E32E2A521A7F /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68654BB4E5C64B4679D8D0D8 /* ExpoModulesProvider.swift */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		022754E82CA04CD39A110DA4 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-NeuroBloom/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		0E31C5CE4D61B9877A409FA3 /* Pods-NeuroBloom.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NeuroBloom.release.xcconfig"; path = "Target Support Files/Pods-NeuroBloom/Pods-NeuroBloom.release.xcconfig"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* NeuroBloom.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NeuroBloom.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = NeuroBloom/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = NeuroBloom/Info.plist; sourceTree = "<group>"; };
-		67D116064DA9D66B49ACCFAB /* Pods-NeuroBloom.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NeuroBloom.debug.xcconfig"; path = "Target Support Files/Pods-NeuroBloom/Pods-NeuroBloom.debug.xcconfig"; sourceTree = "<group>"; };
-		A8FF15294F626556FB9A2A4E /* libPods-NeuroBloom.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-NeuroBloom.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		68654BB4E5C64B4679D8D0D8 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-NeuroBloom/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		86D29E368A4CF4D04B967E04 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = NeuroBloom/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		88B72B3D5F8AE8C5B21A3C41 /* libPods-NeuroBloom.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-NeuroBloom.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = NeuroBloom/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		CCF1BD573A2BC85FBB9F301A /* Pods-NeuroBloom.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NeuroBloom.release.xcconfig"; path = "Target Support Files/Pods-NeuroBloom/Pods-NeuroBloom.release.xcconfig"; sourceTree = "<group>"; };
-		EB166047952082B4E3D36337 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = NeuroBloom/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		C816AE77342595C99F1F13EE /* Pods-NeuroBloom.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NeuroBloom.debug.xcconfig"; path = "Target Support Files/Pods-NeuroBloom/Pods-NeuroBloom.debug.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = NeuroBloom/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* NeuroBloom-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "NeuroBloom-Bridging-Header.h"; path = "NeuroBloom/NeuroBloom-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -37,7 +37,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				02F2383E143553C2D1877CE4 /* libPods-NeuroBloom.a in Frameworks */,
+				A69F6E5E90ADD574C670E039 /* libPods-NeuroBloom.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -53,7 +53,7 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				EB166047952082B4E3D36337 /* PrivacyInfo.xcprivacy */,
+				86D29E368A4CF4D04B967E04 /* PrivacyInfo.xcprivacy */,
 			);
 			name = NeuroBloom;
 			sourceTree = "<group>";
@@ -62,15 +62,33 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				A8FF15294F626556FB9A2A4E /* libPods-NeuroBloom.a */,
+				88B72B3D5F8AE8C5B21A3C41 /* libPods-NeuroBloom.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		705165B91D9B18CB20EF5EC9 /* ExpoModulesProviders */ = {
+		39749F3F17F679AA9433D68A /* NeuroBloom */ = {
 			isa = PBXGroup;
 			children = (
-				B94A04CDCACB0F0D1425DBEF /* NeuroBloom */,
+				68654BB4E5C64B4679D8D0D8 /* ExpoModulesProvider.swift */,
+			);
+			name = NeuroBloom;
+			sourceTree = "<group>";
+		};
+		690D56D7AD4B0FE713F0C19E /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				C816AE77342595C99F1F13EE /* Pods-NeuroBloom.debug.xcconfig */,
+				0E31C5CE4D61B9877A409FA3 /* Pods-NeuroBloom.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		79F5E57AD72FFBECAA6CBFD1 /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				39749F3F17F679AA9433D68A /* NeuroBloom */,
 			);
 			name = ExpoModulesProviders;
 			sourceTree = "<group>";
@@ -89,8 +107,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				F204151CD59B947C67008FC4 /* Pods */,
-				705165B91D9B18CB20EF5EC9 /* ExpoModulesProviders */,
+				690D56D7AD4B0FE713F0C19E /* Pods */,
+				79F5E57AD72FFBECAA6CBFD1 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -105,14 +123,6 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		B94A04CDCACB0F0D1425DBEF /* NeuroBloom */ = {
-			isa = PBXGroup;
-			children = (
-				022754E82CA04CD39A110DA4 /* ExpoModulesProvider.swift */,
-			);
-			name = NeuroBloom;
-			sourceTree = "<group>";
-		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
 			isa = PBXGroup;
 			children = (
@@ -120,16 +130,6 @@
 			);
 			name = Supporting;
 			path = NeuroBloom/Supporting;
-			sourceTree = "<group>";
-		};
-		F204151CD59B947C67008FC4 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				67D116064DA9D66B49ACCFAB /* Pods-NeuroBloom.debug.xcconfig */,
-				CCF1BD573A2BC85FBB9F301A /* Pods-NeuroBloom.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -140,13 +140,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "NeuroBloom" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				D7C0F509E47DFF87E14706E3 /* [Expo] Configure project */,
+				939A261FFDB9F98F75EA34A8 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				755DAC9FBF51DD4C98600F73 /* [CP] Embed Pods Frameworks */,
+				E6A4C1764EABB1E65E02BF15 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -198,7 +198,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				0D45D8878DFE19C0AD02D92A /* PrivacyInfo.xcprivacy in Resources */,
+				3AFC1F1EEA9A2B585C8915FA /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -244,24 +244,6 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		755DAC9FBF51DD4C98600F73 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-NeuroBloom/Pods-NeuroBloom-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-NeuroBloom/Pods-NeuroBloom-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -298,7 +280,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-NeuroBloom/Pods-NeuroBloom-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		D7C0F509E47DFF87E14706E3 /* [Expo] Configure project */ = {
+		939A261FFDB9F98F75EA34A8 /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -322,6 +304,24 @@
 			shellPath = /bin/sh;
 			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-NeuroBloom/expo-configure-project.sh\"\n";
 		};
+		E6A4C1764EABB1E65E02BF15 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-NeuroBloom/Pods-NeuroBloom-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-NeuroBloom/Pods-NeuroBloom-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -330,7 +330,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				5083DFF3D81F26E3E9168892 /* ExpoModulesProvider.swift in Sources */,
+				E82EBFB76249E32E2A521A7F /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -339,7 +339,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 67D116064DA9D66B49ACCFAB /* Pods-NeuroBloom.debug.xcconfig */;
+			baseConfigurationReference = C816AE77342595C99F1F13EE /* Pods-NeuroBloom.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -379,7 +379,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = CCF1BD573A2BC85FBB9F301A /* Pods-NeuroBloom.release.xcconfig */;
+			baseConfigurationReference = 0E31C5CE4D61B9877A409FA3 /* Pods-NeuroBloom.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

@@ -2,6 +2,8 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '../contexts/AuthContext';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import { DMSerifDisplay_400Regular, DMSerifDisplay_400Regular_Italic } from '@expo-google-fonts/dm-serif-display';
+import { SourceSans3_400Regular, SourceSans3_600SemiBold, SourceSans3_700Bold } from '@expo-google-fonts/source-sans-3';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 
@@ -11,6 +13,11 @@ export default function RootLayout() {
         Inter_500Medium,
         Inter_600SemiBold,
         Inter_700Bold,
+        DMSerifDisplay_400Regular,
+        DMSerifDisplay_400Regular_Italic,
+        SourceSans3_400Regular,
+        SourceSans3_600SemiBold,
+        SourceSans3_700Bold,
     });
 
     if (!loaded && !error) {

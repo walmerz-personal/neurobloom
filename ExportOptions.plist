@@ -9,7 +9,7 @@
     <key>uploadSymbols</key>
     <true/>
     <key>destination</key>
-    <string>export</string>
+    <string>upload</string>
     <key>signingStyle</key>
     <string>manual</string>
     <key>provisioningProfiles</key>
