@@ -950,6 +950,93 @@ export const SupabaseService = {
         }
     },
 
+    /**
+     * Get user's pet (kitten/cat)
+     * @param {string} userId 
+     * @returns {Promise<{pet, error}>}
+     */
+    async getPet(userId) {
+        try {
+            const { data, error } = await supabase
+                .from('garden_pets')
+                .select('*, items(*)')
+                .eq('user_id', userId)
+                .maybeSingle();
+
+            if (error) {
+                console.error('❌ Get pet error:', error);
+                return { pet: null, error };
+            }
+
+            return { pet: data, error: null };
+        } catch (error) {
+            console.error('❌ Get pet error:', error);
+            return { pet: null, error };
+        }
+    },
+
+    /**
+     * Buy a pet (directly activates, doesn't go to inventory)
+     * @param {string} userId 
+     * @param {string} itemId 
+     * @param {number} cost 
+     * @returns {Promise<{success, error}>}
+     */
+    async buyPet(userId, itemId, cost) {
+        try {
+            console.log(`🐱 Processing buyPet: User=${userId}, Item=${itemId}, Cost=${cost}`);
+
+            // 1. Check if already has a pet
+            const { pet: existingPet } = await this.getPet(userId);
+            if (existingPet) {
+                return { success: false, error: new Error('You already have a pet!') };
+            }
+
+            // 2. Check points
+            const { points, error: pointsError } = await this.getUserPoints(userId);
+            if (pointsError) {
+                console.error('❌ BuyPet - Failed to get points:', pointsError);
+                return { success: false, error: pointsError };
+            }
+
+            if (points < cost) {
+                console.log(`❌ BuyPet - Insufficient points: Has ${points}, Needs ${cost}`);
+                return { success: false, error: new Error('Insufficient points') };
+            }
+
+            // 3. Deduct points
+            console.log(`💰 BuyPet - Deducting ${cost} points from ${points}`);
+            const { error: updateError } = await this.updateUserPoints(userId, points - cost);
+            if (updateError) {
+                console.error('❌ BuyPet - Failed to update points:', updateError);
+                return { success: false, error: updateError };
+            }
+
+            // 4. Add pet to garden_pets
+            const { error: petError } = await supabase
+                .from('garden_pets')
+                .insert([{
+                    user_id: userId,
+                    item_id: itemId,
+                    purchased_at: new Date().toISOString()
+                }]);
+
+            if (petError) {
+                console.error('❌ BuyPet - Insert failed:', petError);
+                // Rollback points
+                await this.updateUserPoints(userId, points);
+                return { success: false, error: petError };
+            }
+
+            console.log('✅ BuyPet - Purchase successful');
+            return { success: true, error: null };
+
+        } catch (error) {
+            console.error('❌ Buy pet exception:', error);
+            return { success: false, error };
+        }
+    },
+
     // =============================================
     // ACCOUNT MANAGEMENT
     // =============================================
@@ -1163,6 +1250,44 @@ export const SupabaseService = {
     },
 
     /**
+     * Accept an invitation using RPC function (bypasses RLS)
+     * @param {string} invitationCode - The invitation code
+     * @param {string} caregiverId - The caregiver's user ID
+     * @returns {Promise<{data, error}>}
+     */
+    async acceptInvitationRPC(invitationCode, caregiverId) {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { data, error } = await supabase.rpc('accept_invitation', {
+                p_invitation_code: invitationCode,
+                p_caregiver_id: caregiverId
+            });
+
+            if (error) {
+                console.error('❌ Accept invitation RPC error:', error);
+                return { data: null, error };
+            }
+
+            // RPC returns an array, take the first item
+            const result = data && data.length > 0 ? data[0] : null;
+
+            if (!result || !result.success) {
+                const errorMsg = result?.error_message || 'Failed to accept invitation';
+                return { data: null, error: new Error(errorMsg) };
+            }
+
+            console.log('✅ Invitation accepted via RPC:', result.survivor_name);
+            return { data: result, error: null };
+        } catch (error) {
+            console.error('❌ Accept invitation RPC error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
      * Update a care team link
      * @param {string} linkId - Link ID
      * @param {Object} updates - Fields to update
@@ -1223,5 +1348,8 @@ export const SupabaseService = {
         }
     },
 };
+
+// Export the supabase client for other services
+export { supabase };
 
 export default SupabaseService;

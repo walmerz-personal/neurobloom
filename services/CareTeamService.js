@@ -57,43 +57,20 @@ export async function createInvitation(survivorId, relationship = 'other') {
  */
 export async function acceptInvitation(caregiverId, code) {
     try {
-        // First, look up the invitation
-        const { data: invitation, error: lookupError } = await SupabaseService.getInvitationByCode(code);
+        // Use the RPC function which bypasses RLS for pending invitations
+        const { data: result, error: rpcError } = await SupabaseService.acceptInvitationRPC(code, caregiverId);
 
-        if (lookupError || !invitation) {
-            return {
-                success: false,
-                survivor: null,
-                error: new Error('Invalid or expired invitation code')
-            };
-        }
-
-        if (invitation.status !== 'pending') {
-            return {
-                success: false,
-                survivor: null,
-                error: new Error('This invitation has already been used')
-            };
-        }
-
-        // Update the link with the caregiver ID and mark as accepted
-        const { error: updateError } = await SupabaseService.updateCareTeamLink(invitation.id, {
-            caregiver_id: caregiverId,
-            status: 'accepted',
-            accepted_at: new Date().toISOString(),
-        });
-
-        if (updateError) {
-            console.error('❌ Error accepting invitation:', updateError);
-            return { success: false, survivor: null, error: updateError };
+        if (rpcError) {
+            console.error('❌ Error accepting invitation:', rpcError);
+            return { success: false, survivor: null, error: rpcError };
         }
 
         console.log('✅ Invitation accepted');
         return {
             success: true,
             survivor: {
-                id: invitation.survivor_id,
-                name: invitation.survivor_name,
+                id: result.survivor_id,
+                name: result.survivor_name,
             },
             error: null
         };

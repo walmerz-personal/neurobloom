@@ -6,9 +6,12 @@ import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { useAuth } from '../../contexts/AuthContext';
 import { SupabaseService } from '../../services/SupabaseService';
+import { KudosService } from '../../services/KudosService';
 import { MessageCircle, PlayCircle, CheckCircle, LogOut, Quote, User, Flower } from 'lucide-react-native';
 import Svg, { Circle } from 'react-native-svg';
 import Logo from '../../components/Logo';
+import { CareTeamSection } from '../../components/CareTeamSection';
+import { KudosReceivedModal } from '../../components/KudosReceivedModal';
 
 const SURVIVOR_QUOTES = [
     "Every small step forward is progress. You're doing great! 🌟",
@@ -81,6 +84,10 @@ export default function Home() {
     const [motivationalQuote, setMotivationalQuote] = useState('');
     const [dailyProgress, setDailyProgress] = useState({ completed: 0, total: 4 }); // Default goal of 4
 
+    // Kudos state
+    const [unreadKudos, setUnreadKudos] = useState([]);
+    const [showKudosModal, setShowKudosModal] = useState(false);
+
     useEffect(() => {
         if (!userData) return;
 
@@ -93,9 +100,34 @@ export default function Home() {
         useCallback(() => {
             if (user) {
                 fetchDailyProgress();
+                // Check for kudos only if user is a survivor
+                if (userData?.role === 'survivor') {
+                    checkForKudos();
+                }
             }
-        }, [user])
+        }, [user, userData])
     );
+
+    const checkForKudos = async () => {
+        try {
+            const { kudos, error } = await KudosService.getUnreadKudos(user.id);
+            if (!error && kudos.length > 0) {
+                setUnreadKudos(kudos);
+                setShowKudosModal(true);
+            }
+        } catch (error) {
+            console.error('Error checking for kudos:', error);
+        }
+    };
+
+    const handleDismissKudos = async () => {
+        try {
+            await KudosService.markAllKudosAsRead(user.id);
+            setUnreadKudos([]);
+        } catch (error) {
+            console.error('Error marking kudos as read:', error);
+        }
+    };
 
     const fetchDailyProgress = async () => {
         try {
@@ -116,6 +148,17 @@ export default function Home() {
     const handleLogout = async () => {
         await signOut();
         router.replace('/auth/login');
+    };
+
+    const handleNavigateToCaregiver = (action, survivor) => {
+        if (action === 'accept-invitation') {
+            router.push('/caregiver/accept-invitation');
+        } else if (action === 'survivor-progress' && survivor) {
+            router.push({
+                pathname: '/caregiver/survivor-progress',
+                params: { survivorId: survivor.id, survivorName: survivor.name }
+            });
+        }
     };
 
     const progressPercentage = Math.min(dailyProgress.completed / dailyProgress.total, 1);
@@ -195,7 +238,15 @@ export default function Home() {
                     onPress={() => router.push('/check-in')}
                 />
 
-                <View style={{ height: 16 }} />
+                {user && userData && (
+                    <View style={{ marginTop: 24 }}>
+                        <CareTeamSection
+                            userId={user.id}
+                            userRole={userData.role}
+                            onNavigateToCaregiver={handleNavigateToCaregiver}
+                        />
+                    </View>
+                )}
 
                 <QuickActionRow
                     icon={<User size={24} color={Colors.primary} />}
@@ -204,6 +255,14 @@ export default function Home() {
                     onPress={() => router.push('/profile')}
                 />
             </ScrollView>
+
+            {/* Kudos Received Modal for Survivors */}
+            <KudosReceivedModal
+                visible={showKudosModal}
+                onClose={() => setShowKudosModal(false)}
+                kudosList={unreadKudos}
+                onDismiss={handleDismissKudos}
+            />
         </ScreenWrapper>
     );
 }

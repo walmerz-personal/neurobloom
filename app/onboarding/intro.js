@@ -155,7 +155,7 @@ export default function Intro() {
                     <AnimatedView style={[styles.pulseRing, { transform: [{ scale: Animated.multiply(pulseAnim, 0.8) }], opacity: 0.2 }]} />
 
                     <FadeUpView index={0}>
-                        <Text style={styles.statNumber}>800,000</Text>
+                        <Text style={styles.statNumber} numberOfLines={1} adjustsFontSizeToFit>800,000</Text>
                     </FadeUpView>
                     <FadeUpView index={1}>
                         <Text style={styles.statDescription}>

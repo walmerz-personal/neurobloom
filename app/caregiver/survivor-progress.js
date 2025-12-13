@@ -6,7 +6,8 @@ import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../contexts/AuthContext';
 import { CareTeamService } from '../../services/CareTeamService';
-import { ArrowLeft, Activity, Smile, Zap, Target, TrendingUp, Calendar } from 'lucide-react-native';
+import { ArrowLeft, Activity, Smile, Zap, Target, TrendingUp, Calendar, Heart } from 'lucide-react-native';
+import { KudosSendModal } from '../../components/KudosSendModal';
 
 export default function SurvivorProgress() {
     const router = useRouter();
@@ -19,6 +20,20 @@ export default function SurvivorProgress() {
     const [refreshing, setRefreshing] = useState(false);
     const [progress, setProgress] = useState(null);
     const [error, setError] = useState(null);
+
+    // Kudos modal state
+    const [kudosModalVisible, setKudosModalVisible] = useState(false);
+    const [selectedKudosItem, setSelectedKudosItem] = useState(null);
+
+    const openKudosModal = (itemType, itemValue, itemDate = null) => {
+        setSelectedKudosItem({ itemType, itemValue, itemDate });
+        setKudosModalVisible(true);
+    };
+
+    const closeKudosModal = () => {
+        setKudosModalVisible(false);
+        setSelectedKudosItem(null);
+    };
 
     useEffect(() => {
         if (survivorId) {
@@ -118,21 +133,42 @@ export default function SurvivorProgress() {
             >
                 {/* Overview Stats */}
                 <View style={styles.statsGrid}>
-                    <View style={styles.statCard}>
+                    <TouchableOpacity
+                        style={styles.statCard}
+                        onPress={() => openKudosModal('streak', String(stats?.streak || 0))}
+                        activeOpacity={0.7}
+                    >
+                        <View style={styles.kudosIndicator}>
+                            <Heart size={12} color={Colors.bloomMagenta} />
+                        </View>
                         <Calendar size={20} color={Colors.primary} />
                         <Text style={styles.statValue}>{stats?.streak || 0}</Text>
                         <Text style={styles.statLabel}>Day Streak</Text>
-                    </View>
-                    <View style={styles.statCard}>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.statCard}
+                        onPress={() => openKudosModal('exercises', String(stats?.exercisesDone || 0))}
+                        activeOpacity={0.7}
+                    >
+                        <View style={styles.kudosIndicator}>
+                            <Heart size={12} color={Colors.bloomMagenta} />
+                        </View>
                         <Target size={20} color={Colors.success} />
                         <Text style={styles.statValue}>{stats?.exercisesDone || 0}</Text>
                         <Text style={styles.statLabel}>Exercises (14d)</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <TrendingUp size={20} color={Colors.accent} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.statCard}
+                        onPress={() => openKudosModal('checkin_rate', `${stats?.checkInRate || 0}%`)}
+                        activeOpacity={0.7}
+                    >
+                        <View style={styles.kudosIndicator}>
+                            <Heart size={12} color={Colors.bloomMagenta} />
+                        </View>
+                        <TrendingUp size={20} color={Colors.warning} />
                         <Text style={styles.statValue}>{stats?.checkInRate || 0}%</Text>
                         <Text style={styles.statLabel}>Check-in Rate</Text>
-                    </View>
+                    </TouchableOpacity>
                 </View>
 
                 {/* Averages Section */}
@@ -170,7 +206,12 @@ export default function SurvivorProgress() {
                     <Text style={styles.sectionTitle}>Recent Check-ins</Text>
                     {recentLogs && recentLogs.length > 0 ? (
                         recentLogs.slice(0, 7).map((log, index) => (
-                            <View key={log.id || index} style={styles.logRow}>
+                            <TouchableOpacity
+                                key={log.id || index}
+                                style={styles.logRow}
+                                onPress={() => openKudosModal('daily_checkin', formatDate(log.log_date), log.log_date)}
+                                activeOpacity={0.7}
+                            >
                                 <View style={styles.logDate}>
                                     <Text style={styles.logDateText}>{formatDate(log.log_date)}</Text>
                                 </View>
@@ -193,7 +234,10 @@ export default function SurvivorProgress() {
                                         </Text>
                                     </View>
                                 </View>
-                            </View>
+                                <View style={styles.logKudosHint}>
+                                    <Heart size={14} color={Colors.bloomMagenta} />
+                                </View>
+                            </TouchableOpacity>
                         ))
                     ) : (
                         <View style={styles.emptyLogs}>
@@ -214,6 +258,18 @@ export default function SurvivorProgress() {
 
                 <View style={{ height: 40 }} />
             </ScrollView>
+
+            {/* Kudos Modal */}
+            <KudosSendModal
+                visible={kudosModalVisible}
+                onClose={closeKudosModal}
+                caregiverId={user?.id}
+                survivorId={survivorId}
+                survivorName={survivor?.name || survivorName}
+                itemType={selectedKudosItem?.itemType}
+                itemValue={selectedKudosItem?.itemValue}
+                itemDate={selectedKudosItem?.itemDate}
+            />
         </ScreenWrapper>
     );
 }
@@ -395,5 +451,17 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: Colors.text,
         lineHeight: 22,
+    },
+    kudosIndicator: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        backgroundColor: Colors.bloomMagenta + '15',
+        borderRadius: 10,
+        padding: 4,
+    },
+    logKudosHint: {
+        marginLeft: 8,
+        opacity: 0.6,
     },
 });

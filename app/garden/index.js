@@ -4,6 +4,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Colors } from '../../constants/Colors';
 import { PlantingBox } from '../../components/Garden/PlantingBox';
 import { SeedBankModal } from '../../components/Garden/SeedBankModal';
+import { GardenKitten } from '../../components/Garden/GardenKitten';
 import { SupabaseService } from '../../services/SupabaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import { ShoppingBag, Coins, ArrowLeft, Leaf } from 'lucide-react-native';
@@ -17,6 +18,7 @@ export default function GardenScreen() {
     const [points, setPoints] = useState(0);
     const [plants, setPlants] = useState(Array(6).fill(null)); // 6 garden slots
     const [inventory, setInventory] = useState([]); // User's seed inventory
+    const [pet, setPet] = useState(null); // User's pet (kitten/cat)
     const [seedBankVisible, setSeedBankVisible] = useState(false);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -45,6 +47,10 @@ export default function GardenScreen() {
                 });
             }
             setPlants(newPlants);
+
+            // 4. Fetch Pet
+            const { pet: userPet } = await SupabaseService.getPet(user.id);
+            setPet(userPet);
 
         } catch (error) {
             console.error('Error fetching garden data:', error);
@@ -144,7 +150,10 @@ export default function GardenScreen() {
 
             {/* Garden Area (Soil) */}
             <View style={styles.ground}>
-                {/* Soil Textures/Details could go here */}
+                {/* Pet - Kitten/Cat wandering on soil */}
+                {pet && (
+                    <GardenKitten purchasedAt={pet.purchased_at} />
+                )}
 
                 <ScrollView
                     horizontal

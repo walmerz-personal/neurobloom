@@ -74,6 +74,7 @@ export default function ShopScreen() {
     const { user } = useAuth();
     const [items, setItems] = useState([]);
     const [points, setPoints] = useState(0);
+    const [hasPet, setHasPet] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -88,6 +89,10 @@ export default function ShopScreen() {
 
             const { items: shopItems } = await SupabaseService.getItems();
             setItems(shopItems || []);
+
+            // Check if user already has a pet
+            const { pet } = await SupabaseService.getPet(user.id);
+            setHasPet(!!pet);
         } catch (error) {
             console.error('Error fetching shop data:', error);
         } finally {
@@ -101,6 +106,9 @@ export default function ShopScreen() {
             return;
         }
 
+        const isPet = item.type === 'pet';
+        const itemLabel = isPet ? item.name : `${item.name} seed`;
+
         Alert.alert(
             'Confirm Purchase',
             `Buy ${item.name} for ${item.cost} points?`,
@@ -109,15 +117,19 @@ export default function ShopScreen() {
                 {
                     text: 'Buy',
                     onPress: async () => {
-                        const { success, error } = await SupabaseService.buyItem(user.id, item.id, item.cost);
-                        if (success) {
-                            // Run the success animation on the button
-                            if (onSuccessAnimation) onSuccessAnimation();
-
-                            Alert.alert('Success', `You bought a ${item.name} seed!`);
-                            fetchData(); // Refresh points
+                        let result;
+                        if (isPet) {
+                            result = await SupabaseService.buyPet(user.id, item.id, item.cost);
                         } else {
-                            Alert.alert('Error', error?.message || 'Failed to purchase item.');
+                            result = await SupabaseService.buyItem(user.id, item.id, item.cost);
+                        }
+
+                        if (result.success) {
+                            if (onSuccessAnimation) onSuccessAnimation();
+                            Alert.alert('Success', `You bought a ${itemLabel}!`);
+                            fetchData(); // Refresh points and pet status
+                        } else {
+                            Alert.alert('Error', result.error?.message || 'Failed to purchase item.');
                         }
                     }
                 }
@@ -125,24 +137,38 @@ export default function ShopScreen() {
         );
     };
 
-    const renderItem = ({ item }) => (
-        <View style={styles.itemCard}>
-            <View style={styles.itemIcon}>
-                {/* Placeholder for item image */}
-                <Text style={{ fontSize: 32 }}>🌱</Text>
+    const renderItem = ({ item }) => {
+        const isPet = item.type === 'pet';
+        const isOwned = isPet && hasPet;
+        const icon = isPet ? '🐱' : '🌱';
+        const durationText = isPet
+            ? `Grows to a cat in ${Math.round(item.growth_duration_hours / 24)} days`
+            : `Grows in ${item.growth_duration_hours} hours`;
+
+        return (
+            <View style={[styles.itemCard, isOwned && styles.itemCardOwned]}>
+                <View style={styles.itemIcon}>
+                    <Text style={{ fontSize: 32 }}>{icon}</Text>
+                </View>
+                <View style={styles.itemInfo}>
+                    <Text style={styles.itemName}>{item.name}</Text>
+                    <Text style={styles.itemDesc}>{item.description}</Text>
+                    <Text style={styles.itemDuration}>{durationText}</Text>
+                </View>
+                {isOwned ? (
+                    <View style={styles.ownedBadge}>
+                        <Text style={styles.ownedText}>Owned</Text>
+                    </View>
+                ) : (
+                    <BuyButton
+                        item={item}
+                        userPoints={points}
+                        onBuy={handleBuy}
+                    />
+                )}
             </View>
-            <View style={styles.itemInfo}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemDesc}>{item.description}</Text>
-                <Text style={styles.itemDuration}>Grows in {item.growth_duration_hours} hours</Text>
-            </View>
-            <BuyButton
-                item={item}
-                userPoints={points}
-                onBuy={handleBuy}
-            />
-        </View>
-    );
+        );
+    };
 
     return (
         <ScreenWrapper>
@@ -276,6 +302,21 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter_400Regular',
         fontSize: 16,
         color: Colors.textSecondary,
+    },
+    itemCardOwned: {
+        opacity: 0.7,
+        backgroundColor: '#F5F5F5',
+    },
+    ownedBadge: {
+        backgroundColor: '#4CAF50',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+    },
+    ownedText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 12,
+        color: 'white',
     },
 });
 
