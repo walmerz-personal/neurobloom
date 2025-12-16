@@ -1,24 +1,18 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, StyleSheet, Animated, Easing, Dimensions, PanResponder } from 'react-native';
 import LottieView from 'lottie-react-native';
 import Svg, { Circle, Ellipse } from 'react-native-svg';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const GARDEN_WIDTH = SCREEN_WIDTH - 60;
 
 /**
- * GardenKitten - Cat walks smoothly back and forth across the garden
+ * GardenKitten - Cat walks naturally back and forth across the garden
+ * 
+ * Note: The cat_walk.json Lottie animation was modified to use static positioning
+ * (the internal position animation was removed so we control movement from here)
  */
 export const GardenKitten = ({ purchasedAt }) => {
-    const positionX = useRef(new Animated.Value(0)).current;
-    const [facingRight, setFacingRight] = useState(true);
-    const [isChasingBall, setIsChasingBall] = useState(false);
-
-    const lottieRef = useRef(null);
-    const ballX = useRef(new Animated.Value(GARDEN_WIDTH * 0.7)).current;
-    const isAnimatingRef = useRef(false);
-
-    // Growth stage sizing - BIGGER
+    // Growth stage sizing
     const getGrowthStage = () => {
         if (!purchasedAt) return 0;
         const daysElapsed = (new Date() - new Date(purchasedAt)) / (1000 * 60 * 60 * 24);
@@ -31,46 +25,60 @@ export const GardenKitten = ({ purchasedAt }) => {
     const sizeMultiplier = [0.7, 0.8, 0.9, 1.0][getGrowthStage()];
     const displaySize = 120 * sizeMultiplier;
 
-    // Simple continuous walk back and forth
+    // Walking boundaries
+    const LEFT_BOUND = 20;
+    const RIGHT_BOUND = SCREEN_WIDTH - displaySize - 20;
+
+    // Animated values
+    const positionX = useRef(new Animated.Value(LEFT_BOUND)).current;
+    const ballX = useRef(new Animated.Value(SCREEN_WIDTH * 0.5)).current;
+    const [facingRight, setFacingRight] = useState(true);
+
+    // Refs to track state without re-renders
+    const isChasingBallRef = useRef(false);
+    const facingRightRef = useRef(true);
+    const walkTimeoutRef = useRef(null);
+    const animationRef = useRef(null);
+    const lottieRef = useRef(null);
+
+    // Random durations for natural feel
+    const getWalkDuration = () => 4000 + Math.random() * 3000; // 4-7 seconds
+    const getPauseDuration = () => 800 + Math.random() * 1200; // 0.8-2 seconds
+
+    // Start walking function
+    const startWalking = useCallback(() => {
+        if (isChasingBallRef.current) return;
+
+        const targetX = facingRightRef.current ? RIGHT_BOUND : LEFT_BOUND;
+        setFacingRight(facingRightRef.current);
+
+        if (animationRef.current) {
+            animationRef.current.stop();
+        }
+
+        animationRef.current = Animated.timing(positionX, {
+            toValue: targetX,
+            duration: getWalkDuration(),
+            easing: Easing.linear,
+            useNativeDriver: false, // Using left positioning
+        });
+
+        animationRef.current.start(({ finished }) => {
+            if (finished && !isChasingBallRef.current) {
+                facingRightRef.current = !facingRightRef.current;
+                walkTimeoutRef.current = setTimeout(startWalking, getPauseDuration());
+            }
+        });
+    }, [RIGHT_BOUND, LEFT_BOUND, positionX]);
+
+    // Initial walk start
     useEffect(() => {
-        if (isChasingBall) return;
-
-        let currentlyFacingRight = true;
-
-        const walkOnce = () => {
-            if (isChasingBall || isAnimatingRef.current) return;
-
-            isAnimatingRef.current = true;
-            const targetX = currentlyFacingRight ? GARDEN_WIDTH - displaySize : 0;
-
-            // Update direction state
-            setFacingRight(currentlyFacingRight);
-
-            // Walk to the other side - 8 seconds for full walk
-            Animated.timing(positionX, {
-                toValue: targetX,
-                duration: 8000,
-                easing: Easing.linear,
-                useNativeDriver: true,
-            }).start(({ finished }) => {
-                isAnimatingRef.current = false;
-                if (finished && !isChasingBall) {
-                    // Flip direction and pause briefly
-                    currentlyFacingRight = !currentlyFacingRight;
-                    setTimeout(walkOnce, 1000);
-                }
-            });
-        };
-
-        // Start walking after a short delay
-        const timeout = setTimeout(walkOnce, 500);
-
+        walkTimeoutRef.current = setTimeout(startWalking, 500);
         return () => {
-            clearTimeout(timeout);
-            positionX.stopAnimation();
-            isAnimatingRef.current = false;
+            if (walkTimeoutRef.current) clearTimeout(walkTimeoutRef.current);
+            if (animationRef.current) animationRef.current.stop();
         };
-    }, [isChasingBall, displaySize]);
+    }, [startWalking]);
 
     // Ball pan responder
     const ballPan = useRef(
@@ -78,35 +86,37 @@ export const GardenKitten = ({ purchasedAt }) => {
             onStartShouldSetPanResponder: () => true,
             onMoveShouldSetPanResponder: () => true,
             onPanResponderMove: (_, gs) => {
-                ballX.setValue(Math.max(10, Math.min(gs.moveX - 15, GARDEN_WIDTH - 25)));
+                ballX.setValue(Math.max(20, Math.min(gs.moveX - 14, SCREEN_WIDTH - 48)));
             },
             onPanResponderRelease: (_, gs) => {
-                const target = Math.max(10, Math.min(gs.moveX + gs.vx * 80 - 15, GARDEN_WIDTH - 25));
+                const target = Math.max(34, Math.min(gs.moveX + gs.vx * 80, SCREEN_WIDTH - 34));
 
-                // Stop current walk
-                positionX.stopAnimation();
-                isAnimatingRef.current = false;
-                setIsChasingBall(true);
+                if (animationRef.current) animationRef.current.stop();
+                if (walkTimeoutRef.current) clearTimeout(walkTimeoutRef.current);
+                isChasingBallRef.current = true;
 
                 // Ball rolls
                 Animated.spring(ballX, {
-                    toValue: target,
+                    toValue: target - 14,
                     friction: 5,
-                    useNativeDriver: true,
+                    useNativeDriver: false,
                 }).start();
 
-                // Cat chases - get current position
+                // Cat chases
                 positionX.stopAnimation((currentValue) => {
-                    const catTarget = Math.max(0, Math.min(target - displaySize / 2, GARDEN_WIDTH - displaySize));
-                    setFacingRight(catTarget > currentValue);
+                    const catTarget = Math.max(LEFT_BOUND, Math.min(target - displaySize / 2, RIGHT_BOUND));
+                    const shouldFaceRight = catTarget > currentValue;
+                    facingRightRef.current = shouldFaceRight;
+                    setFacingRight(shouldFaceRight);
 
                     Animated.timing(positionX, {
                         toValue: catTarget,
-                        duration: 2000,
+                        duration: 1200,
                         easing: Easing.out(Easing.quad),
-                        useNativeDriver: true,
+                        useNativeDriver: false,
                     }).start(() => {
-                        setIsChasingBall(false);
+                        isChasingBallRef.current = false;
+                        walkTimeoutRef.current = setTimeout(startWalking, 1500);
                     });
                 });
             },
@@ -114,11 +124,11 @@ export const GardenKitten = ({ purchasedAt }) => {
     ).current;
 
     return (
-        <View style={styles.container}>
-            {/* Red Ball */}
+        <View style={styles.container} pointerEvents="box-none">
+            {/* Ball */}
             <Animated.View
                 {...ballPan.panHandlers}
-                style={[styles.ball, { transform: [{ translateX: ballX }] }]}
+                style={[styles.ball, { left: ballX }]}
             >
                 <Svg width={28} height={28} viewBox="0 0 28 28">
                     <Circle cx="14" cy="14" r="13" fill="#D32F2F" />
@@ -131,12 +141,10 @@ export const GardenKitten = ({ purchasedAt }) => {
                 style={[
                     styles.cat,
                     {
+                        left: positionX,
                         width: displaySize,
                         height: displaySize,
-                        transform: [
-                            { translateX: positionX },
-                            { scaleX: facingRight ? 1 : -1 },
-                        ],
+                        transform: [{ scaleX: facingRight ? 1 : -1 }],
                     },
                 ]}
             >
@@ -144,8 +152,8 @@ export const GardenKitten = ({ purchasedAt }) => {
                     ref={lottieRef}
                     source={require('../../assets/animations/cat_walk.json')}
                     style={{ width: displaySize, height: displaySize }}
-                    autoPlay={true}
-                    loop={true}
+                    autoPlay
+                    loop
                     speed={1}
                 />
             </Animated.View>
@@ -156,19 +164,21 @@ export const GardenKitten = ({ purchasedAt }) => {
 const styles = StyleSheet.create({
     container: {
         position: 'absolute',
-        top: -75,
-        left: 10,
-        right: 10,
-        height: 140,
-        zIndex: 10,
+        bottom: 200,
+        left: 0,
+        right: 0,
+        height: 150,
+        zIndex: 200,
+        overflow: 'visible',
     },
     cat: {
         position: 'absolute',
         bottom: 0,
+        overflow: 'visible',
     },
     ball: {
         position: 'absolute',
         bottom: 20,
-        zIndex: 5,
+        zIndex: 50,
     },
 });

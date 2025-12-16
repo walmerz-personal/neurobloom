@@ -150,11 +150,6 @@ export default function GardenScreen() {
 
             {/* Garden Area (Soil) */}
             <View style={styles.ground}>
-                {/* Pet - Kitten/Cat wandering on soil */}
-                {pet && (
-                    <GardenKitten purchasedAt={pet.purchased_at} />
-                )}
-
                 <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
@@ -173,6 +168,11 @@ export default function GardenScreen() {
                     <View style={styles.paddingEnd} />
                 </ScrollView>
             </View>
+
+            {/* Pet - Kitten/Cat wandering above soil - Rendered OUTSIDE ground View for proper visibility */}
+            {pet && (
+                <GardenKitten purchasedAt={pet.purchased_at} />
+            )}
 
             {/* Bottom Navigation Placeholder (Visual only, actual nav handled by Tabs) */}
             {/* The tab bar covers the bottom, so we just need ensure soil goes down enough */}
@@ -290,6 +290,7 @@ const styles = StyleSheet.create({
         // So the scrollview should be overlapping the sky/ground boundary.
         // Let's adjust.
         zIndex: 1,
+        overflow: 'visible', // Allow cat to render above this area
     },
     // We want the ScrollView to float over the boundary of Sky/Ground
     scrollView: {

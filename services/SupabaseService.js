@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { Config } from '../constants/Config';
 import 'react-native-url-polyfill/auto';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Initialize Supabase client with error handling
 let supabase = null;
@@ -19,8 +20,15 @@ try {
         initError = new Error(errorMsg);
     } else {
         // Credentials exist, create client
-        supabase = createClient(Config.SUPABASE_URL, Config.SUPABASE_ANON_KEY);
-        console.log('✅ Supabase client initialized successfully');
+        supabase = createClient(Config.SUPABASE_URL, Config.SUPABASE_ANON_KEY, {
+            auth: {
+                storage: AsyncStorage,
+                autoRefreshToken: true,
+                persistSession: true,
+                detectSessionInUrl: false,
+            },
+        });
+        console.log('✅ Supabase client initialized successfully with persistence');
     }
 } catch (error) {
     const errorMsg = `❌ CRITICAL: Failed to initialize Supabase client: ${error.message}`;

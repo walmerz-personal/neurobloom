@@ -13,7 +13,14 @@ export default {
         userInterfaceStyle: "light",
         newArchEnabled: false,
         plugins: [
-            "expo-router"
+            "expo-router",
+            [
+                "expo-notifications",
+                {
+                    "icon": "./assets/neurobloom-logo.png",
+                    "color": "#5B4FD6"
+                }
+            ]
         ],
         splash: {
             image: "./assets/splash-icon.png",

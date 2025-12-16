@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, Platform, Switch, Linking } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper } from '../components/ScreenWrapper';
@@ -7,8 +7,9 @@ import { Colors } from '../constants/Colors';
 import { Typography } from '../constants/Typography';
 import { useAuth } from '../contexts/AuthContext';
 import { SupabaseService } from '../services/SupabaseService';
-import { ArrowLeft, Save, User, Calendar, Activity, Target, Mail, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Save, User, Calendar, Activity, Target, Mail, Trash2, Bell } from 'lucide-react-native';
 import { CareTeamSection } from '../components/CareTeamSection';
+import { NotificationService } from '../services/NotificationService';
 
 export default function Profile() {
     const router = useRouter();
@@ -25,9 +26,36 @@ export default function Profile() {
     const [goals, setGoals] = useState('');
     const [showDatePicker, setShowDatePicker] = useState(false);
 
+    // Notification State
+    const [notificationsEnabled, setNotificationsEnabled] = useState(true); // On by default
+    const [reminderTime, setReminderTime] = useState(new Date(2000, 0, 1, 8, 30)); // Default 8:30 AM
+    const [showTimePicker, setShowTimePicker] = useState(false);
+
     useEffect(() => {
         loadProfile();
+        loadNotificationPrefs();
     }, [user]);
+
+    const loadNotificationPrefs = async () => {
+        const prefs = await NotificationService.loadNotificationPrefs();
+        if (prefs) {
+            // User has saved preferences, use them
+            setNotificationsEnabled(prefs.enabled);
+            if (prefs.hour !== undefined && prefs.minute !== undefined) {
+                setReminderTime(new Date(2000, 0, 1, prefs.hour, prefs.minute));
+            }
+        } else {
+            // First time - enable notifications by default
+            const hasPermission = await NotificationService.requestPermissions();
+            if (hasPermission) {
+                await NotificationService.scheduleDailyReminder(8, 30);
+                await NotificationService.saveNotificationPrefs({ enabled: true, hour: 8, minute: 30 });
+                setNotificationsEnabled(true);
+            } else {
+                setNotificationsEnabled(false);
+            }
+        }
+    };
 
     const loadProfile = async () => {
         if (!user?.id) return;
@@ -78,6 +106,50 @@ export default function Profile() {
             Alert.alert('Error', 'Failed to save profile');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleNotificationToggle = async (value) => {
+        if (value) {
+            // Request permissions when enabling
+            const hasPermission = await NotificationService.requestPermissions();
+            if (!hasPermission) {
+                Alert.alert(
+                    'Notifications Disabled',
+                    'To receive daily reminders, please enable notifications in your device Settings.',
+                    [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Open Settings', onPress: () => Linking.openSettings() }
+                    ]
+                );
+                return;
+            }
+            // Schedule the reminder
+            const hour = reminderTime.getHours();
+            const minute = reminderTime.getMinutes();
+            await NotificationService.scheduleDailyReminder(hour, minute);
+            await NotificationService.saveNotificationPrefs({ enabled: true, hour, minute });
+            setNotificationsEnabled(true);
+        } else {
+            // Cancel all reminders
+            await NotificationService.cancelAllReminders();
+            await NotificationService.saveNotificationPrefs({ enabled: false, hour: reminderTime.getHours(), minute: reminderTime.getMinutes() });
+            setNotificationsEnabled(false);
+        }
+    };
+
+    const handleTimeChange = async (event, selectedTime) => {
+        if (Platform.OS === 'android') {
+            setShowTimePicker(false);
+        }
+        if (selectedTime && event.type !== 'dismissed') {
+            setReminderTime(selectedTime);
+            if (notificationsEnabled) {
+                const hour = selectedTime.getHours();
+                const minute = selectedTime.getMinutes();
+                await NotificationService.scheduleDailyReminder(hour, minute);
+                await NotificationService.saveNotificationPrefs({ enabled: true, hour, minute });
+            }
         }
     };
 
@@ -300,6 +372,61 @@ export default function Profile() {
                     }}
                 />
 
+                {/* Notifications Section */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Notifications</Text>
+
+                    <View style={styles.notificationCard}>
+                        <View style={styles.notificationRow}>
+                            <View style={styles.notificationInfo}>
+                                <View style={styles.labelContainer}>
+                                    <Bell size={18} color={Colors.primary} />
+                                    <Text style={styles.notificationLabel}>Daily Exercise Reminder</Text>
+                                </View>
+                                <Text style={styles.notificationDescription}>
+                                    Get a gentle reminder to do your exercises
+                                </Text>
+                            </View>
+                            <Switch
+                                value={notificationsEnabled}
+                                onValueChange={handleNotificationToggle}
+                                trackColor={{ false: Colors.border, true: Colors.primaryLight }}
+                                thumbColor={notificationsEnabled ? Colors.primary : '#f4f3f4'}
+                            />
+                        </View>
+
+                        {notificationsEnabled && (
+                            <View style={styles.timePickerSection}>
+                                <Text style={styles.timeLabel}>Reminder Time</Text>
+                                <TouchableOpacity
+                                    style={styles.timeButton}
+                                    onPress={() => setShowTimePicker(true)}
+                                >
+                                    <Text style={styles.timeButtonText}>
+                                        {reminderTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </Text>
+                                </TouchableOpacity>
+                                {showTimePicker && (
+                                    <DateTimePicker
+                                        value={reminderTime}
+                                        mode="time"
+                                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                        onChange={handleTimeChange}
+                                    />
+                                )}
+                                {Platform.OS === 'ios' && showTimePicker && (
+                                    <TouchableOpacity
+                                        style={styles.datePickerDone}
+                                        onPress={() => setShowTimePicker(false)}
+                                    >
+                                        <Text style={styles.datePickerDoneText}>Done</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        )}
+                    </View>
+                </View>
+
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Account Management</Text>
 
@@ -484,6 +611,57 @@ const styles = StyleSheet.create({
     datePickerDoneText: {
         fontFamily: 'Inter_600SemiBold',
         fontSize: 16,
+        color: Colors.primary,
+    },
+    // Notification styles
+    notificationCard: {
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: Colors.border,
+        borderRadius: 12,
+        padding: 16,
+    },
+    notificationRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    notificationInfo: {
+        flex: 1,
+        marginRight: 12,
+    },
+    notificationLabel: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 16,
+        color: Colors.text,
+    },
+    notificationDescription: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 13,
+        color: Colors.textSecondary,
+        marginTop: 4,
+    },
+    timePickerSection: {
+        marginTop: 16,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: Colors.border,
+    },
+    timeLabel: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 14,
+        color: Colors.textSecondary,
+        marginBottom: 8,
+    },
+    timeButton: {
+        backgroundColor: Colors.surfaceHighlight,
+        borderRadius: 8,
+        padding: 12,
+        alignItems: 'center',
+    },
+    timeButtonText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 18,
         color: Colors.primary,
     },
 });
