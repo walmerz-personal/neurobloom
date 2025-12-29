@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, SafeAreaView, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, SafeAreaView, Dimensions, Platform, ImageBackground } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Colors } from '../../constants/Colors';
 import { PlantingBox } from '../../components/Garden/PlantingBox';
@@ -8,7 +8,8 @@ import { GardenKitten } from '../../components/Garden/GardenKitten';
 import { SupabaseService } from '../../services/SupabaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import { ShoppingBag, Coins, ArrowLeft, Leaf } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+
+const gardenBackground = require('../../assets/images/garden/garden_background.png');
 
 const { width } = Dimensions.get('window');
 
@@ -107,10 +108,11 @@ export default function GardenScreen() {
 
     return (
         <View style={styles.container}>
-            {/* Sky Background */}
-            <LinearGradient
-                colors={['#D1C4E9', '#F3E5F5', '#FFF3E0']} // Purple -> Pink -> Orange/Peach
-                style={styles.sky}
+            {/* Full Screen Background Image */}
+            <ImageBackground
+                source={gardenBackground}
+                style={styles.backgroundImage}
+                resizeMode="cover"
             >
                 {/* Header */}
                 <SafeAreaView style={styles.safeArea}>
@@ -139,14 +141,7 @@ export default function GardenScreen() {
                         </View>
                     </View>
                 </SafeAreaView>
-
-                {/* Hills Background Layers */}
-                <View style={styles.hillsContainer}>
-                    <View style={[styles.hill, styles.hillBack]} />
-                    <View style={[styles.hill, styles.hillFront]} />
-                </View>
-
-            </LinearGradient>
+            </ImageBackground>
 
             {/* Garden Area (Soil) */}
             <View style={styles.ground}>
@@ -190,7 +185,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#FFF3E0',
     },
-    sky: {
+    backgroundImage: {
         flex: 1,
         width: '100%',
     },
@@ -246,36 +241,6 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter_600SemiBold',
         fontSize: 14,
         color: '#4E342E',
-    },
-
-    // Hills
-    hillsContainer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 200, // Height of hills area
-        zIndex: 0,
-    },
-    hill: {
-        position: 'absolute',
-        bottom: -50, // Push down slightly
-        width: width * 1.5,
-        height: 200,
-        borderTopLeftRadius: 300,
-        borderTopRightRadius: 300,
-    },
-    hillBack: {
-        backgroundColor: 'rgba(126, 87, 194, 0.3)', // Purpleish
-        left: -100,
-        bottom: 20,
-        transform: [{ scaleX: 1.5 }],
-    },
-    hillFront: {
-        backgroundColor: 'rgba(149, 117, 205, 0.4)', // Lighter purple
-        right: -50,
-        bottom: 0,
-        transform: [{ scaleX: 1.2 }],
     },
 
     // Ground

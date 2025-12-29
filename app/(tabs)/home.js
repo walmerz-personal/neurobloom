@@ -12,6 +12,7 @@ import Svg, { Circle } from 'react-native-svg';
 import Logo from '../../components/Logo';
 import { CareTeamSection } from '../../components/CareTeamSection';
 import { KudosReceivedModal } from '../../components/KudosReceivedModal';
+import { CaregiverHomeView } from '../../components/CaregiverHomeView';
 
 const SURVIVOR_QUOTES = [
     "Every small step forward is progress. You're doing great! 🌟",
@@ -162,6 +163,34 @@ export default function Home() {
     };
 
     const progressPercentage = Math.min(dailyProgress.completed / dailyProgress.total, 1);
+
+    // If user is a caregiver, render the caregiver-specific home view
+    if (userData?.role === 'caregiver') {
+        return (
+            <ScreenWrapper>
+                <View style={styles.header}>
+                    <View style={styles.headerLeft}>
+                        <Logo style={styles.headerLogo} />
+                        <View>
+                            <Text style={styles.greetingSub}>Welcome back,</Text>
+                            <Text style={styles.greeting}>
+                                {userData?.name ? userData.name.split(' ')[0] : 'Friend'}
+                            </Text>
+                        </View>
+                    </View>
+                    <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+                        <LogOut size={24} color={Colors.textSecondary} />
+                    </TouchableOpacity>
+                </View>
+                <CaregiverHomeView
+                    userData={userData}
+                    user={user}
+                    onLogout={handleLogout}
+                    onNavigateToCaregiver={handleNavigateToCaregiver}
+                />
+            </ScreenWrapper>
+        );
+    }
 
     return (
         <ScreenWrapper>
