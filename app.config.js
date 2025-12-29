@@ -32,7 +32,7 @@ export default {
         ios: {
             supportsTablet: true,
             bundleIdentifier: "com.neurobloom.app",
-            buildNumber: "21",
+            buildNumber: "22",
             infoPlist: {
                 ITSAppUsesNonExemptEncryption: false
             }
