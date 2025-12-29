@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Audio } from 'expo-av';
+import { useAudioRecorder, AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorderState } from 'expo-audio';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
@@ -17,13 +17,16 @@ export default function Lilly() {
     ]);
     const [inputText, setInputText] = useState('');
     const [isTyping, setIsTyping] = useState(false);
-    const [isRecording, setIsRecording] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [userProfile, setUserProfile] = useState(null);
+    const [permissionGranted, setPermissionGranted] = useState(false);
     const scrollViewRef = useRef(null);
-    const recordingRef = useRef(null);
     const router = useRouter();
     const { user } = useAuth();
+
+    // Use the new expo-audio hook for recording
+    const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+    const recorderState = useAudioRecorderState(audioRecorder);
 
     useEffect(() => {
         const loadProfile = async () => {
@@ -36,12 +39,24 @@ export default function Lilly() {
         loadProfile();
     }, [user]);
 
+    // Request permissions on mount
+    useEffect(() => {
+        const requestPermissions = async () => {
+            const status = await AudioModule.requestRecordingPermissionsAsync();
+            setPermissionGranted(status.granted);
+            if (status.granted) {
+                await setAudioModeAsync({
+                    playsInSilentMode: true,
+                    allowsRecording: true,
+                });
+            }
+        };
+        requestPermissions();
+    }, []);
+
     const startRecording = async () => {
         try {
-            console.log('🎤 Requesting microphone permissions...');
-            const permission = await Audio.requestPermissionsAsync();
-
-            if (!permission.granted) {
+            if (!permissionGranted) {
                 Alert.alert(
                     'Permission Required',
                     'Please allow microphone access to use voice input.',
@@ -50,19 +65,9 @@ export default function Lilly() {
                 return;
             }
 
-            console.log('🎤 Configuring audio mode...');
-            await Audio.setAudioModeAsync({
-                allowsRecordingIOS: true,
-                playsInSilentModeIOS: true,
-            });
-
             console.log('🎤 Starting recording...');
-            const { recording } = await Audio.Recording.createAsync(
-                Audio.RecordingOptionsPresets.HIGH_QUALITY
-            );
-
-            recordingRef.current = recording;
-            setIsRecording(true);
+            await audioRecorder.prepareToRecordAsync();
+            audioRecorder.record();
             console.log('✅ Recording started');
         } catch (error) {
             console.error('❌ Failed to start recording:', error);
@@ -73,19 +78,9 @@ export default function Lilly() {
     const stopRecording = async () => {
         try {
             console.log('🎤 Stopping recording...');
-            setIsRecording(false);
 
-            if (!recordingRef.current) {
-                return;
-            }
-
-            await recordingRef.current.stopAndUnloadAsync();
-            await Audio.setAudioModeAsync({
-                allowsRecordingIOS: false,
-            });
-
-            const uri = recordingRef.current.getURI();
-            recordingRef.current = null;
+            await audioRecorder.stop();
+            const uri = audioRecorder.uri;
 
             console.log('✅ Recording stopped, URI:', uri);
 
@@ -110,14 +105,13 @@ export default function Lilly() {
             }
         } catch (error) {
             console.error('❌ Failed to stop recording:', error);
-            setIsRecording(false);
             setIsTranscribing(false);
             Alert.alert('Error', 'Failed to process recording. Please try again.');
         }
     };
 
     const handleVoicePress = () => {
-        if (isRecording) {
+        if (recorderState.isRecording) {
             stopRecording();
         } else {
             startRecording();
@@ -232,12 +226,12 @@ export default function Lilly() {
                         <TouchableOpacity
                             style={[
                                 styles.voiceButton,
-                                isRecording && styles.voiceButtonRecording
+                                recorderState.isRecording && styles.voiceButtonRecording
                             ]}
                             onPress={handleVoicePress}
                             disabled={isTranscribing}
                         >
-                            {isRecording ? (
+                            {recorderState.isRecording ? (
                                 <View style={styles.recordingIndicator} />
                             ) : (
                                 <Mic size={20} color={isTranscribing ? Colors.textTertiary : Colors.textSecondary} />
@@ -246,19 +240,19 @@ export default function Lilly() {
 
                         <TextInput
                             style={styles.input}
-                            placeholder={isRecording ? "Recording..." : "Type a message..."}
+                            placeholder={recorderState.isRecording ? "Recording..." : "Type a message..."}
                             placeholderTextColor={Colors.textTertiary}
                             value={inputText}
                             onChangeText={setInputText}
                             returnKeyType="send"
                             onSubmitEditing={handleSend}
-                            editable={!isRecording && !isTranscribing}
+                            editable={!recorderState.isRecording && !isTranscribing}
                         />
 
                         <TouchableOpacity
                             style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
                             onPress={handleSend}
-                            disabled={!inputText.trim() || isRecording || isTranscribing}
+                            disabled={!inputText.trim() || recorderState.isRecording || isTranscribing}
                         >
                             <Send size={20} color="white" />
                         </TouchableOpacity>

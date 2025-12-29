@@ -9,7 +9,7 @@ import { SupabaseService } from '../../services/SupabaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import { ShoppingBag, Coins, ArrowLeft, Leaf } from 'lucide-react-native';
 
-const gardenBackground = require('../../assets/images/garden/garden_background.png');
+const gardenBackground = require('../../assets/images/garden/garden_background_v2.png');
 
 const { width } = Dimensions.get('window');
 
@@ -108,13 +108,13 @@ export default function GardenScreen() {
 
     return (
         <View style={styles.container}>
-            {/* Full Screen Background Image */}
+            {/* Full Screen Background Image (Clean v2) */}
             <ImageBackground
                 source={gardenBackground}
                 style={styles.backgroundImage}
                 resizeMode="cover"
             >
-                {/* Header */}
+                {/* Header with Title and Stats */}
                 <SafeAreaView style={styles.safeArea}>
                     <View style={styles.header}>
                         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -129,7 +129,7 @@ export default function GardenScreen() {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Stats Pills */}
+                    {/* Stats Pills - Interactive */}
                     <View style={styles.statsContainer}>
                         <TouchableOpacity style={styles.statPill} onPress={() => setSeedBankVisible(true)}>
                             <Leaf size={16} color="#8D6E63" fill="#8D6E63" />
@@ -141,36 +141,38 @@ export default function GardenScreen() {
                         </View>
                     </View>
                 </SafeAreaView>
+
+                {/* Spacer to push garden area to bottom */}
+                <View style={styles.spacer} />
+
+                {/* Garden Planting Area - Interactive visible boxes */}
+                <View style={styles.gardenArea}>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.scrollContent}
+                        style={styles.scrollView}
+                    >
+                        <View style={styles.paddingStart} />
+                        {plants.map((plant, index) => (
+                            <PlantingBox
+                                key={index}
+                                plant={plant}
+                                onPress={() => handleBoxPress(index)}
+                                index={index}
+                            />
+                        ))}
+                        <View style={styles.paddingEnd} />
+                    </ScrollView>
+                </View>
             </ImageBackground>
 
-            {/* Garden Area (Soil) */}
-            <View style={styles.ground}>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.scrollContent}
-                    style={styles.scrollView}
-                >
-                    <View style={styles.paddingStart} />
-                    {plants.map((plant, index) => (
-                        <PlantingBox
-                            key={index}
-                            plant={plant}
-                            onPress={() => handleBoxPress(index)}
-                            index={index}
-                        />
-                    ))}
-                    <View style={styles.paddingEnd} />
-                </ScrollView>
-            </View>
-
-            {/* Pet - Kitten/Cat wandering above soil - Rendered OUTSIDE ground View for proper visibility */}
+            {/* Pet - Kitten/Cat wandering */}
             {pet && (
                 <GardenKitten purchasedAt={pet.purchased_at} />
             )}
 
-            {/* Bottom Navigation Placeholder (Visual only, actual nav handled by Tabs) */}
-            {/* The tab bar covers the bottom, so we just need ensure soil goes down enough */}
+            {/* Seed Bank Modal */}
             <SeedBankModal
                 visible={seedBankVisible}
                 onClose={() => setSeedBankVisible(false)}
@@ -183,7 +185,7 @@ export default function GardenScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFF3E0',
+        backgroundColor: '#4E342E', // Fallback color matching soil
     },
     backgroundImage: {
         flex: 1,
@@ -195,16 +197,16 @@ const styles = StyleSheet.create({
     },
     header: {
         flexDirection: 'row',
-        justifyContent: 'space-between', // Centered title, but we need buttons on sides potentially
+        justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 20,
         paddingTop: Platform.OS === 'android' ? 40 : 10,
         marginBottom: 10,
     },
     headerTitle: {
-        fontFamily: 'Inter_700Bold', // Assuming this font exists from previous analysis
+        fontFamily: 'Inter_700Bold',
         fontSize: 24,
-        color: '#2E1A16', // Dark Brown
+        color: '#2E1A16',
         position: 'absolute',
         left: 0,
         right: 0,
@@ -242,29 +244,18 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#4E342E',
     },
-
-    // Ground
-    ground: {
-        height: 300, // Fixed height for soil area
-        backgroundColor: '#4E342E', // Dark Brown Soil
-        borderTopWidth: 8,
-        borderTopColor: '#5D4037', // Slightly lighter top edge
-        width: '100%',
-        justifyContent: 'flex-start', // Plants sit on top of soil? No, they sit IN soil line.
-        // Actually, in the image, the boxes SIT ON the soil line.
-        // So the scrollview should be overlapping the sky/ground boundary.
-        // Let's adjust.
-        zIndex: 1,
-        overflow: 'visible', // Allow cat to render above this area
+    spacer: {
+        flex: 1,
     },
-    // We want the ScrollView to float over the boundary of Sky/Ground
+    gardenArea: {
+        paddingBottom: 40, // Adjust based on box position on soil
+    },
     scrollView: {
-        marginTop: -60, // Pull up to overlap sky
-        paddingTop: 0,
+        // Clean scrollView
     },
     scrollContent: {
-        alignItems: 'flex-end', // Align items to bottom of scroll area
-        paddingBottom: 40, // Space from bottom
+        alignItems: 'flex-end',
+        paddingBottom: 20,
     },
     paddingStart: { width: 20 },
     paddingEnd: { width: 20 },

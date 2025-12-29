@@ -11,7 +11,7 @@ export default {
         orientation: "portrait",
         icon: "./assets/neurobloom-logo.png",
         userInterfaceStyle: "light",
-        newArchEnabled: false,
+        newArchEnabled: true,
         plugins: [
             "expo-router",
             [
@@ -20,7 +20,9 @@ export default {
                     "icon": "./assets/neurobloom-logo.png",
                     "color": "#5B4FD6"
                 }
-            ]
+            ],
+            "@react-native-community/datetimepicker",
+            "expo-audio"
         ],
         splash: {
             image: "./assets/splash-icon.png",
