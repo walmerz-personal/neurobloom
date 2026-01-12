@@ -5,6 +5,12 @@ import { PrimaryButton, SecondaryButton } from '../../components/Button';
 import { Colors } from '../../constants/Colors';
 
 describe('Button Components', () => {
+    // Helper to flatten styles
+    const getStyle = (element) => {
+        const style = element.props.style;
+        return Array.isArray(style) ? Object.assign({}, ...style) : style;
+    };
+
     describe('PrimaryButton', () => {
         it('should render with correct title', () => {
             const { getByText } = render(
@@ -27,7 +33,7 @@ describe('Button Components', () => {
 
         it('should apply custom styles', () => {
             const customStyle = { marginBottom: 20 };
-            const { getByText } = render(
+            const { getByRole } = render(
                 <PrimaryButton
                     title="Styled Button"
                     onPress={() => { }}
@@ -35,18 +41,17 @@ describe('Button Components', () => {
                 />
             );
 
-            const button = getByText('Styled Button').parent;
-            expect(button.props.style).toContainEqual(customStyle);
+            const button = getByRole('button', { name: 'Styled Button' });
+            expect(button.props.style).toMatchObject(customStyle);
         });
 
         it('should have correct background color', () => {
-            const { getByText } = render(
+            const { getByRole } = render(
                 <PrimaryButton title="Test" onPress={() => { }} />
             );
 
-            const button = getByText('Test').parent;
-            const styles = button.props.style;
-            const backgroundColor = styles.find(s => s.backgroundColor)?.backgroundColor;
+            const button = getByRole('button', { name: 'Test' });
+            const backgroundColor = getStyle(button).backgroundColor;
 
             expect(backgroundColor).toBe(Colors.primary);
         });
@@ -57,18 +62,17 @@ describe('Button Components', () => {
             );
 
             const text = getByText('Test');
-            const styles = text.props.style;
-            const color = styles.color || (Array.isArray(styles) && styles.find(s => s.color)?.color);
+            const color = getStyle(text).color;
 
             expect(color).toBe('white');
         });
 
         it('should be accessible', () => {
-            const { getByText } = render(
+            const { getByRole } = render(
                 <PrimaryButton title="Accessible Button" onPress={() => { }} />
             );
 
-            const button = getByText('Accessible Button').parent;
+            const button = getByRole('button', { name: 'Accessible Button' });
             expect(button.props.accessible).toBeTruthy();
         });
 
@@ -118,7 +122,7 @@ describe('Button Components', () => {
 
         it('should apply custom styles', () => {
             const customStyle = { marginTop: 10 };
-            const { getByText } = render(
+            const { getByRole } = render(
                 <SecondaryButton
                     title="Custom Secondary"
                     onPress={() => { }}
@@ -126,18 +130,17 @@ describe('Button Components', () => {
                 />
             );
 
-            const button = getByText('Custom Secondary').parent;
-            expect(button.props.style).toContainEqual(customStyle);
+            const button = getByRole('button', { name: 'Custom Secondary' });
+            expect(button.props.style).toMatchObject(customStyle);
         });
 
         it('should have correct background color', () => {
-            const { getByText } = render(
+            const { getByRole } = render(
                 <SecondaryButton title="Test" onPress={() => { }} />
             );
 
-            const button = getByText('Test').parent;
-            const styles = button.props.style;
-            const backgroundColor = styles.find(s => s.backgroundColor)?.backgroundColor;
+            const button = getByRole('button', { name: 'Test' });
+            const backgroundColor = getStyle(button).backgroundColor;
 
             expect(backgroundColor).toBe(Colors.lillyBubble);
         });
@@ -148,18 +151,17 @@ describe('Button Components', () => {
             );
 
             const text = getByText('Test');
-            const styles = text.props.style;
-            const color = styles.color || (Array.isArray(styles) && styles.find(s => s.color)?.color);
+            const color = getStyle(text).color;
 
             expect(color).toBe(Colors.text);
         });
 
         it('should be accessible', () => {
-            const { getByText } = render(
+            const { getByRole } = render(
                 <SecondaryButton title="Accessible Secondary" onPress={() => { }} />
             );
 
-            const button = getByText('Accessible Secondary').parent;
+            const button = getByRole('button', { name: 'Accessible Secondary' });
             expect(button.props.accessible).toBeTruthy();
         });
 
@@ -190,36 +192,36 @@ describe('Button Components', () => {
 
     describe('Button Style Consistency', () => {
         it('both buttons should have same border radius', () => {
-            const { getByText: getPrimary } = render(
+            const { getByRole: getPrimary } = render(
                 <PrimaryButton title="Primary" onPress={() => { }} />
             );
-            const { getByText: getSecondary } = render(
+            const { getByRole: getSecondary } = render(
                 <SecondaryButton title="Secondary" onPress={() => { }} />
             );
 
-            const primaryButton = getPrimary('Primary').parent;
-            const secondaryButton = getSecondary('Secondary').parent;
+            const primaryButton = getPrimary('button', { name: 'Primary' });
+            const secondaryButton = getSecondary('button', { name: 'Secondary' });
 
-            const primaryRadius = primaryButton.props.style.find(s => s.borderRadius)?.borderRadius;
-            const secondaryRadius = secondaryButton.props.style.find(s => s.borderRadius)?.borderRadius;
+            const primaryRadius = getStyle(primaryButton).borderRadius;
+            const secondaryRadius = getStyle(secondaryButton).borderRadius;
 
             expect(primaryRadius).toBe(secondaryRadius);
             expect(primaryRadius).toBe(14);
         });
 
         it('both buttons should have same padding', () => {
-            const { getByText: getPrimary } = render(
+            const { getByRole: getPrimary } = render(
                 <PrimaryButton title="Primary" onPress={() => { }} />
             );
-            const { getByText: getSecondary } = render(
+            const { getByRole: getSecondary } = render(
                 <SecondaryButton title="Secondary" onPress={() => { }} />
             );
 
-            const primaryButton = getPrimary('Primary').parent;
-            const secondaryButton = getSecondary('Secondary').parent;
+            const primaryButton = getPrimary('button', { name: 'Primary' });
+            const secondaryButton = getSecondary('button', { name: 'Secondary' });
 
-            const primaryPadding = primaryButton.props.style.find(s => s.padding)?.padding;
-            const secondaryPadding = secondaryButton.props.style.find(s => s.padding)?.padding;
+            const primaryPadding = getStyle(primaryButton).padding;
+            const secondaryPadding = getStyle(secondaryButton).padding;
 
             expect(primaryPadding).toBe(secondaryPadding);
             expect(primaryPadding).toBe(18);
@@ -236,10 +238,8 @@ describe('Button Components', () => {
             const primaryText = getPrimary('Primary');
             const secondaryText = getSecondary('Secondary');
 
-            const primarySize = primaryText.props.style.fontSize ||
-                (Array.isArray(primaryText.props.style) && primaryText.props.style.find(s => s.fontSize)?.fontSize);
-            const secondarySize = secondaryText.props.style.fontSize ||
-                (Array.isArray(secondaryText.props.style) && secondaryText.props.style.find(s => s.fontSize)?.fontSize);
+            const primarySize = getStyle(primaryText).fontSize;
+            const secondarySize = getStyle(secondaryText).fontSize;
 
             expect(primarySize).toBe(secondarySize);
             expect(primarySize).toBe(18);

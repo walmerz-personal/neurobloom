@@ -4,7 +4,7 @@ import { Home, Dumbbell, MessageCircle, TrendingUp } from 'lucide-react-native';
 
 export function TabBar({ state, descriptors, navigation }) {
     return (
-        <View style={styles.tabBar}>
+        <View style={styles.tabBar} testID="tab-bar">
             {state.routes.map((route, index) => {
                 const { options } = descriptors[route.key];
                 const label =
@@ -55,7 +55,7 @@ export function TabBar({ state, descriptors, navigation }) {
                         style={styles.tabItem}
                     >
                         <View style={[styles.iconContainer, isFocused && styles.iconContainerFocused]}>
-                            <IconComponent size={24} color={color} strokeWidth={isFocused ? 2.5 : 2} />
+                            <IconComponent size={24} color={color} strokeWidth={isFocused ? 2.5 : 2} testID={`tab-icon-${route.name}`} />
                         </View>
                         <Text style={[styles.label, isFocused && styles.labelFocused]}>
                             {label}

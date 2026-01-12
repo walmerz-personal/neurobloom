@@ -6,7 +6,7 @@ import { Colors } from '../constants/Colors';
 export function ScreenWrapper({ children, style }) {
     return (
         <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-            <View style={[styles.content, style]}>
+            <View style={[styles.content, style]} testID="screen-wrapper">
                 {children}
             </View>
         </SafeAreaView>

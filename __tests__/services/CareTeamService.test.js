@@ -7,6 +7,7 @@ jest.mock('../../services/SupabaseService', () => ({
         getCareTeamLinks: jest.fn(),
         getCareTeamLink: jest.fn(),
         getInvitationByCode: jest.fn(),
+        acceptInvitationRPC: jest.fn(),
         updateCareTeamLink: jest.fn(),
         deleteCareTeamLink: jest.fn(),
         getDailyLogs: jest.fn(),
@@ -69,7 +70,7 @@ describe('CareTeamService', () => {
             for (let i = 0; i < 10; i++) {
                 const { code } = await CareTeamService.createInvitation('survivor-123');
                 expect(code).toMatch(/^[A-Z0-9]{8}$/);
-                // Should not contain ambiguous characters
+                // Should not contain ambiguous characters (0, O, I, 1, L)
                 expect(code).not.toMatch(/[0OIL1]/);
             }
         });
@@ -77,17 +78,12 @@ describe('CareTeamService', () => {
 
     describe('acceptInvitation', () => {
         it('should accept a valid pending invitation', async () => {
-            SupabaseService.getInvitationByCode.mockResolvedValue({
+            // Mock RPC success
+            SupabaseService.acceptInvitationRPC.mockResolvedValue({
                 data: {
-                    id: 'link-123',
                     survivor_id: 'survivor-123',
                     survivor_name: 'Katie',
-                    status: 'pending',
                 },
-                error: null,
-            });
-            SupabaseService.updateCareTeamLink.mockResolvedValue({
-                data: {},
                 error: null,
             });
 
@@ -96,19 +92,14 @@ describe('CareTeamService', () => {
             expect(success).toBe(true);
             expect(survivor.name).toBe('Katie');
             expect(error).toBeNull();
-            expect(SupabaseService.updateCareTeamLink).toHaveBeenCalledWith(
-                'link-123',
-                expect.objectContaining({
-                    caregiver_id: 'caregiver-123',
-                    status: 'accepted',
-                })
-            );
+            expect(SupabaseService.acceptInvitationRPC).toHaveBeenCalledWith('ABCD1234', 'caregiver-123');
         });
 
         it('should reject invalid invitation code', async () => {
-            SupabaseService.getInvitationByCode.mockResolvedValue({
+            // Mock RPC error for invalid code
+            SupabaseService.acceptInvitationRPC.mockResolvedValue({
                 data: null,
-                error: new Error('Not found'),
+                error: new Error('Invalid invitation code'),
             });
 
             const { success, error } = await CareTeamService.acceptInvitation('caregiver-123', 'INVALID1');
@@ -118,12 +109,10 @@ describe('CareTeamService', () => {
         });
 
         it('should reject already used invitation', async () => {
-            SupabaseService.getInvitationByCode.mockResolvedValue({
-                data: {
-                    id: 'link-123',
-                    status: 'accepted',
-                },
-                error: null,
+            // Mock RPC error for used code
+            SupabaseService.acceptInvitationRPC.mockResolvedValue({
+                data: null,
+                error: new Error('Invitation has already been used'),
             });
 
             const { success, error } = await CareTeamService.acceptInvitation('caregiver-123', 'USED1234');

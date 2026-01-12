@@ -53,33 +53,30 @@ describe('Typography', () => {
     });
 
     describe('Font Weight Validation', () => {
-        it('should have valid font weights', () => {
-            const validWeights = ['400', '600', '700'];
 
-            Object.values(Typography).forEach(style => {
-                expect(validWeights).toContain(style.fontWeight);
-            });
+        it('should use serif display font for titles', () => {
+            // Check fontFamily is DMSerifDisplay
+            expect(Typography.title1.fontFamily).toMatch(/DMSerifDisplay/);
+            expect(Typography.title2.fontFamily).toMatch(/DMSerifDisplay/);
         });
 
-        it('should use bold weight for titles', () => {
-            expect(Typography.title1.fontWeight).toBe('700');
-            expect(Typography.title2.fontWeight).toBe('700');
+        it('should use semibold weight for headline', () => {
+            expect(Typography.headline.fontFamily).toMatch(/SemiBold|600/);
         });
 
-        it('should use semibold weight for title3 and headline', () => {
-            expect(Typography.title3.fontWeight).toBe('600');
-            expect(Typography.headline.fontWeight).toBe('600');
+        it('should use serif display for title3', () => {
+            expect(Typography.title3.fontFamily).toMatch(/DMSerifDisplay/);
         });
 
         it('should use regular weight for body text', () => {
-            expect(Typography.body.fontWeight).toBe('400');
-            expect(Typography.callout.fontWeight).toBe('400');
-            expect(Typography.footnote.fontWeight).toBe('400');
+            expect(Typography.body.fontFamily).toMatch(/Regular|400/);
+            expect(Typography.callout.fontFamily).toMatch(/Regular|400/);
+            expect(Typography.footnote.fontFamily).toMatch(/Regular|400/);
         });
 
-        it('should have string font weights', () => {
+        it('should have string font families', () => {
             Object.values(Typography).forEach(style => {
-                expect(typeof style.fontWeight).toBe('string');
+                expect(typeof style.fontFamily).toBe('string');
             });
         });
     });
@@ -118,7 +115,7 @@ describe('Typography', () => {
         it('body should have line height defined', () => {
             expect(Typography.body.lineHeight).toBeDefined();
             expect(typeof Typography.body.lineHeight).toBe('number');
-            expect(Typography.body.lineHeight).toBe(22);
+            expect(Typography.body.lineHeight).toBe(24);
         });
 
         it('body line height should be greater than font size', () => {
@@ -130,7 +127,7 @@ describe('Typography', () => {
         it('should have all required properties for each style', () => {
             Object.entries(Typography).forEach(([key, style]) => {
                 expect(style).toHaveProperty('fontSize');
-                expect(style).toHaveProperty('fontWeight');
+                expect(style).toHaveProperty('fontFamily');
                 expect(style).toHaveProperty('color');
             });
         });

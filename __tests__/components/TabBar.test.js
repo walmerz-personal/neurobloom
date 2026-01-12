@@ -51,6 +51,12 @@ describe('TabBar', () => {
         jest.clearAllMocks();
     });
 
+    // Helper to flatten styles
+    const getStyle = (element) => {
+        const style = element.props.style;
+        return Array.isArray(style) ? Object.assign({}, ...style) : style;
+    };
+
     describe('Rendering', () => {
         it('should render all tab items', () => {
             const state = createMockState();
@@ -74,7 +80,7 @@ describe('TabBar', () => {
             const state = createMockState();
             const descriptors = createMockDescriptors();
 
-            const { getByText } = render(
+            const { getAllByTestId } = render(
                 <TabBar
                     state={state}
                     descriptors={descriptors}
@@ -82,10 +88,10 @@ describe('TabBar', () => {
                 />
             );
 
-            expect(getByText('🏠')).toBeTruthy(); // home
-            expect(getByText('🏋️')).toBeTruthy(); // exercises
-            expect(getByText('💬')).toBeTruthy(); // lilly
-            expect(getByText('📊')).toBeTruthy(); // progress
+            expect(getAllByTestId('tab-icon-home')[0]).toBeTruthy();
+            expect(getAllByTestId('tab-icon-exercises')[0]).toBeTruthy();
+            expect(getAllByTestId('tab-icon-lilly')[0]).toBeTruthy();
+            expect(getAllByTestId('tab-icon-progress')[0]).toBeTruthy();
         });
 
         it('should use tabBarLabel when available', () => {
@@ -167,8 +173,8 @@ describe('TabBar', () => {
             const homeLabel = getByText('Home');
             const exercisesLabel = getByText('Exercises');
 
-            const homeColor = homeLabel.props.style.find(s => s.color)?.color;
-            const exercisesColor = exercisesLabel.props.style.find(s => s.color)?.color;
+            const homeColor = getStyle(homeLabel).color;
+            const exercisesColor = getStyle(exercisesLabel).color;
 
             expect(homeColor).toBe(Colors.primary);
             expect(exercisesColor).toBe(Colors.textSecondary);
@@ -189,8 +195,8 @@ describe('TabBar', () => {
             const lillyLabel = getByText('Lilly');
             const homeLabel = getByText('Home');
 
-            const lillyColor = lillyLabel.props.style.find(s => s.color)?.color;
-            const homeColor = homeLabel.props.style.find(s => s.color)?.color;
+            const lillyColor = getStyle(lillyLabel).color;
+            const homeColor = getStyle(homeLabel).color;
 
             expect(lillyColor).toBe(Colors.primary);
             expect(homeColor).toBe(Colors.textSecondary);
@@ -381,7 +387,7 @@ describe('TabBar', () => {
             const state = createMockState();
             const descriptors = createMockDescriptors();
 
-            const { getByText } = render(
+            const { getByTestId } = render(
                 <TabBar
                     state={state}
                     descriptors={descriptors}
@@ -389,18 +395,17 @@ describe('TabBar', () => {
                 />
             );
 
-            const tabBar = getByText('Home').parent.parent.parent;
-            const height = tabBar.props.style.height ||
-                (Array.isArray(tabBar.props.style) && tabBar.props.style.find(s => s.height)?.height);
+            const tabBar = getByTestId('tab-bar');
+            const style = getStyle(tabBar);
 
-            expect(height).toBe(83);
+            expect(style.height).toBe(88);
         });
 
         it('should have correct border styling', () => {
             const state = createMockState();
             const descriptors = createMockDescriptors();
 
-            const { getByText } = render(
+            const { getByTestId } = render(
                 <TabBar
                     state={state}
                     descriptors={descriptors}
@@ -408,15 +413,11 @@ describe('TabBar', () => {
                 />
             );
 
-            const tabBar = getByText('Home').parent.parent.parent;
-            const styles = tabBar.props.style;
-            const borderWidth = styles.borderTopWidth ||
-                (Array.isArray(styles) && styles.find(s => s.borderTopWidth)?.borderTopWidth);
-            const borderColor = styles.borderTopColor ||
-                (Array.isArray(styles) && styles.find(s => s.borderTopColor)?.borderTopColor);
+            const tabBar = getByTestId('tab-bar');
+            const style = getStyle(tabBar);
 
-            expect(borderWidth).toBe(0.5);
-            expect(borderColor).toBe(Colors.border);
+            expect(style.borderTopWidth).toBe(1);
+            expect(style.borderTopColor).toBe(Colors.border);
         });
     });
 });

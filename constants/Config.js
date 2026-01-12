@@ -22,6 +22,11 @@ export const Config = {
     // Fall back to process.env for local development (works with .env.local)
     SUPABASE_URL: getConfigValue('SUPABASE_URL', 'EXPO_PUBLIC_SUPABASE_URL', 'supabaseUrl'),
     SUPABASE_ANON_KEY: getConfigValue('SUPABASE_ANON_KEY', 'EXPO_PUBLIC_SUPABASE_ANON_KEY', 'supabaseAnonKey'),
+
+    // OpenAI Configuration
+    OPENAI_API_KEY: getConfigValue('OPENAI_API_KEY', 'EXPO_PUBLIC_OPENAI_API_KEY', 'openaiApiKey'),
+    API_URL: 'https://api.openai.com/v1/chat/completions',
+    MODEL: 'gpt-4o-mini',
 };
 
 // Log configuration status (in both dev and production for debugging)

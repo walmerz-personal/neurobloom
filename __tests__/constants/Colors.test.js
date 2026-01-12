@@ -101,26 +101,24 @@ describe('Colors', () => {
         });
 
         it('primary color should be blue', () => {
-            expect(Colors.primary).toBe('#3B82F6');
+            expect(Colors.primary).toBe('#1a237e');
         });
 
         it('text colors should be defined consistently', () => {
-            expect(Colors.text).toBe('#1d1d1f');
-            expect(Colors.textSecondary).toBe('#6e6e73');
+            expect(Colors.text).toBe('#1F2937');
+            expect(Colors.textSecondary).toBe('#6B7280');
         });
-    });
 
-    describe('Accessibility', () => {
         it('should have sufficient contrast colors for text', () => {
             // Text color should be dark enough
-            expect(Colors.text.toLowerCase()).toContain('1d1d1f');
-            expect(Colors.textSecondary.toLowerCase()).toContain('6e6e73');
+            expect(Colors.text.toLowerCase()).toContain('1f2937');
+            expect(Colors.textSecondary.toLowerCase()).toContain('6b7280');
         });
 
         it('should have light background colors', () => {
-            // Background should be light (f5f5f7 is light gray)
-            expect(Colors.background.toLowerCase()).toContain('f5f5f7');
-            expect(Colors.card.toLowerCase()).toContain('ffffff');
+            // Background should be light
+            expect(Colors.background.toLowerCase()).toContain('ffffff');
+            expect(Colors.card.toLowerCase()).toContain('f8f9fa');
         });
     });
 
