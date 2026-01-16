@@ -53,22 +53,24 @@ export const AuthProvider = ({ children }) => {
                 return;
             }
 
-            // Add timeout to prevent hanging on cold start (AsyncStorage can be slow)
+            // Wrap entire session check + user data loading in timeout
+            // This handles both AsyncStorage cold start AND Supabase paused scenarios
             const timeoutPromise = new Promise((_, reject) =>
                 setTimeout(() => reject(new Error('Session check timeout')), 5000)
             );
 
-            const { session } = await Promise.race([
-                SupabaseService.getSession(),
+            await Promise.race([
+                (async () => {
+                    const { session } = await SupabaseService.getSession();
+                    setSession(session);
+                    setUser(session?.user ?? null);
+
+                    if (session?.user) {
+                        await loadUserData(session.user.id);
+                    }
+                })(),
                 timeoutPromise
             ]);
-
-            setSession(session);
-            setUser(session?.user ?? null);
-
-            if (session?.user) {
-                await loadUserData(session.user.id);
-            }
         } catch (error) {
             console.error('❌ Error checking session:', error);
             // On timeout or error, proceed without session (user will need to login)
