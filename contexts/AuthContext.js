@@ -53,7 +53,16 @@ export const AuthProvider = ({ children }) => {
                 return;
             }
 
-            const { session } = await SupabaseService.getSession();
+            // Add timeout to prevent hanging on cold start (AsyncStorage can be slow)
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Session check timeout')), 5000)
+            );
+
+            const { session } = await Promise.race([
+                SupabaseService.getSession(),
+                timeoutPromise
+            ]);
+
             setSession(session);
             setUser(session?.user ?? null);
 
@@ -62,6 +71,7 @@ export const AuthProvider = ({ children }) => {
             }
         } catch (error) {
             console.error('❌ Error checking session:', error);
+            // On timeout or error, proceed without session (user will need to login)
         } finally {
             setLoading(false);
         }
