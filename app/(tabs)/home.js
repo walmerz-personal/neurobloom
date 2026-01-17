@@ -155,6 +155,8 @@ export default function Home() {
     const handleNavigateToCaregiver = (action, survivor) => {
         if (action === 'accept-invitation') {
             router.push('/caregiver/accept-invitation');
+        } else if (action === 'request-access') {
+            router.push('/caregiver/request-access');
         } else if (action === 'survivor-progress' && survivor) {
             router.push({
                 pathname: '/caregiver/survivor-progress',
@@ -168,6 +170,8 @@ export default function Home() {
     const handleNavigateToMedicalStaff = (action, survivor) => {
         if (action === 'accept-invitation') {
             router.push('/caregiver/accept-invitation'); // Reuse caregiver invitation flow
+        } else if (action === 'request-access') {
+            router.push('/caregiver/request-access'); // Reuse caregiver request-access flow (works for both roles)
         } else if (action === 'survivor-progress' && survivor) {
             router.push({
                 pathname: '/medical-staff/survivor-progress',

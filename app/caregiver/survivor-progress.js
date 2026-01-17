@@ -6,8 +6,10 @@ import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../contexts/AuthContext';
 import { CareTeamService } from '../../services/CareTeamService';
-import { ArrowLeft, Activity, Smile, Zap, Target, TrendingUp, Calendar, Heart } from 'lucide-react-native';
+import { ArrowLeft, Activity, Smile, Zap, Target, TrendingUp, Calendar, Heart, AlertTriangle } from 'lucide-react-native';
 import { KudosSendModal } from '../../components/KudosSendModal';
+import { HealthMetricsCard } from '../../components/HealthMetricsCard';
+import { SupabaseService } from '../../services/SupabaseService';
 
 export default function SurvivorProgress() {
     const router = useRouter();
@@ -20,6 +22,8 @@ export default function SurvivorProgress() {
     const [refreshing, setRefreshing] = useState(false);
     const [progress, setProgress] = useState(null);
     const [error, setError] = useState(null);
+    const [healthMetrics, setHealthMetrics] = useState(null);
+    const [healthLoading, setHealthLoading] = useState(false);
 
     // Kudos modal state
     const [kudosModalVisible, setKudosModalVisible] = useState(false);
@@ -38,6 +42,7 @@ export default function SurvivorProgress() {
     useEffect(() => {
         if (survivorId) {
             loadProgress();
+            loadHealthMetrics();
         }
     }, [survivorId]);
 
@@ -61,6 +66,43 @@ export default function SurvivorProgress() {
     const onRefresh = () => {
         setRefreshing(true);
         loadProgress();
+        loadHealthMetrics();
+    };
+
+    const loadHealthMetrics = async () => {
+        if (!survivorId || !user?.id) return;
+
+        setHealthLoading(true);
+        try {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 7); // Last 7 days for caregiver view
+
+            // Use the viewer-aware method that respects sharing preferences
+            const { data: metrics, error } = await SupabaseService.getHealthMetricsForViewer(
+                survivorId,
+                user.id,
+                startDate,
+                endDate
+            );
+
+            if (error) {
+                console.error('Error fetching health metrics:', error);
+            } else if (metrics && metrics.length > 0) {
+                // Get latest metrics
+                const latest = metrics[0];
+                setHealthMetrics({
+                    walkingSteadiness: latest.walking_steadiness,
+                    walkingSpeedAvg: latest.walking_speed_avg,
+                    stepCount: latest.step_count,
+                    distanceWalked: latest.distance_walked,
+                });
+            }
+        } catch (error) {
+            console.error('Error loading health metrics:', error);
+        } finally {
+            setHealthLoading(false);
+        }
     };
 
     const getMoodEmoji = (score) => {
@@ -245,6 +287,22 @@ export default function SurvivorProgress() {
                         </View>
                     )}
                 </View>
+
+                {/* Health Overview (if permission granted) */}
+                {healthMetrics && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Health Overview</Text>
+                        <HealthMetricsCard metrics={healthMetrics} showDetails={false} />
+                        {healthMetrics.walkingSteadiness === 'Very Low' && (
+                            <View style={styles.alertBox}>
+                                <AlertTriangle size={16} color={Colors.error} />
+                                <Text style={styles.alertText}>
+                                    Walking steadiness is very low. Please ensure they have support when walking.
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                )}
 
                 {/* Goals */}
                 {survivor?.goals && (
@@ -463,5 +521,19 @@ const styles = StyleSheet.create({
     logKudosHint: {
         marginLeft: 8,
         opacity: 0.6,
+    },
+    alertBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.error + '10',
+        borderRadius: 8,
+        padding: 12,
+        marginTop: 12,
+        gap: 8,
+    },
+    alertText: {
+        ...Typography.caption,
+        color: Colors.error,
+        flex: 1,
     },
 });

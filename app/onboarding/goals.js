@@ -1,7 +1,8 @@
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { PrimaryButton } from '../../components/Button';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
@@ -14,6 +15,26 @@ export default function Goals() {
 
     const [recoveryPhase, setRecoveryPhase] = useState('');
     const [goals, setGoals] = useState('');
+
+    // For medical_staff, skip directly to signup
+    useEffect(() => {
+        if (role === 'medical_staff') {
+            const medicalStaffRole = params.medicalStaffRole || '';
+            const impairments = params.impairments ? JSON.parse(params.impairments) : [];
+            router.push({
+                pathname: '/auth/signup',
+                params: {
+                    name,
+                    role,
+                    medicalStaffRole,
+                    strokeDate: '',
+                    impairments: JSON.stringify([]),
+                    recoveryPhase: '',
+                    goals: ''
+                }
+            });
+        }
+    }, [role]);
 
     const handleComplete = () => {
         // Navigate to account creation with all onboarding data
@@ -62,12 +83,17 @@ export default function Goals() {
                 style={{ flex: 1 }}
             >
                 <ScrollView contentContainerStyle={styles.scrollContent}>
-                    <Text style={styles.title}>Almost done!</Text>
-                    <Text style={styles.subtitle}>
-                        Where are you in the journey?
-                    </Text>
+                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                        <Ionicons name="arrow-back" size={24} color={Colors.text} />
+                    </TouchableOpacity>
+                    {role !== 'medical_staff' && (
+                        <>
+                            <Text style={styles.title}>Almost done!</Text>
+                            <Text style={styles.subtitle}>
+                                Where are you in the journey?
+                            </Text>
 
-                    <View style={styles.phaseContainer}>
+                            <View style={styles.phaseContainer}>
                         {phases.map((phase) => (
                             <TouchableOpacity
                                 key={phase.id}
@@ -85,25 +111,27 @@ export default function Goals() {
                                 </Text>
                             </TouchableOpacity>
                         ))}
-                    </View>
+                            </View>
 
-                    <Text style={[styles.subtitle, { marginTop: 24 }]}>
-                        What are your main goals?
-                    </Text>
-                    <Text style={styles.helperText}>
-                        E.g., "Walk without a cane", "Speak clearly again", "Return to work"
-                    </Text>
+                            <Text style={[styles.subtitle, { marginTop: 24 }]}>
+                                What are your main goals?
+                            </Text>
+                            <Text style={styles.helperText}>
+                                E.g., "Walk without a cane", "Speak clearly again", "Return to work"
+                            </Text>
 
-                    <TextInput
-                        style={styles.textArea}
-                        placeholder="Type your goals here..."
-                        placeholderTextColor={Colors.textSecondary}
-                        value={goals}
-                        onChangeText={setGoals}
-                        multiline
-                        numberOfLines={4}
-                        textAlignVertical="top"
-                    />
+                            <TextInput
+                                style={styles.textArea}
+                                placeholder="Type your goals here..."
+                                placeholderTextColor={Colors.textSecondary}
+                                value={goals}
+                                onChangeText={setGoals}
+                                multiline
+                                numberOfLines={4}
+                                textAlignVertical="top"
+                            />
+                        </>
+                    )}
 
                     <View style={styles.buttonContainer}>
                         <PrimaryButton title="Complete Setup" onPress={handleComplete} />
@@ -124,6 +152,12 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         padding: 24,
+    },
+    backButton: {
+        marginBottom: 16,
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
     },
     title: {
         ...Typography.title2,

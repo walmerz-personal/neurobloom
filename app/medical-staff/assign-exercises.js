@@ -1,7 +1,7 @@
 // app/medical-staff/assign-exercises.js
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../contexts/AuthContext';
@@ -31,8 +31,10 @@ const CATEGORIES = ['All', 'Arms', 'Legs', 'Core', 'Hands'];
 export default function AssignExercises() {
     const router = useRouter();
     const { user } = useAuth();
+    const params = useLocalSearchParams();
+    const preSelectedSurvivorId = params.survivorId;
     const [survivors, setSurvivors] = useState([]);
-    const [selectedSurvivor, setSelectedSurvivor] = useState(null);
+    const [selectedSurvivor, setSelectedSurvivor] = useState(preSelectedSurvivorId || null);
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [selectedExercises, setSelectedExercises] = useState(new Set());
     const [customExercises, setCustomExercises] = useState([]);
@@ -57,8 +59,11 @@ export default function AssignExercises() {
             const { survivors: linkedSurvivors, error } = await MedicalStaffService.getLinkedSurvivors(user.id);
             if (!error && linkedSurvivors) {
                 setSurvivors(linkedSurvivors);
-                if (linkedSurvivors.length === 1) {
-                    setSelectedSurvivor(linkedSurvivors[0].id);
+                // If pre-selected survivor is provided, use it; otherwise auto-select if only one
+                if (!selectedSurvivor) {
+                    if (linkedSurvivors.length === 1) {
+                        setSelectedSurvivor(linkedSurvivors[0].id);
+                    }
                 }
             }
         } catch (error) {
@@ -69,9 +74,10 @@ export default function AssignExercises() {
     };
 
     const loadCustomExercises = async () => {
-        if (!user) return;
+        if (!selectedSurvivor) return;
         try {
-            const { data, error } = await SupabaseService.getCustomExercises(user.id);
+            // Load custom exercises for the selected survivor (medical staff can see them via RLS)
+            const { data, error } = await SupabaseService.getCustomExercises(selectedSurvivor);
             if (!error && data) {
                 setCustomExercises(data || []);
             }

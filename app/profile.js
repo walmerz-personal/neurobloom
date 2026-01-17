@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { SupabaseService } from '../services/SupabaseService';
 import { ArrowLeft, Save, User, Calendar, Activity, Target, Mail, Trash2, Bell } from 'lucide-react-native';
 import { CareTeamSection } from '../components/CareTeamSection';
+import { HealthSharingSection } from '../components/HealthSharingSection';
 import { NotificationService } from '../services/NotificationService';
 
 export default function Profile() {
@@ -371,6 +372,11 @@ export default function Profile() {
                         }
                     }}
                 />
+
+                {/* Health Data Sharing Section (Survivors only) */}
+                {role === 'survivor' && (
+                    <HealthSharingSection userId={user?.id} userRole={role} />
+                )}
 
                 {/* Notifications Section */}
                 <View style={styles.section}>

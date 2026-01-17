@@ -321,6 +321,7 @@ export const SupabaseService = {
                     impairments: profileData.impairments || [],
                     recovery_phase: profileData.recoveryPhase || null,
                     goals: profileData.goals || null,
+                    medical_staff_role: profileData.medicalStaffRole || null,
                     preferences: profileData.preferences || {},
                 })
                 .select()
@@ -1439,6 +1440,201 @@ export const SupabaseService = {
         }
     },
 
+    /**
+     * Generate a unique access request token
+     * @returns {string} 16-character token
+     */
+    generateAccessRequestToken() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let token = '';
+        for (let i = 0; i < 16; i++) {
+            token += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return token;
+    },
+
+    /**
+     * Create an access request (creates care_team_link with access_request_token)
+     * @param {string} requesterId - The caregiver's or medical staff's user ID
+     * @param {string} phoneNumber - The survivor's phone number
+     * @param {string} roleType - 'caregiver' or 'medical_staff'
+     * @returns {Promise<{token: string|null, error: Error|null}>}
+     */
+    async createAccessRequest(requesterId, phoneNumber, roleType = 'caregiver') {
+        if (!this.isInitialized()) {
+            return { token: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            // Generate unique token
+            let token;
+            let tokenExists = true;
+            let attempts = 0;
+            const maxAttempts = 10;
+
+            while (tokenExists && attempts < maxAttempts) {
+                token = this.generateAccessRequestToken();
+                // Check if token exists
+                const { data: existing } = await supabase
+                    .from('care_team_links')
+                    .select('id')
+                    .eq('access_request_token', token)
+                    .single();
+                tokenExists = !!existing;
+                attempts++;
+            }
+
+            if (tokenExists) {
+                return { token: null, error: new Error('Failed to generate unique token') };
+            }
+
+            // Set expiration (7 days from now)
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + 7);
+
+            const linkData = {
+                access_request_token: token,
+                access_request_phone: phoneNumber,
+                access_request_expires_at: expiresAt.toISOString(),
+                status: 'pending',
+                relationship: roleType === 'medical_staff' ? 'professional' : 'other',
+            };
+
+            // Set requester ID based on role type
+            if (roleType === 'medical_staff') {
+                linkData.medical_staff_id = requesterId;
+            } else {
+                linkData.caregiver_id = requesterId;
+            }
+
+            const { data, error } = await supabase
+                .from('care_team_links')
+                .insert([linkData])
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Create access request error:', error);
+                return { token: null, error };
+            }
+
+            console.log('✅ Access request created with token:', token);
+            return { token, linkId: data?.id, error: null };
+        } catch (error) {
+            console.error('❌ Create access request error:', error);
+            return { token: null, error };
+        }
+    },
+
+    /**
+     * Get access request by token
+     * @param {string} token - Access request token
+     * @returns {Promise<{data, error}>}
+     */
+    async getAccessRequestByToken(token) {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('care_team_links')
+                .select(`
+                    *,
+                    requester:caregiver_id(id, name, email, role),
+                    requester_medical:medical_staff_id(id, name, email, role)
+                `)
+                .eq('access_request_token', token)
+                .single();
+
+            if (error) {
+                if (error.code === 'PGRST116') {
+                    return { data: null, error: new Error('Access request not found') };
+                }
+                console.error('❌ Get access request by token error:', error);
+                return { data: null, error };
+            }
+
+            // Check if token has expired
+            if (data.access_request_expires_at) {
+                const expiresAt = new Date(data.access_request_expires_at);
+                if (expiresAt < new Date()) {
+                    return { data: null, error: new Error('Access request has expired') };
+                }
+            }
+
+            // Get the requester info (either from caregiver_id or medical_staff_id)
+            const requester = data.requester || data.requester_medical;
+            const requesterRole = data.caregiver_id ? 'caregiver' : 'medical_staff';
+
+            return {
+                data: {
+                    ...data,
+                    requester,
+                    requesterRole,
+                },
+                error: null,
+            };
+        } catch (error) {
+            console.error('❌ Get access request by token error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
+     * Accept an access request by token
+     * @param {string} token - Access request token
+     * @param {string} survivorId - The survivor's user ID
+     * @returns {Promise<{data, error}>}
+     */
+    async acceptAccessRequest(token, survivorId) {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            // Get the access request
+            const { data: request, error: lookupError } = await this.getAccessRequestByToken(token);
+
+            if (lookupError || !request) {
+                return { data: null, error: lookupError || new Error('Access request not found') };
+            }
+
+            // Update the link to accept it
+            const updateData = {
+                survivor_id: survivorId,
+                status: 'accepted',
+                accepted_at: new Date().toISOString(),
+                // Clear access request fields
+                access_request_token: null,
+                access_request_phone: null,
+                access_request_expires_at: null,
+            };
+
+            const { data: updatedLink, error: updateError } = await this.updateCareTeamLink(request.id, updateData);
+
+            if (updateError || !updatedLink) {
+                console.error('❌ Accept access request error:', updateError);
+                return { data: null, error: updateError || new Error('Failed to accept access request') };
+            }
+
+            // Get requester name for response
+            const requester = request.requester;
+            const result = {
+                success: true,
+                requester_id: request.caregiver_id || request.medical_staff_id,
+                requester_name: requester?.name || 'Unknown',
+                requester_role: request.requesterRole,
+            };
+
+            console.log('✅ Access request accepted:', result.requester_name);
+            return { data: result, error: null };
+        } catch (error) {
+            console.error('❌ Accept access request error:', error);
+            return { data: null, error };
+        }
+    },
+
     // =============================================
     // CUSTOM EXERCISES
     // =============================================
@@ -1831,6 +2027,253 @@ export const SupabaseService = {
             return { error: null };
         } catch (error) {
             console.error('❌ Delete assignment error:', error);
+            return { error };
+        }
+    },
+
+    // =============================================
+    // HEALTH METRICS
+    // =============================================
+
+    /**
+     * Save or update health metrics for a user and date
+     * @param {string} userId - User ID
+     * @param {Object} metrics - Health metrics data
+     * @param {string} metrics.metricDate - Date (YYYY-MM-DD)
+     * @param {number} metrics.walkingSpeedAvg - Average walking speed (m/s)
+     * @param {number} metrics.walkingStepLengthAvg - Average step length (m)
+     * @param {number} metrics.walkingAsymmetryPercentage - Asymmetry percentage
+     * @param {number} metrics.walkingDoubleSupportPercentage - Double support percentage
+     * @param {string} metrics.walkingSteadiness - 'OK', 'Low', or 'Very Low'
+     * @param {number} metrics.sixMinuteWalkDistance - Six-minute walk distance (m)
+     * @param {number} metrics.stepCount - Daily step count
+     * @param {number} metrics.distanceWalked - Distance walked (m)
+     * @param {string} metrics.dataQuality - 'good', 'fair', 'poor', or 'insufficient'
+     * @param {number} metrics.sampleCount - Number of samples
+     * @param {string} metrics.deviceSource - 'iPhone', 'Apple Watch', or 'Unknown'
+     * @returns {Promise<{data, error}>}
+     */
+    async saveHealthMetrics(userId, metrics) {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('health_metrics')
+                .upsert({
+                    user_id: userId,
+                    metric_date: metrics.metricDate,
+                    walking_speed_avg: metrics.walkingSpeedAvg,
+                    walking_step_length_avg: metrics.walkingStepLengthAvg,
+                    walking_asymmetry_percentage: metrics.walkingAsymmetryPercentage,
+                    walking_double_support_percentage: metrics.walkingDoubleSupportPercentage,
+                    walking_steadiness: metrics.walkingSteadiness,
+                    six_minute_walk_distance: metrics.sixMinuteWalkDistance,
+                    step_count: metrics.stepCount,
+                    distance_walked: metrics.distanceWalked,
+                    data_quality: metrics.dataQuality,
+                    sample_count: metrics.sampleCount,
+                    device_source: metrics.deviceSource,
+                }, {
+                    onConflict: 'user_id,metric_date',
+                })
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Save health metrics error:', error);
+                return { data: null, error };
+            }
+
+            console.log('✅ Health metrics saved:', data.id);
+            return { data, error: null };
+        } catch (error) {
+            console.error('❌ Save health metrics error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
+     * Get health metrics for a user and date range
+     * @param {string} userId - User ID
+     * @param {Date} startDate - Start date
+     * @param {Date} endDate - End date
+     * @returns {Promise<{data: Array, error}>}
+     */
+    async getHealthMetrics(userId, startDate, endDate) {
+        if (!this.isInitialized()) {
+            return { data: [], error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const startDateStr = startDate.toISOString().split('T')[0];
+            const endDateStr = endDate.toISOString().split('T')[0];
+
+            const { data, error } = await supabase
+                .from('health_metrics')
+                .select('*')
+                .eq('user_id', userId)
+                .gte('metric_date', startDateStr)
+                .lte('metric_date', endDateStr)
+                .order('metric_date', { ascending: false });
+
+            if (error) {
+                console.error('❌ Get health metrics error:', error);
+                return { data: [], error };
+            }
+
+            return { data: data || [], error: null };
+        } catch (error) {
+            console.error('❌ Get health metrics error:', error);
+            return { data: [], error };
+        }
+    },
+
+    /**
+     * Get health metrics for a viewer (respects sharing preferences)
+     * @param {string} targetUserId - User ID whose metrics to view
+     * @param {string} viewerUserId - User ID of the viewer
+     * @param {Date} startDate - Start date
+     * @param {Date} endDate - End date
+     * @returns {Promise<{data: Array, error}>}
+     */
+    async getHealthMetricsForViewer(targetUserId, viewerUserId, startDate, endDate) {
+        if (!this.isInitialized()) {
+            return { data: [], error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const startDateStr = startDate.toISOString().split('T')[0];
+            const endDateStr = endDate.toISOString().split('T')[0];
+
+            // Use the database function that respects sharing preferences
+            const { data, error } = await supabase.rpc('get_health_metrics_for_viewer', {
+                target_user_id: targetUserId,
+                viewer_user_id: viewerUserId,
+                start_date: startDateStr,
+                end_date: endDateStr,
+            });
+
+            if (error) {
+                console.error('❌ Get health metrics for viewer error:', error);
+                return { data: [], error };
+            }
+
+            return { data: data || [], error: null };
+        } catch (error) {
+            console.error('❌ Get health metrics for viewer error:', error);
+            return { data: [], error };
+        }
+    },
+
+    /**
+     * Get health sharing preferences for a user
+     * @param {string} userId - User ID
+     * @returns {Promise<{data: Array, error}>}
+     */
+    async getHealthSharingPreferences(userId) {
+        if (!this.isInitialized()) {
+            return { data: [], error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('health_sharing_preferences')
+                .select('*')
+                .eq('user_id', userId);
+
+            if (error) {
+                console.error('❌ Get health sharing preferences error:', error);
+                return { data: [], error };
+            }
+
+            return { data: data || [], error: null };
+        } catch (error) {
+            console.error('❌ Get health sharing preferences error:', error);
+            return { data: [], error };
+        }
+    },
+
+    /**
+     * Save or update health sharing preferences
+     * @param {string} userId - User ID
+     * @param {Object} preferences - Sharing preferences
+     * @param {string} preferences.relationshipType - 'caregiver' or 'medical_staff'
+     * @param {string} preferences.sharedWithUserId - User ID to share with
+     * @param {boolean} preferences.shareAllMetrics - Share all metrics
+     * @param {Object} preferences.metrics - Per-metric sharing toggles
+     * @returns {Promise<{data, error}>}
+     */
+    async saveHealthSharingPreferences(userId, preferences) {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('health_sharing_preferences')
+                .upsert({
+                    user_id: userId,
+                    relationship_type: preferences.relationshipType,
+                    shared_with_user_id: preferences.sharedWithUserId,
+                    share_all_metrics: preferences.shareAllMetrics || false,
+                    share_walking_speed: preferences.metrics?.shareWalkingSpeed || false,
+                    share_walking_steadiness: preferences.metrics?.shareWalkingSteadiness || false,
+                    share_step_length: preferences.metrics?.shareStepLength || false,
+                    share_asymmetry: preferences.metrics?.shareAsymmetry || false,
+                    share_double_support: preferences.metrics?.shareDoubleSupport || false,
+                    share_step_count: preferences.metrics?.shareStepCount || false,
+                    share_distance_walked: preferences.metrics?.shareDistanceWalked || false,
+                    share_six_minute_walk: preferences.metrics?.shareSixMinuteWalk || false,
+                }, {
+                    onConflict: 'user_id,shared_with_user_id,relationship_type',
+                })
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Save health sharing preferences error:', error);
+                return { data: null, error };
+            }
+
+            console.log('✅ Health sharing preferences saved');
+            return { data, error: null };
+        } catch (error) {
+            console.error('❌ Save health sharing preferences error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
+     * Delete health sharing preferences
+     * @param {string} userId - User ID
+     * @param {string} sharedWithUserId - User ID to stop sharing with
+     * @param {string} relationshipType - 'caregiver' or 'medical_staff'
+     * @returns {Promise<{error}>}
+     */
+    async deleteHealthSharingPreferences(userId, sharedWithUserId, relationshipType) {
+        if (!this.isInitialized()) {
+            return { error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { error } = await supabase
+                .from('health_sharing_preferences')
+                .delete()
+                .eq('user_id', userId)
+                .eq('shared_with_user_id', sharedWithUserId)
+                .eq('relationship_type', relationshipType);
+
+            if (error) {
+                console.error('❌ Delete health sharing preferences error:', error);
+                return { error };
+            }
+
+            console.log('✅ Health sharing preferences deleted');
+            return { error: null };
+        } catch (error) {
+            console.error('❌ Delete health sharing preferences error:', error);
             return { error };
         }
     },

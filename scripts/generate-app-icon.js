@@ -29,8 +29,14 @@ async function generateAppIcon() {
             <stop offset="0%" style="stop-color:${COLORS.navyBlue};stop-opacity:1" />
             <stop offset="100%" style="stop-color:${COLORS.deepNavy};stop-opacity:1" />
           </linearGradient>
+          <radialGradient id="glowGradient" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.15" />
+            <stop offset="70%" style="stop-color:#ffffff;stop-opacity:0.05" />
+            <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0" />
+          </radialGradient>
         </defs>
         <rect width="${SIZE}" height="${SIZE}" fill="url(#bgGradient)"/>
+        <circle cx="${SIZE/2}" cy="${SIZE/2}" r="${SIZE/2}" fill="url(#glowGradient)"/>
       </svg>
     `;
 
@@ -40,8 +46,8 @@ async function generateAppIcon() {
       .png()
       .toBuffer();
 
-    // Load and resize logo (make it larger - about 70% of icon size)
-    const logoSize = Math.floor(SIZE * 0.7);
+    // Load and resize logo (make it larger - about 85% of icon size for maximum presence with border)
+    const logoSize = Math.floor(SIZE * 0.85);
     const logo = await sharp(logoPath)
       .resize(logoSize, logoSize, {
         fit: 'contain',

@@ -27,6 +27,15 @@ CREATE TABLE user_profiles (
   impairments TEXT[], -- ['motor', 'speech', 'cognitive', 'vision']
   recovery_phase TEXT, -- 'acute', 'subacute', 'chronic'
   goals TEXT,
+  medical_staff_role TEXT CHECK (medical_staff_role IN (
+    'occupational_therapist',
+    'speech_language_pathologist',
+    'physical_therapist',
+    'psychologist',
+    'psychiatrist',
+    'nurse',
+    'other'
+  ) OR medical_staff_role IS NULL), -- Specific role for medical staff (only set for medical_staff users)
   preferences JSONB DEFAULT '{}', -- accessibility settings, notification prefs
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()

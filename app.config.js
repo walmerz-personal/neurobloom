@@ -34,7 +34,9 @@ export default {
             bundleIdentifier: "com.neurobloom.app",
             buildNumber: "23",
             infoPlist: {
-                ITSAppUsesNonExemptEncryption: false
+                ITSAppUsesNonExemptEncryption: false,
+                NSHealthShareUsageDescription: "NeuroBloom tracks your walking speed, steadiness, and mobility to help monitor your recovery progress.",
+                NSHealthUpdateUsageDescription: "NeuroBloom saves your health metrics to track your recovery journey."
             }
         },
         android: {

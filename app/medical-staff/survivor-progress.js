@@ -6,8 +6,11 @@ import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../contexts/AuthContext';
 import { MedicalStaffService } from '../../services/MedicalStaffService';
-import { ArrowLeft, Activity, Smile, Zap, Target, TrendingUp, Calendar, Heart } from 'lucide-react-native';
+import { CareTeamService } from '../../services/CareTeamService';
+import { ArrowLeft, Activity, Smile, Zap, Target, TrendingUp, Calendar, Heart, ClipboardList, Settings } from 'lucide-react-native';
 import { KudosSendModal } from '../../components/KudosSendModal';
+import { HealthChart } from '../../components/HealthChart';
+import { SupabaseService } from '../../services/SupabaseService';
 
 export default function SurvivorProgress() {
     const router = useRouter();
@@ -20,6 +23,10 @@ export default function SurvivorProgress() {
     const [refreshing, setRefreshing] = useState(false);
     const [progress, setProgress] = useState(null);
     const [error, setError] = useState(null);
+    const [assignments, setAssignments] = useState([]);
+    const [showAssignments, setShowAssignments] = useState(false);
+    const [healthMetrics, setHealthMetrics] = useState([]);
+    const [healthLoading, setHealthLoading] = useState(false);
 
     // Kudos modal state
     const [kudosModalVisible, setKudosModalVisible] = useState(false);
@@ -38,17 +45,26 @@ export default function SurvivorProgress() {
     useEffect(() => {
         if (survivorId) {
             loadProgress();
+            loadHealthMetrics();
         }
     }, [survivorId]);
 
     const loadProgress = async () => {
         try {
-            const { progress: data, error: err } = await CareTeamService.getSurvivorProgress(user.id, survivorId);
+            const { progress: data, error: err } = await MedicalStaffService.getSurvivorProgress(user.id, survivorId);
 
             if (err) {
                 setError(err.message);
             } else {
                 setProgress(data);
+            }
+
+            // Also load assignments
+            const { assignments: assignmentData, error: assignError } = await MedicalStaffService.getMedicalStaffAssignments(user.id);
+            if (!assignError && assignmentData) {
+                // Filter to assignments for this survivor
+                const survivorAssignments = assignmentData.filter(a => a.survivor_id === survivorId);
+                setAssignments(survivorAssignments);
             }
         } catch (err) {
             setError('Failed to load progress data');
@@ -61,6 +77,36 @@ export default function SurvivorProgress() {
     const onRefresh = () => {
         setRefreshing(true);
         loadProgress();
+        loadHealthMetrics();
+    };
+
+    const loadHealthMetrics = async () => {
+        if (!survivorId || !user?.id) return;
+
+        setHealthLoading(true);
+        try {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 30);
+
+            // Use the viewer-aware method that respects sharing preferences
+            const { data: metrics, error } = await SupabaseService.getHealthMetricsForViewer(
+                survivorId,
+                user.id,
+                startDate,
+                endDate
+            );
+
+            if (error) {
+                console.error('Error fetching health metrics:', error);
+            } else {
+                setHealthMetrics(metrics || []);
+            }
+        } catch (error) {
+            console.error('Error loading health metrics:', error);
+        } finally {
+            setHealthLoading(false);
+        }
     };
 
     const getMoodEmoji = (score) => {
@@ -122,7 +168,12 @@ export default function SurvivorProgress() {
                     <ArrowLeft size={24} color={Colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{survivor?.name || 'Progress'}</Text>
-                <View style={{ width: 40 }} />
+                <TouchableOpacity
+                    onPress={() => router.push(`/medical-staff/manage-assignments?survivorId=${survivorId}&survivorName=${encodeURIComponent(survivor?.name || survivorName || '')}`)}
+                    style={styles.settingsButton}
+                >
+                    <Settings size={20} color={Colors.primary} />
+                </TouchableOpacity>
             </View>
 
             <ScrollView
@@ -246,6 +297,147 @@ export default function SurvivorProgress() {
                     )}
                 </View>
 
+                {/* Exercise Assignments */}
+                <View style={styles.section}>
+                    <TouchableOpacity
+                        style={styles.assignmentsHeader}
+                        onPress={() => setShowAssignments(!showAssignments)}
+                    >
+                        <View style={styles.assignmentsHeaderLeft}>
+                            <ClipboardList size={20} color={Colors.primary} />
+                            <Text style={styles.sectionTitle}>Exercise Assignments</Text>
+                        </View>
+                        <Text style={styles.assignmentsCount}>
+                            {assignments.filter(a => a.status === 'assigned').length} active
+                        </Text>
+                    </TouchableOpacity>
+
+                    {showAssignments && (
+                        <View style={styles.assignmentsList}>
+                            {assignments.length === 0 ? (
+                                <View style={styles.emptyAssignments}>
+                                    <Text style={styles.emptyAssignmentsText}>No assignments yet</Text>
+                                    <TouchableOpacity
+                                        style={styles.assignButton}
+                                        onPress={() => router.push(`/medical-staff/assign-exercises?survivorId=${survivorId}&survivorName=${encodeURIComponent(survivorName || '')}`)}
+                                    >
+                                        <Text style={styles.assignButtonText}>Assign Exercises</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            ) : (
+                                assignments.map((assignment) => {
+                                    const statusColors = {
+                                        assigned: Colors.warning,
+                                        completed: Colors.success,
+                                        skipped: Colors.textSecondary,
+                                    };
+                                    const statusLabels = {
+                                        assigned: 'Assigned',
+                                        completed: 'Completed',
+                                        skipped: 'Skipped',
+                                    };
+                                    return (
+                                        <View key={assignment.id} style={styles.assignmentCard}>
+                                            <View style={styles.assignmentHeader}>
+                                                <Text style={styles.assignmentExerciseId}>
+                                                    Exercise: {assignment.exercise_id}
+                                                </Text>
+                                                <View style={[styles.assignmentStatusBadge, { backgroundColor: statusColors[assignment.status] + '20' }]}>
+                                                    <Text style={[styles.assignmentStatusText, { color: statusColors[assignment.status] }]}>
+                                                        {statusLabels[assignment.status]}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                            <View style={styles.assignmentMeta}>
+                                                <Text style={styles.assignmentDate}>
+                                                    Assigned: {new Date(assignment.assigned_date).toLocaleDateString()}
+                                                </Text>
+                                                {assignment.due_date && (
+                                                    <Text style={styles.assignmentDueDate}>
+                                                        Due: {new Date(assignment.due_date).toLocaleDateString()}
+                                                    </Text>
+                                                )}
+                                            </View>
+                                            {assignment.notes && (
+                                                <Text style={styles.assignmentNotes}>{assignment.notes}</Text>
+                                            )}
+                                        </View>
+                                    );
+                                })
+                            )}
+                        </View>
+                    )}
+                </View>
+
+                {/* Health Metrics Section */}
+                {healthMetrics.length > 0 && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Health Metrics</Text>
+                        <View style={styles.healthCard}>
+                            <Text style={styles.healthDescription}>
+                                Mobility and walking metrics tracked via Apple Health
+                            </Text>
+
+                            {/* Walking Speed Chart */}
+                            {healthMetrics.some(m => m.walking_speed_avg !== null) && (
+                                <View style={styles.chartSection}>
+                                    <Text style={styles.chartTitle}>Walking Speed Trend</Text>
+                                    <HealthChart
+                                        data={healthMetrics
+                                            .slice(0, 14)
+                                            .reverse()
+                                            .map(m => ({
+                                                date: m.metric_date,
+                                                value: m.walking_speed_avg,
+                                            }))
+                                            .filter(d => d.value !== null && d.value !== undefined)}
+                                        metricName="Walking Speed"
+                                        unit="m/s"
+                                    />
+                                </View>
+                            )}
+
+                            {/* Latest Metrics Summary */}
+                            {healthMetrics[0] && (
+                                <View style={styles.metricsSummary}>
+                                    {healthMetrics[0].walking_steadiness && (
+                                        <View style={styles.metricItem}>
+                                            <Text style={styles.metricLabel}>Walking Steadiness</Text>
+                                            <Text
+                                                style={[
+                                                    styles.metricValue,
+                                                    {
+                                                        color:
+                                                            healthMetrics[0].walking_steadiness === 'OK'
+                                                                ? Colors.success
+                                                                : healthMetrics[0].walking_steadiness === 'Low'
+                                                                ? Colors.warning
+                                                                : Colors.error,
+                                                    },
+                                                ]}
+                                            >
+                                                {healthMetrics[0].walking_steadiness}
+                                            </Text>
+                                        </View>
+                                    )}
+                                    {healthMetrics[0].step_count !== null && (
+                                        <View style={styles.metricItem}>
+                                            <Text style={styles.metricLabel}>Avg Daily Steps</Text>
+                                            <Text style={styles.metricValue}>
+                                                {Math.round(
+                                                    healthMetrics
+                                                        .slice(0, 7)
+                                                        .reduce((sum, m) => sum + (m.step_count || 0), 0) / 7
+                                                ).toLocaleString()}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
+                            )}
+                        </View>
+                    </View>
+                )}
+
                 {/* Goals */}
                 {survivor?.goals && (
                     <View style={styles.section}>
@@ -292,6 +484,11 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter_700Bold',
         fontSize: 18,
         color: Colors.text,
+        flex: 1,
+        textAlign: 'center',
+    },
+    settingsButton: {
+        padding: 8,
     },
     loadingContainer: {
         flex: 1,
@@ -463,5 +660,136 @@ const styles = StyleSheet.create({
     logKudosHint: {
         marginLeft: 8,
         opacity: 0.6,
+    },
+    assignmentsHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    assignmentsHeaderLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    assignmentsCount: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 14,
+        color: Colors.textSecondary,
+    },
+    assignmentsList: {
+        gap: 12,
+    },
+    emptyAssignments: {
+        backgroundColor: Colors.surfaceHighlight,
+        borderRadius: 12,
+        padding: 24,
+        alignItems: 'center',
+    },
+    emptyAssignmentsText: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 14,
+        color: Colors.textSecondary,
+        marginBottom: 16,
+    },
+    assignButton: {
+        backgroundColor: Colors.primary,
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 12,
+    },
+    assignButtonText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 14,
+        color: 'white',
+    },
+    assignmentCard: {
+        backgroundColor: 'white',
+        borderRadius: 12,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    assignmentHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    assignmentExerciseId: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 15,
+        color: Colors.text,
+        flex: 1,
+    },
+    assignmentStatusBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
+    },
+    assignmentStatusText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 11,
+    },
+    assignmentMeta: {
+        flexDirection: 'row',
+        gap: 16,
+        marginBottom: 8,
+    },
+    assignmentDate: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 12,
+        color: Colors.textSecondary,
+    },
+    assignmentDueDate: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 12,
+        color: Colors.textSecondary,
+    },
+    assignmentNotes: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 13,
+        color: Colors.text,
+        marginTop: 8,
+        fontStyle: 'italic',
+    },
+    healthCard: {
+        backgroundColor: 'white',
+        borderRadius: 12,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    healthDescription: {
+        ...Typography.caption,
+        color: Colors.textSecondary,
+        marginBottom: 16,
+    },
+    chartSection: {
+        marginBottom: 16,
+    },
+    chartTitle: {
+        ...Typography.body,
+        fontFamily: 'Inter_600SemiBold',
+        marginBottom: 12,
+    },
+    metricsSummary: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: Colors.border,
+    },
+    metricItem: {
+        alignItems: 'center',
+    },
+    metricLabel: {
+        ...Typography.caption,
+        color: Colors.textSecondary,
+        marginBottom: 4,
+    },
+    metricValue: {
+        ...Typography.headline,
+        fontFamily: 'Inter_700Bold',
     },
 });

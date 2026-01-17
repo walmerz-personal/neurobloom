@@ -20,6 +20,7 @@ export default function CreateAccount() {
     const impairments = params.impairments ? JSON.parse(params.impairments) : [];
     const recoveryPhase = params.recoveryPhase || '';
     const goals = params.goals || '';
+    const medicalStaffRole = params.medicalStaffRole || '';
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -65,6 +66,8 @@ export default function CreateAccount() {
                     impairments,
                     recoveryPhase,
                     goals,
+                    medicalStaffRole: role === 'medical_staff' ? medicalStaffRole : null,
+                    preferences: {},
                 };
 
                 await SupabaseService.saveUserProfile(user.id, profileData);

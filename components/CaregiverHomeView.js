@@ -200,6 +200,12 @@ export function CaregiverHomeView({ userData, user, onLogout, onNavigateToCaregi
                     >
                         <Text style={styles.connectButtonText}>Enter Invitation Code</Text>
                     </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.requestAccessButton}
+                        onPress={() => onNavigateToCaregiver?.('request-access')}
+                    >
+                        <Text style={styles.requestAccessButtonText}>Request Access</Text>
+                    </TouchableOpacity>
                 </View>
             ) : (
                 survivors.map((survivor) => {
@@ -354,6 +360,20 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter_600SemiBold',
         fontSize: 14,
         color: 'white',
+    },
+    requestAccessButton: {
+        marginTop: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: Colors.primary,
+        backgroundColor: 'transparent',
+    },
+    requestAccessButtonText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 14,
+        color: Colors.primary,
     },
     survivorCard: {
         flexDirection: 'row',

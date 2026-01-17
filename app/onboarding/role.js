@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-nativ
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 
@@ -17,6 +18,9 @@ export default function RoleSelection() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.content}>
+                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                    <Ionicons name="arrow-back" size={24} color={Colors.text} />
+                </TouchableOpacity>
                 <Text style={styles.title}>Who is this account for?</Text>
                 <Text style={styles.subtitle}>
                     This helps us personalize your experience.
@@ -85,6 +89,12 @@ const styles = StyleSheet.create({
     content: {
         flex: 1,
         padding: 24,
+    },
+    backButton: {
+        marginBottom: 16,
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
     },
     title: {
         ...Typography.title2,

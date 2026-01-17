@@ -20,6 +20,79 @@ function generateInvitationCode() {
 }
 
 /**
+ * Create an access request (SMS-based)
+ * @param {string} requesterId - The caregiver's user ID
+ * @param {string} phoneNumber - The survivor's phone number
+ * @returns {Promise<{token: string|null, error: Error|null}>}
+ */
+export async function createAccessRequest(requesterId, phoneNumber) {
+    try {
+        const { token, linkId, error } = await SupabaseService.createAccessRequest(requesterId, phoneNumber, 'caregiver');
+
+        if (error) {
+            console.error('❌ Error creating access request:', error);
+            return { token: null, error };
+        }
+
+        console.log('✅ Access request created with token:', token);
+        return { token, linkId, error: null };
+    } catch (error) {
+        console.error('❌ Error creating access request:', error);
+        return { token: null, error };
+    }
+}
+
+/**
+ * Get access request by token
+ * @param {string} token - Access request token
+ * @returns {Promise<{data, error}>}
+ */
+export async function getAccessRequestByToken(token) {
+    try {
+        const { data, error } = await SupabaseService.getAccessRequestByToken(token);
+
+        if (error) {
+            return { data: null, error };
+        }
+
+        return { data, error: null };
+    } catch (error) {
+        return { data: null, error };
+    }
+}
+
+/**
+ * Accept an access request by token
+ * @param {string} token - Access request token
+ * @param {string} survivorId - The survivor's user ID
+ * @returns {Promise<{success: boolean, requester: Object|null, error: Error|null}>}
+ */
+export async function acceptAccessRequest(token, survivorId) {
+    try {
+        const { data: result, error } = await SupabaseService.acceptAccessRequest(token, survivorId);
+
+        if (error) {
+            console.error('❌ Error accepting access request:', error);
+            return { success: false, requester: null, error };
+        }
+
+        console.log('✅ Access request accepted');
+        return {
+            success: true,
+            requester: {
+                id: result.requester_id,
+                name: result.requester_name,
+                role: result.requester_role,
+            },
+            error: null,
+        };
+    } catch (error) {
+        console.error('❌ Error accepting access request:', error);
+        return { success: false, requester: null, error };
+    }
+}
+
+/**
  * Create an invitation for a caregiver to link with a survivor
  * @param {string} survivorId - The survivor's user ID
  * @param {string} relationship - Type: 'spouse', 'child', 'parent', 'sibling', 'friend', 'professional', 'other'
@@ -365,6 +438,9 @@ export const CareTeamService = {
     createInvitation,
     acceptInvitation,
     declineInvitation,
+    createAccessRequest,
+    getAccessRequestByToken,
+    acceptAccessRequest,
     getLinkedCaregivers,
     getLinkedSurvivors,
     getPendingInvitations,

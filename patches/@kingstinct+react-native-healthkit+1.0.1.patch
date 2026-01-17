@@ -1,0 +1,13 @@
+diff --git a/node_modules/@kingstinct/react-native-healthkit/ios/ReactNativeHealthkit.swift b/node_modules/@kingstinct/react-native-healthkit/ios/ReactNativeHealthkit.swift
+index 6d71ca2..fef0485 100644
+--- a/node_modules/@kingstinct/react-native-healthkit/ios/ReactNativeHealthkit.swift
++++ b/node_modules/@kingstinct/react-native-healthkit/ios/ReactNativeHealthkit.swift
+@@ -20,6 +20,8 @@ class ReactNativeHealthkit: RCTEventEmitter {
+         self._runningQueries = Dictionary<String, HKQuery>();
+         self._dateFormatter = ISO8601DateFormatter();
+         
++        super.init()
++        
+         if(HKHealthStore.isHealthDataAvailable()){
+             self._store = HKHealthStore.init();
+         }

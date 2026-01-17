@@ -1,11 +1,16 @@
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Linking, Platform } from 'react-native';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
-import { TrendingUp, Calendar, Award } from 'lucide-react-native';
+import { TrendingUp, Calendar, Award, Activity, Settings } from 'lucide-react-native';
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { SupabaseService } from '../../services/SupabaseService';
+import { HealthMetricsCard } from '../../components/HealthMetricsCard';
+import { HealthChart } from '../../components/HealthChart';
+import * as HealthKitService from '../../services/HealthKitService';
+import * as HealthMetricsService from '../../services/HealthMetricsService';
+import { useRouter } from 'expo-router';
 import Svg, { Path, Circle, Line, Text as SvgText } from 'react-native-svg';
 
 const MOOD_MAP = {
@@ -26,13 +31,20 @@ const REVERSE_MOOD_MAP = {
 
 export default function Progress() {
     const { user } = useAuth();
+    const router = useRouter();
     const [moodData, setMoodData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [streak, setStreak] = useState({ current: 0, longest: 0, total: 0 });
+    const [healthMetrics, setHealthMetrics] = useState(null);
+    const [healthLoading, setHealthLoading] = useState(true);
+    const [healthChartData, setHealthChartData] = useState([]);
+    const [healthPermissionsGranted, setHealthPermissionsGranted] = useState(false);
 
     useEffect(() => {
         if (user) {
             fetchData();
+            fetchHealthData();
+            checkHealthPermissions();
         }
     }, [user]);
 
@@ -92,6 +104,102 @@ export default function Progress() {
             console.error('Exception fetching data:', e);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const checkHealthPermissions = async () => {
+        if (Platform.OS !== 'ios') {
+            setHealthPermissionsGranted(false);
+            return;
+        }
+
+        try {
+            const { granted } = await HealthKitService.checkHealthKitPermissions();
+            setHealthPermissionsGranted(granted);
+        } catch (error) {
+            console.error('Error checking health permissions:', error);
+            setHealthPermissionsGranted(false);
+        }
+    };
+
+    const fetchHealthData = async () => {
+        if (!user) return;
+        
+        setHealthLoading(true);
+        try {
+            // Get last 30 days of health metrics
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 30);
+
+            const { data: metrics, error } = await SupabaseService.getHealthMetrics(
+                user.id,
+                startDate,
+                endDate
+            );
+
+            if (error) {
+                console.error('Error fetching health metrics:', error);
+            } else if (metrics && metrics.length > 0) {
+                // Get latest metrics for the card
+                const latest = metrics[0];
+                setHealthMetrics({
+                    walkingSteadiness: latest.walking_steadiness,
+                    walkingSpeedAvg: latest.walking_speed_avg,
+                    stepCount: latest.step_count,
+                    distanceWalked: latest.distance_walked,
+                    walkingStepLengthAvg: latest.walking_step_length_avg,
+                    walkingAsymmetryPercentage: latest.walking_asymmetry_percentage,
+                });
+
+                // Prepare chart data for walking speed (last 14 days)
+                const chartData = metrics
+                    .slice(0, 14)
+                    .reverse()
+                    .map(m => ({
+                        date: m.metric_date,
+                        value: m.walking_speed_avg,
+                    }))
+                    .filter(d => d.value !== null && d.value !== undefined);
+
+                setHealthChartData(chartData);
+            }
+        } catch (error) {
+            console.error('Error fetching health data:', error);
+        } finally {
+            setHealthLoading(false);
+        }
+    };
+
+    const handleConnectHealth = () => {
+        router.push('/onboarding/health-permissions');
+    };
+
+    const handleSyncHealth = async () => {
+        if (!user) return;
+
+        try {
+            setHealthLoading(true);
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 30);
+
+            const { success, error } = await HealthMetricsService.syncAndSaveHealthData(
+                user.id,
+                startDate,
+                endDate
+            );
+
+            if (success) {
+                // Refresh health data
+                await fetchHealthData();
+            } else {
+                console.error('Error syncing health data:', error);
+            }
+        } catch (error) {
+            console.error('Error syncing health data:', error);
+        } finally {
+            setHealthLoading(false);
         }
     };
 
@@ -282,6 +390,81 @@ export default function Progress() {
                             : "Start checking in to see your mood trend!"}
                     </Text>
                 </View>
+
+                {/* Health Metrics Section */}
+                {Platform.OS === 'ios' && (
+                    <>
+                        {!healthPermissionsGranted ? (
+                            <View style={styles.card}>
+                                <View style={styles.cardHeader}>
+                                    <View style={[styles.iconContainer, { backgroundColor: Colors.primaryLight + '20' }]}>
+                                        <Activity size={24} color={Colors.primary} />
+                                    </View>
+                                    <Text style={styles.cardTitle}>Connect Apple Health</Text>
+                                </View>
+                                <Text style={styles.cardFooter}>
+                                    Track your walking speed, steadiness, and mobility metrics automatically.
+                                </Text>
+                                <TouchableOpacity
+                                    style={styles.connectButton}
+                                    onPress={handleConnectHealth}
+                                >
+                                    <Text style={styles.connectButtonText}>Connect Apple Health</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <>
+                                <View style={styles.card}>
+                                    <View style={styles.cardHeader}>
+                                        <View style={[styles.iconContainer, { backgroundColor: Colors.primaryLight + '20' }]}>
+                                            <Activity size={24} color={Colors.primary} />
+                                        </View>
+                                        <Text style={styles.cardTitle}>Mobility Metrics</Text>
+                                        <TouchableOpacity
+                                            onPress={handleSyncHealth}
+                                            disabled={healthLoading}
+                                            style={styles.syncButton}
+                                        >
+                                            {healthLoading ? (
+                                                <ActivityIndicator size="small" color={Colors.primary} />
+                                            ) : (
+                                                <Text style={styles.syncButtonText}>Sync</Text>
+                                            )}
+                                        </TouchableOpacity>
+                                    </View>
+                                    {healthLoading ? (
+                                        <View style={styles.healthLoadingContainer}>
+                                            <ActivityIndicator color={Colors.primary} />
+                                        </View>
+                                    ) : (
+                                        <HealthMetricsCard metrics={healthMetrics} showDetails={false} />
+                                    )}
+                                </View>
+
+                                {healthChartData.length > 0 && (
+                                    <View style={styles.card}>
+                                        <View style={styles.cardHeader}>
+                                            <View style={[styles.iconContainer, { backgroundColor: Colors.success + '20' }]}>
+                                                <TrendingUp size={24} color={Colors.success} />
+                                            </View>
+                                            <Text style={styles.cardTitle}>Walking Speed Trend</Text>
+                                        </View>
+                                        <View style={styles.chartContainer}>
+                                            <HealthChart
+                                                data={healthChartData}
+                                                metricName="Walking Speed"
+                                                unit="m/s"
+                                            />
+                                        </View>
+                                        <Text style={styles.cardFooter}>
+                                            Your walking speed over the last 14 days. Higher is better!
+                                        </Text>
+                                    </View>
+                                )}
+                            </>
+                        )}
+                    </>
+                )}
             </ScrollView>
         </ScreenWrapper>
     );
@@ -405,6 +588,33 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter_500Medium',
         color: Colors.textSecondary,
         textAlign: 'center',
+    },
+    connectButton: {
+        backgroundColor: Colors.primary,
+        borderRadius: 12,
+        paddingVertical: 14,
+        paddingHorizontal: 24,
+        alignItems: 'center',
+        marginTop: 12,
+    },
+    connectButtonText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 16,
+        color: 'white',
+    },
+    syncButton: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+    },
+    syncButtonText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 14,
+        color: Colors.primary,
+    },
+    healthLoadingContainer: {
+        height: 100,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 });
 

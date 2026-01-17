@@ -1,6 +1,7 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { PrimaryButton } from '../../components/Button';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
@@ -15,6 +16,9 @@ export default function Welcome() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.content}>
+                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                    <Ionicons name="arrow-back" size={24} color={Colors.text} />
+                </TouchableOpacity>
                 <View style={styles.iconContainer}>
                     <Text style={styles.icon}>🌸</Text>
                 </View>
@@ -41,6 +45,15 @@ const styles = StyleSheet.create({
         padding: 24,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    backButton: {
+        position: 'absolute',
+        top: 0,
+        left: 24,
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        zIndex: 1,
     },
     iconContainer: {
         width: 120,

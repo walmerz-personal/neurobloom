@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -17,6 +17,8 @@ export default function Details() {
     const [strokeDate, setStrokeDate] = useState('');
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [impairments, setImpairments] = useState([]);
+    const [medicalStaffRole, setMedicalStaffRole] = useState('');
+    const [otherRole, setOtherRole] = useState('');
 
     const toggleImpairment = (impairment) => {
         if (impairments.includes(impairment)) {
@@ -27,13 +29,32 @@ export default function Details() {
     };
 
     const handleNext = () => {
-        router.push({
-            pathname: '/onboarding/goals',
-            params: { role, name, strokeDate, impairments: JSON.stringify(impairments) }
-        });
+        if (role === 'medical_staff') {
+            // For medical_staff, go directly to goals (which will skip to signup)
+            const finalRole = medicalStaffRole === 'other' ? otherRole : medicalStaffRole;
+            router.push({
+                pathname: '/onboarding/goals',
+                params: { 
+                    role, 
+                    name, 
+                    medicalStaffRole: finalRole,
+                    strokeDate: '', 
+                    impairments: JSON.stringify([]) 
+                }
+            });
+        } else {
+            router.push({
+                pathname: '/onboarding/goals',
+                params: { role, name, strokeDate, impairments: JSON.stringify(impairments) }
+            });
+        }
     };
 
     const handleSkip = () => {
+        if (role === 'medical_staff') {
+            // For medical_staff, still need to collect role, so don't skip
+            return;
+        }
         router.push({
             pathname: '/onboarding/goals',
             params: { role, name, strokeDate: '', impairments: JSON.stringify([]) }
@@ -47,6 +68,16 @@ export default function Details() {
         { id: 'vision', label: 'Vision', icon: '👁️' },
     ];
 
+    const medicalStaffRoleOptions = [
+        { id: 'occupational_therapist', label: 'Occupational Therapist (OT)' },
+        { id: 'speech_language_pathologist', label: 'Speech Language Pathologist (SLP)' },
+        { id: 'physical_therapist', label: 'Physical Therapist (PT)' },
+        { id: 'psychologist', label: 'Psychologist' },
+        { id: 'psychiatrist', label: 'Psychiatrist' },
+        { id: 'nurse', label: 'Nurse' },
+        { id: 'other', label: 'Other' },
+    ];
+
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -54,81 +85,132 @@ export default function Details() {
                     <Ionicons name="arrow-back" size={24} color={Colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.title}>Tell us a bit more</Text>
-                <Text style={styles.subtitle}>
-                    {role === 'survivor'
-                        ? "When did you have your stroke?"
-                        : "When did your loved one have their stroke?"}
-                </Text>
+                
+                {role === 'medical_staff' ? (
+                    <>
+                        <Text style={styles.subtitle}>
+                            What is your role?
+                        </Text>
+                        <View style={styles.optionsContainer}>
+                            {medicalStaffRoleOptions.map((option) => (
+                                <TouchableOpacity
+                                    key={option.id}
+                                    style={[
+                                        styles.optionCard,
+                                        medicalStaffRole === option.id && styles.optionCardSelected
+                                    ]}
+                                    onPress={() => setMedicalStaffRole(option.id)}
+                                >
+                                    <Text style={[
+                                        styles.optionLabel,
+                                        medicalStaffRole === option.id && styles.optionLabelSelected
+                                    ]}>
+                                        {option.label}
+                                    </Text>
+                                    {medicalStaffRole === option.id && (
+                                        <Text style={styles.checkmark}>✓</Text>
+                                    )}
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                        {medicalStaffRole === 'other' && (
+                            <View style={styles.otherInputContainer}>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Please specify your role"
+                                    placeholderTextColor={Colors.textSecondary}
+                                    value={otherRole}
+                                    onChangeText={setOtherRole}
+                                    autoCapitalize="words"
+                                />
+                            </View>
+                        )}
+                    </>
+                ) : (
+                    <>
+                        <Text style={styles.subtitle}>
+                            {role === 'survivor'
+                                ? "When did you have your stroke?"
+                                : "When did your loved one have their stroke?"}
+                        </Text>
 
-                <TouchableOpacity
-                    style={styles.dateInputContainer}
-                    onPress={() => setShowDatePicker(true)}
-                >
-                    <Text style={strokeDate ? styles.dateText : styles.datePlaceholder}>
-                        {strokeDate || 'Select date'}
-                    </Text>
-                </TouchableOpacity>
-                {showDatePicker && (
-                    <DateTimePicker
-                        value={strokeDate ? new Date(strokeDate) : new Date()}
-                        mode="date"
-                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                        maximumDate={new Date()}
-                        onChange={(event, selectedDate) => {
-                            if (Platform.OS === 'android') {
-                                setShowDatePicker(false);
-                            }
-                            if (selectedDate && event.type !== 'dismissed') {
-                                const formattedDate = selectedDate.toISOString().split('T')[0];
-                                setStrokeDate(formattedDate);
-                            }
-                        }}
-                    />
-                )}
-                {Platform.OS === 'ios' && showDatePicker && (
-                    <TouchableOpacity
-                        style={styles.datePickerDone}
-                        onPress={() => setShowDatePicker(false)}
-                    >
-                        <Text style={styles.datePickerDoneText}>Done</Text>
-                    </TouchableOpacity>
-                )}
-
-                <Text style={[styles.subtitle, { marginTop: 24 }]}>
-                    {role === 'survivor'
-                        ? "What are your main challenges?"
-                        : "What are their main challenges?"}
-                </Text>
-
-                <View style={styles.optionsContainer}>
-                    {impairmentOptions.map((option) => (
                         <TouchableOpacity
-                            key={option.id}
-                            style={[
-                                styles.optionCard,
-                                impairments.includes(option.id) && styles.optionCardSelected
-                            ]}
-                            onPress={() => toggleImpairment(option.id)}
+                            style={styles.dateInputContainer}
+                            onPress={() => setShowDatePicker(true)}
                         >
-                            <Text style={styles.optionIcon}>{option.icon}</Text>
-                            <Text style={[
-                                styles.optionLabel,
-                                impairments.includes(option.id) && styles.optionLabelSelected
-                            ]}>
-                                {option.label}
+                            <Text style={strokeDate ? styles.dateText : styles.datePlaceholder}>
+                                {strokeDate || 'Select date'}
                             </Text>
-                            {impairments.includes(option.id) && (
-                                <Text style={styles.checkmark}>✓</Text>
-                            )}
                         </TouchableOpacity>
-                    ))}
-                </View>
+                        {showDatePicker && (
+                            <DateTimePicker
+                                value={strokeDate ? new Date(strokeDate) : new Date()}
+                                mode="date"
+                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                maximumDate={new Date()}
+                                onChange={(event, selectedDate) => {
+                                    if (Platform.OS === 'android') {
+                                        setShowDatePicker(false);
+                                    }
+                                    if (selectedDate && event.type !== 'dismissed') {
+                                        const formattedDate = selectedDate.toISOString().split('T')[0];
+                                        setStrokeDate(formattedDate);
+                                    }
+                                }}
+                            />
+                        )}
+                        {Platform.OS === 'ios' && showDatePicker && (
+                            <TouchableOpacity
+                                style={styles.datePickerDone}
+                                onPress={() => setShowDatePicker(false)}
+                            >
+                                <Text style={styles.datePickerDoneText}>Done</Text>
+                            </TouchableOpacity>
+                        )}
+
+                        <Text style={[styles.subtitle, { marginTop: 24 }]}>
+                            {role === 'survivor'
+                                ? "What are your main challenges?"
+                                : "What are their main challenges?"}
+                        </Text>
+
+                        <View style={styles.optionsContainer}>
+                            {impairmentOptions.map((option) => (
+                                <TouchableOpacity
+                                    key={option.id}
+                                    style={[
+                                        styles.optionCard,
+                                        impairments.includes(option.id) && styles.optionCardSelected
+                                    ]}
+                                    onPress={() => toggleImpairment(option.id)}
+                                >
+                                    <Text style={styles.optionIcon}>{option.icon}</Text>
+                                    <Text style={[
+                                        styles.optionLabel,
+                                        impairments.includes(option.id) && styles.optionLabelSelected
+                                    ]}>
+                                        {option.label}
+                                    </Text>
+                                    {impairments.includes(option.id) && (
+                                        <Text style={styles.checkmark}>✓</Text>
+                                    )}
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </>
+                )}
 
                 <View style={styles.buttonContainer}>
-                    <PrimaryButton title="Next" onPress={handleNext} />
-                    <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-                        <Text style={styles.skipButtonText}>Skip for now</Text>
-                    </TouchableOpacity>
+                    <PrimaryButton 
+                        title="Next" 
+                        onPress={handleNext}
+                        disabled={role === 'medical_staff' && (!medicalStaffRole || (medicalStaffRole === 'other' && !otherRole.trim()))}
+                    />
+                    {role !== 'medical_staff' && (
+                        <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+                            <Text style={styles.skipButtonText}>Skip for now</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -239,5 +321,9 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         fontSize: 16,
         color: Colors.primary,
+    },
+    otherInputContainer: {
+        marginTop: 12,
+        marginBottom: 32,
     },
 });

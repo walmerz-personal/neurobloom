@@ -339,7 +339,7 @@ export default function Intro() {
                     </FadeUpView>
                     <FadeUpView index={3} style={{ alignItems: 'center' }}>
                         <Text style={[styles.tagline, { textAlign: 'center' }]}>
-                            <Text style={{ color: BRAND.bloomPink }}>Survivors</Text> and <Text style={{ color: BRAND.leafCyan }}>Caregivers</Text>
+                            <Text style={{ color: BRAND.bloomPink }}>Survivors</Text>, <Text style={{ color: BRAND.leafCyan }}>Caregivers</Text>, and <Text style={{ color: BRAND.leafTeal }}>Medical Staff</Text>
                         </Text>
                         <Text style={styles.subTagline}>growing together.</Text>
                     </FadeUpView>
