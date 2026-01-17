@@ -1,6 +1,7 @@
 // contexts/AuthContext.js
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { SupabaseService } from '../services/SupabaseService';
+import { NotificationService } from '../services/NotificationService';
 
 const AuthContext = createContext({});
 
@@ -30,6 +31,8 @@ export const AuthProvider = ({ children }) => {
                 if (session?.user) {
                     // Load user data from users table
                     await loadUserData(session.user.id);
+                    // Track app launch activity
+                    await trackActivityAndCheckInactivity(session.user.id);
                 } else {
                     setUserData(null);
                 }
@@ -67,6 +70,8 @@ export const AuthProvider = ({ children }) => {
 
                     if (session?.user) {
                         await loadUserData(session.user.id);
+                        // Track app launch activity
+                        await trackActivityAndCheckInactivity(session.user.id);
                     }
                 })(),
                 timeoutPromise
@@ -91,6 +96,29 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    /**
+     * Track user activity and check for inactivity reminder
+     * Updates last_activity_at and checks if reminder should be sent
+     */
+    const trackActivityAndCheckInactivity = async (userId) => {
+        try {
+            // Get last activity before updating (to check for inactivity)
+            const { lastActivity, error: getError } = await SupabaseService.getLastActivity(userId);
+            
+            // Update last activity to current time
+            await SupabaseService.updateLastActivity(userId);
+
+            // Check if user hasn't been active for 2+ days and send reminder if needed
+            // Only check if we successfully retrieved last activity (to avoid sending on first run)
+            if (!getError && lastActivity) {
+                await NotificationService.checkAndSendInactivityReminder(userId, lastActivity);
+            }
+        } catch (error) {
+            console.error('❌ Error tracking activity:', error);
+            // Non-critical error - don't block app functionality
+        }
+    };
+
     const signIn = async (email, password) => {
         try {
             const { user, session, error } = await SupabaseService.signIn(email, password);
@@ -102,6 +130,8 @@ export const AuthProvider = ({ children }) => {
             setUser(user);
             setSession(session);
             await loadUserData(user.id);
+            // Track login activity
+            await trackActivityAndCheckInactivity(user.id);
 
             return { user, error: null };
         } catch (error) {

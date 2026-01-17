@@ -16,6 +16,7 @@ Notifications.setNotificationHandler({
 
 const NOTIFICATION_PREFS_KEY = '@neurobloom_notification_prefs';
 const DAILY_REMINDER_ID = 'daily-exercise-reminder';
+const LAST_INACTIVITY_REMINDER_KEY = '@neurobloom_last_inactivity_reminder';
 
 // Default reminder time: 8:30 AM
 const DEFAULT_HOUR = 8;
@@ -158,6 +159,81 @@ export async function initializeNotifications() {
     }
 }
 
+/**
+ * Check if user hasn't opened app for 2+ days and send reminder notification
+ * @param {string} userId - User ID
+ * @param {string} lastActivityAt - ISO timestamp of last activity (from database)
+ * @returns {Promise<{sent, error}>} - Whether notification was sent
+ */
+export async function checkAndSendInactivityReminder(userId, lastActivityAt) {
+    try {
+        // Check if we have notification permissions
+        const { status } = await Notifications.getPermissionsAsync();
+        if (status !== 'granted') {
+            console.log('⏭️ Skipping inactivity reminder: notification permissions not granted');
+            return { sent: false, error: null };
+        }
+
+        // If no last activity timestamp, user is new - skip reminder
+        if (!lastActivityAt) {
+            console.log('⏭️ Skipping inactivity reminder: no previous activity');
+            return { sent: false, error: null };
+        }
+
+        // Calculate days since last activity
+        const lastActivity = new Date(lastActivityAt);
+        const now = new Date();
+        const daysSinceLastActivity = Math.floor((now - lastActivity) / (1000 * 60 * 60 * 24));
+
+        // Only send reminder if 2+ days have passed
+        if (daysSinceLastActivity < 2) {
+            console.log(`⏭️ Skipping inactivity reminder: only ${daysSinceLastActivity} days since last activity`);
+            return { sent: false, error: null };
+        }
+
+        // Check if we've already sent a reminder recently (within last 24 hours)
+        // This prevents spam if user opens app multiple times after 2+ days
+        try {
+            const lastReminderJson = await AsyncStorage.getItem(`${LAST_INACTIVITY_REMINDER_KEY}_${userId}`);
+            if (lastReminderJson) {
+                const lastReminder = new Date(JSON.parse(lastReminderJson));
+                const hoursSinceLastReminder = (now - lastReminder) / (1000 * 60 * 60);
+                if (hoursSinceLastReminder < 24) {
+                    console.log(`⏭️ Skipping inactivity reminder: already sent ${hoursSinceLastReminder.toFixed(1)} hours ago`);
+                    return { sent: false, error: null };
+                }
+            }
+        } catch (storageError) {
+            console.warn('⚠️ Error checking last reminder time:', storageError);
+            // Continue anyway - better to send reminder than miss it
+        }
+
+        // Send the reminder notification immediately
+        const notificationId = await Notifications.scheduleNotificationAsync({
+            content: {
+                title: "We Miss You! 🌸",
+                body: "Regular check-ins and exercises help track your recovery progress. Every day counts - let's continue your journey together!",
+                sound: true,
+                data: { type: 'inactivity-reminder' },
+            },
+            trigger: null, // Send immediately
+        });
+
+        if (notificationId) {
+            // Store the timestamp of when we sent this reminder
+            await AsyncStorage.setItem(`${LAST_INACTIVITY_REMINDER_KEY}_${userId}`, JSON.stringify(now.toISOString()));
+            console.log(`✅ Inactivity reminder sent for user (${daysSinceLastActivity} days inactive):`, userId);
+            return { sent: true, error: null };
+        } else {
+            console.error('❌ Failed to send inactivity reminder: notification ID not returned');
+            return { sent: false, error: new Error('Notification scheduling failed') };
+        }
+    } catch (error) {
+        console.error('❌ Error checking and sending inactivity reminder:', error);
+        return { sent: false, error };
+    }
+}
+
 export const NotificationService = {
     requestPermissions,
     scheduleDailyReminder,
@@ -166,6 +242,7 @@ export const NotificationService = {
     saveNotificationPrefs,
     loadNotificationPrefs,
     initializeNotifications,
+    checkAndSendInactivityReminder,
     DEFAULT_HOUR,
     DEFAULT_MINUTE,
 };

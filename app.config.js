@@ -9,7 +9,7 @@ export default {
         scheme: "neurobloom",
         main: "expo-router/entry",
         orientation: "portrait",
-        icon: "./assets/neurobloom-logo.png",
+        icon: "./assets/app-icon-1024.png",
         userInterfaceStyle: "light",
         newArchEnabled: true,
         plugins: [

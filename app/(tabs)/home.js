@@ -13,6 +13,7 @@ import Logo from '../../components/Logo';
 import { CareTeamSection } from '../../components/CareTeamSection';
 import { KudosReceivedModal } from '../../components/KudosReceivedModal';
 import { CaregiverHomeView } from '../../components/CaregiverHomeView';
+import { MedicalStaffHomeView } from '../../components/MedicalStaffHomeView';
 
 const SURVIVOR_QUOTES = [
     "Every small step forward is progress. You're doing great! 🌟",
@@ -92,7 +93,7 @@ export default function Home() {
     useEffect(() => {
         if (!userData) return;
 
-        const quotes = userData.role === 'caregiver' ? CAREGIVER_QUOTES : SURVIVOR_QUOTES;
+        const quotes = userData.role === 'caregiver' || userData.role === 'medical_staff' ? CAREGIVER_QUOTES : SURVIVOR_QUOTES;
         const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
         setMotivationalQuote(randomQuote);
     }, [userData]);
@@ -164,6 +165,19 @@ export default function Home() {
 
     const progressPercentage = Math.min(dailyProgress.completed / dailyProgress.total, 1);
 
+    const handleNavigateToMedicalStaff = (action, survivor) => {
+        if (action === 'accept-invitation') {
+            router.push('/caregiver/accept-invitation'); // Reuse caregiver invitation flow
+        } else if (action === 'survivor-progress' && survivor) {
+            router.push({
+                pathname: '/medical-staff/survivor-progress',
+                params: { survivorId: survivor.id, survivorName: survivor.name }
+            });
+        } else if (action === 'assign-exercises') {
+            router.push('/medical-staff/assign-exercises');
+        }
+    };
+
     // If user is a caregiver, render the caregiver-specific home view
     if (userData?.role === 'caregiver') {
         return (
@@ -187,6 +201,34 @@ export default function Home() {
                     user={user}
                     onLogout={handleLogout}
                     onNavigateToCaregiver={handleNavigateToCaregiver}
+                />
+            </ScreenWrapper>
+        );
+    }
+
+    // If user is medical staff, render the medical staff-specific home view
+    if (userData?.role === 'medical_staff') {
+        return (
+            <ScreenWrapper>
+                <View style={styles.header}>
+                    <View style={styles.headerLeft}>
+                        <Logo style={styles.headerLogo} />
+                        <View>
+                            <Text style={styles.greetingSub}>Welcome back,</Text>
+                            <Text style={styles.greeting}>
+                                {userData?.name ? userData.name.split(' ')[0] : 'Friend'}
+                            </Text>
+                        </View>
+                    </View>
+                    <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+                        <LogOut size={24} color={Colors.textSecondary} />
+                    </TouchableOpacity>
+                </View>
+                <MedicalStaffHomeView
+                    userData={userData}
+                    user={user}
+                    onLogout={handleLogout}
+                    onNavigateToMedicalStaff={handleNavigateToMedicalStaff}
                 />
             </ScreenWrapper>
         );

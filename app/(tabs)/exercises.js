@@ -3,9 +3,11 @@ import { useState, useEffect } from 'react';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
-import { PlayCircle, Clock, Target, ChevronDown, ChevronUp, CheckCircle, Circle } from 'lucide-react-native';
+import { PlayCircle, Clock, Target, ChevronDown, ChevronUp, CheckCircle, Circle, Plus, Edit, Trash2 } from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { SupabaseService } from '../../services/SupabaseService';
+import { MedicalStaffService } from '../../services/MedicalStaffService';
+import { CustomExerciseModal } from '../../components/CustomExerciseModal';
 
 const CATEGORIES = ['All', 'Arms', 'Legs', 'Core', 'Hands'];
 const MODE_TYPES = ['All', 'Solo', 'Partner'];
@@ -242,10 +244,16 @@ export default function Exercises() {
     const [expandedCardId, setExpandedCardId] = useState(null);
     const [completedExercises, setCompletedExercises] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [customExercises, setCustomExercises] = useState([]);
+    const [assignedExercises, setAssignedExercises] = useState([]);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [exerciseToEdit, setExerciseToEdit] = useState(null);
 
     useEffect(() => {
         if (user) {
             fetchCompletedExercises();
+            fetchCustomExercises();
+            fetchAssignedExercises();
         }
     }, [user]);
 
@@ -261,6 +269,38 @@ export default function Exercises() {
             console.error('Error fetching completed exercises:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchCustomExercises = async () => {
+        if (!user) return;
+        try {
+            const { data, error } = await SupabaseService.getCustomExercises(user.id);
+            if (error) {
+                console.error('Error fetching custom exercises:', error);
+                return;
+            }
+            setCustomExercises(data || []);
+        } catch (error) {
+            console.error('Error fetching custom exercises:', error);
+        }
+    };
+
+    const fetchAssignedExercises = async () => {
+        if (!user) return;
+        try {
+            const { assignments, error } = await MedicalStaffService.getAssignedExercises(user.id);
+            if (error) {
+                console.error('Error fetching assigned exercises:', error);
+                return;
+            }
+            // Get active assignments (assigned status) and map to exercise IDs
+            const activeAssignments = (assignments || [])
+                .filter(a => a.status === 'assigned')
+                .map(a => a.exercise_id);
+            setAssignedExercises(activeAssignments);
+        } catch (error) {
+            console.error('Error fetching assigned exercises:', error);
         }
     };
 
@@ -292,6 +332,17 @@ export default function Exercises() {
             setCompletedExercises(completedExercises);
             alert('Failed to update status. Please try again.');
         } else {
+            // If this was an assigned exercise, update assignment status
+            if (!isCompleted && assignedExercises.includes(exerciseId)) {
+                // Find the assignment and update its status
+                const { assignments } = await MedicalStaffService.getAssignedExercises(user.id);
+                const assignment = assignments?.find(a => a.exercise_id === exerciseId && a.status === 'assigned');
+                if (assignment) {
+                    await MedicalStaffService.updateAssignment(assignment.id, { status: 'completed' });
+                    await fetchAssignedExercises(); // Refresh assignments
+                }
+            }
+
             // Success! If we just completed it (was not completed before), award points
             if (!isCompleted) {
                 const { points } = await SupabaseService.getUserPoints(user.id);
@@ -301,11 +352,78 @@ export default function Exercises() {
         }
     };
 
-    const filteredExercises = EXERCISES_DATA.filter(ex => {
+    // Merge built-in and custom exercises
+    const allExercises = [
+        ...EXERCISES_DATA.map(ex => ({ ...ex, isCustom: false })),
+        ...customExercises
+    ];
+
+    const filteredExercises = allExercises.filter(ex => {
         const categoryMatch = selectedCategory === 'All' || ex.category === selectedCategory;
         const modeMatch = selectedMode === 'All' || ex.mode === selectedMode.toLowerCase();
         return categoryMatch && modeMatch;
     });
+
+    const handleSaveExercise = async (exerciseData, exerciseId) => {
+        if (!user) return;
+
+        try {
+            if (exerciseId) {
+                // Update existing exercise
+                const { error } = await SupabaseService.updateCustomExercise(exerciseId, exerciseData);
+                if (error) throw error;
+            } else {
+                // Create new exercise
+                const { error } = await SupabaseService.createCustomExercise(user.id, exerciseData);
+                if (error) throw error;
+            }
+            // Refresh custom exercises
+            await fetchCustomExercises();
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    const handleDeleteExercise = (exerciseId) => {
+        Alert.alert(
+            'Delete Exercise',
+            'Are you sure you want to delete this custom exercise? This cannot be undone.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        const { error } = await SupabaseService.deleteCustomExercise(exerciseId);
+                        if (error) {
+                            Alert.alert('Error', 'Failed to delete exercise. Please try again.');
+                        } else {
+                            await fetchCustomExercises();
+                            // Also remove from completed exercises if it was completed
+                            if (completedExercises.includes(exerciseId)) {
+                                await toggleCompletion(exerciseId);
+                            }
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleEditExercise = (exercise) => {
+        setExerciseToEdit(exercise);
+        setModalVisible(true);
+    };
+
+    const handleOpenCreateModal = () => {
+        setExerciseToEdit(null);
+        setModalVisible(true);
+    };
+
+    const handleCloseModal = () => {
+        setModalVisible(false);
+        setExerciseToEdit(null);
+    };
 
     const toggleExpand = (id) => {
         setExpandedCardId(expandedCardId === id ? null : id);
@@ -314,8 +432,19 @@ export default function Exercises() {
     return (
         <ScreenWrapper>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Recovery Exercises</Text>
-                <Text style={styles.headerSubtitle}>Daily movements for your recovery</Text>
+                <View style={styles.headerTop}>
+                    <View style={styles.headerText}>
+                        <Text style={styles.headerTitle}>Recovery Exercises</Text>
+                        <Text style={styles.headerSubtitle}>Daily movements for your recovery</Text>
+                    </View>
+                    <TouchableOpacity
+                        style={styles.addButton}
+                        onPress={handleOpenCreateModal}
+                        accessibilityLabel="Add custom exercise"
+                    >
+                        <Plus size={24} color="white" />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <View style={styles.categoryContainer}>
@@ -371,48 +500,91 @@ export default function Exercises() {
             </View>
 
             <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                {filteredExercises.map((exercise) => (
-                    <ExerciseCard
-                        key={exercise.id}
-                        data={exercise}
-                        isExpanded={expandedCardId === exercise.id}
-                        isCompleted={completedExercises.includes(exercise.id)}
-                        onPress={() => toggleExpand(exercise.id)}
-                        onToggleComplete={() => toggleCompletion(exercise.id)}
-                    />
-                ))}
+                {filteredExercises.map((exercise) => {
+                    const isAssigned = assignedExercises.includes(exercise.id);
+                    return (
+                        <ExerciseCard
+                            key={exercise.id}
+                            data={exercise}
+                            isExpanded={expandedCardId === exercise.id}
+                            isCompleted={completedExercises.includes(exercise.id)}
+                            isCustom={exercise.isCustom}
+                            isAssigned={isAssigned}
+                            onPress={() => toggleExpand(exercise.id)}
+                            onToggleComplete={() => toggleCompletion(exercise.id)}
+                            onEdit={exercise.isCustom ? () => handleEditExercise(exercise) : undefined}
+                            onDelete={exercise.isCustom ? () => handleDeleteExercise(exercise.id) : undefined}
+                        />
+                    );
+                })}
                 <View style={styles.footerSpacer} />
             </ScrollView>
+
+            <CustomExerciseModal
+                visible={modalVisible}
+                onClose={handleCloseModal}
+                exercise={exerciseToEdit}
+                onSave={handleSaveExercise}
+                userId={user?.id}
+            />
         </ScreenWrapper>
     );
 }
 
-function ExerciseCard({ data, isExpanded, isCompleted, onPress, onToggleComplete }) {
+function ExerciseCard({ data, isExpanded, isCompleted, isCustom, isAssigned, onPress, onToggleComplete, onEdit, onDelete }) {
     return (
         <TouchableOpacity
-            style={[styles.card, isExpanded && styles.cardExpanded]}
+            style={[styles.card, isExpanded && styles.cardExpanded, isCustom && styles.cardCustom, isAssigned && styles.cardAssigned]}
             onPress={onPress}
             activeOpacity={0.9}
         >
             <View style={[styles.thumbnail, { backgroundColor: data.thumbnailColor }]}>
                 <PlayCircle size={40} color={Colors.text} style={{ opacity: 0.6 }} />
                 <View style={styles.categoryBadge}>
-                    <Text style={styles.categoryBadgeText}>{data.category}</Text>
+                    <Text style={styles.categoryBadgeText}>
+                        {data.category}{isCustom ? ' • Custom' : ''}{isAssigned ? ' • Assigned' : ''}
+                    </Text>
                 </View>
 
-                <TouchableOpacity
-                    style={styles.checkboxContainer}
-                    onPress={(e) => {
-                        e.stopPropagation();
-                        onToggleComplete();
-                    }}
-                >
-                    {isCompleted ? (
-                        <CheckCircle size={28} color={Colors.primary} fill="white" />
-                    ) : (
-                        <Circle size={28} color="rgba(0,0,0,0.3)" fill="rgba(255,255,255,0.8)" />
+                <View style={styles.topLeftActions}>
+                    {isCustom && onEdit && (
+                        <TouchableOpacity
+                            style={styles.editButton}
+                            onPress={(e) => {
+                                e.stopPropagation();
+                                onEdit();
+                            }}
+                            accessibilityLabel="Edit exercise"
+                        >
+                            <Edit size={18} color={Colors.text} />
+                        </TouchableOpacity>
                     )}
-                </TouchableOpacity>
+                    {isCustom && onDelete && (
+                        <TouchableOpacity
+                            style={styles.deleteButton}
+                            onPress={(e) => {
+                                e.stopPropagation();
+                                onDelete();
+                            }}
+                            accessibilityLabel="Delete exercise"
+                        >
+                            <Trash2 size={18} color="#EF4444" />
+                        </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                        style={styles.checkboxContainer}
+                        onPress={(e) => {
+                            e.stopPropagation();
+                            onToggleComplete();
+                        }}
+                    >
+                        {isCompleted ? (
+                            <CheckCircle size={28} color={Colors.primary} fill="white" />
+                        ) : (
+                            <Circle size={28} color="rgba(0,0,0,0.3)" fill="rgba(255,255,255,0.8)" />
+                        )}
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <View style={styles.info}>
@@ -425,23 +597,31 @@ function ExerciseCard({ data, isExpanded, isCompleted, onPress, onToggleComplete
                 </View>
 
                 <View style={styles.meta}>
-                    <View style={styles.metaItem}>
-                        <Clock size={14} color={Colors.textSecondary} />
-                        <Text style={styles.metaText}>{data.time}</Text>
-                    </View>
-                    <View style={styles.metaItem}>
-                        <Target size={14} color={Colors.textSecondary} />
-                        <Text style={styles.metaText}>{data.target}</Text>
-                    </View>
-                    <View style={[styles.difficultyBadge,
-                    data.difficulty === 'Beginner' ? styles.diffEasy :
-                        data.difficulty === 'Intermediate' ? styles.diffMed : styles.diffHard
-                    ]}>
-                        <Text style={styles.difficultyText}>{data.difficulty}</Text>
-                    </View>
+                    {data.time && (
+                        <View style={styles.metaItem}>
+                            <Clock size={14} color={Colors.textSecondary} />
+                            <Text style={styles.metaText}>{data.time}</Text>
+                        </View>
+                    )}
+                    {data.target && (
+                        <View style={styles.metaItem}>
+                            <Target size={14} color={Colors.textSecondary} />
+                            <Text style={styles.metaText}>{data.target}</Text>
+                        </View>
+                    )}
+                    {data.difficulty && (
+                        <View style={[styles.difficultyBadge,
+                        data.difficulty === 'Beginner' ? styles.diffEasy :
+                            data.difficulty === 'Intermediate' ? styles.diffMed : styles.diffHard
+                        ]}>
+                            <Text style={styles.difficultyText}>{data.difficulty}</Text>
+                        </View>
+                    )}
                 </View>
 
-                <Text style={styles.description}>{data.description}</Text>
+                {data.description && (
+                    <Text style={styles.description}>{data.description}</Text>
+                )}
 
                 {isExpanded && (
                     <View style={styles.instructionsContainer}>
@@ -467,6 +647,14 @@ const styles = StyleSheet.create({
         paddingBottom: 16,
         backgroundColor: Colors.background,
     },
+    headerTop: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+    },
+    headerText: {
+        flex: 1,
+    },
     headerTitle: {
         fontFamily: 'Inter_700Bold',
         fontSize: 28,
@@ -477,6 +665,19 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter_400Regular',
         fontSize: 16,
         color: Colors.textSecondary,
+    },
+    addButton: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: Colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 4,
+        elevation: 3,
     },
     categoryContainer: {
         backgroundColor: Colors.background,
@@ -572,6 +773,14 @@ const styles = StyleSheet.create({
         borderColor: Colors.primary,
         shadowOpacity: 0.1,
     },
+    cardCustom: {
+        borderLeftWidth: 3,
+        borderLeftColor: Colors.primary,
+    },
+    cardAssigned: {
+        borderTopWidth: 3,
+        borderTopColor: Colors.success,
+    },
     thumbnail: {
         width: '100%',
         height: 160,
@@ -593,11 +802,43 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: Colors.text,
     },
-    checkboxContainer: {
+    topLeftActions: {
         position: 'absolute',
         top: 16,
         left: 16,
         zIndex: 10,
+        flexDirection: 'row',
+        gap: 8,
+        alignItems: 'center',
+    },
+    editButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(255,255,255,0.95)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    deleteButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(255,255,255,0.95)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    checkboxContainer: {
+        // Checkbox is positioned within topLeftActions flex container
     },
     info: {
         padding: 20,

@@ -58,6 +58,19 @@ export default function RoleSelection() {
                             </Text>
                         </View>
                     </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.optionCard}
+                        onPress={() => handleRoleSelect('medical_staff')}
+                    >
+                        <Text style={styles.optionIcon}>⚕️</Text>
+                        <View style={styles.optionTextContainer}>
+                            <Text style={styles.optionTitle}>I am Medical Staff</Text>
+                            <Text style={styles.optionDescription}>
+                                I am a PT, OT, SLP, or other healthcare provider.
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
                 </View>
             </View>
         </SafeAreaView>

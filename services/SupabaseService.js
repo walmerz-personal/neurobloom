@@ -71,7 +71,7 @@ export const SupabaseService = {
      * @param {string} email 
      * @param {string} password 
      * @param {string} name 
-     * @param {string} role - 'survivor' or 'caregiver'
+     * @param {string} role - 'survivor', 'caregiver', or 'medical_staff'
      * @returns {Promise<{user, error}>}
      */
     async signUp(email, password, name, role) {
@@ -413,6 +413,65 @@ export const SupabaseService = {
         } catch (error) {
             console.error('❌ Update user data error:', error);
             return { user: null, error };
+        }
+    },
+
+    /**
+     * Update last activity timestamp for a user
+     * Called when user opens the app or signs in
+     * @param {string} userId 
+     * @returns {Promise<{success, error}>}
+     */
+    async updateLastActivity(userId) {
+        if (!this.isInitialized()) {
+            return { success: false, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { error } = await supabase
+                .from('users')
+                .update({ last_activity_at: new Date().toISOString() })
+                .eq('id', userId);
+
+            if (error) {
+                console.error('❌ Update last activity error:', error);
+                return { success: false, error };
+            }
+
+            console.log('✅ Last activity updated for user:', userId);
+            return { success: true, error: null };
+        } catch (error) {
+            console.error('❌ Update last activity error:', error);
+            return { success: false, error };
+        }
+    },
+
+    /**
+     * Get last activity timestamp for a user
+     * @param {string} userId 
+     * @returns {Promise<{lastActivity, error}>}
+     */
+    async getLastActivity(userId) {
+        if (!this.isInitialized()) {
+            return { lastActivity: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .select('last_activity_at')
+                .eq('id', userId)
+                .single();
+
+            if (error) {
+                console.error('❌ Get last activity error:', error);
+                return { lastActivity: null, error };
+            }
+
+            return { lastActivity: data?.last_activity_at || null, error: null };
+        } catch (error) {
+            console.error('❌ Get last activity error:', error);
+            return { lastActivity: null, error };
         }
     },
 
@@ -1158,7 +1217,7 @@ export const SupabaseService = {
     /**
      * Get care team links for a user
      * @param {string} userId - User ID
-     * @param {string} role - 'survivor' or 'caregiver'
+     * @param {string} role - 'survivor', 'caregiver', or 'medical_staff'
      * @returns {Promise<{data, error}>}
      */
     async getCareTeamLinks(userId, role) {
@@ -1170,13 +1229,16 @@ export const SupabaseService = {
             let query = supabase.from('care_team_links').select(`
                 *,
                 survivor:survivor_id(id, name, email),
-                caregiver:caregiver_id(id, name, email)
+                caregiver:caregiver_id(id, name, email),
+                medical_staff:medical_staff_id(id, name, email)
             `);
 
             if (role === 'survivor') {
                 query = query.eq('survivor_id', userId);
             } else if (role === 'caregiver') {
                 query = query.eq('caregiver_id', userId);
+            } else if (role === 'medical_staff') {
+                query = query.eq('medical_staff_id', userId);
             }
 
             const { data, error } = await query;
@@ -1194,23 +1256,30 @@ export const SupabaseService = {
     },
 
     /**
-     * Get a specific care team link between caregiver and survivor
-     * @param {string} caregiverId 
+     * Get a specific care team link between caregiver/medical staff and survivor
+     * @param {string} caregiverId - Caregiver or medical staff ID
      * @param {string} survivorId 
+     * @param {string} linkType - 'caregiver' or 'medical_staff' (default: 'caregiver')
      * @returns {Promise<{data, error}>}
      */
-    async getCareTeamLink(caregiverId, survivorId) {
+    async getCareTeamLink(caregiverId, survivorId, linkType = 'caregiver') {
         if (!this.isInitialized()) {
             return { data: null, error: initError || new Error('Supabase not initialized') };
         }
 
         try {
-            const { data, error } = await supabase
+            let query = supabase
                 .from('care_team_links')
                 .select('*')
-                .eq('caregiver_id', caregiverId)
-                .eq('survivor_id', survivorId)
-                .single();
+                .eq('survivor_id', survivorId);
+
+            if (linkType === 'medical_staff') {
+                query = query.eq('medical_staff_id', caregiverId);
+            } else {
+                query = query.eq('caregiver_id', caregiverId);
+            }
+
+            const { data, error } = await query.single();
 
             if (error && error.code !== 'PGRST116') {
                 console.error('❌ Get care team link error:', error);
@@ -1260,19 +1329,33 @@ export const SupabaseService = {
     /**
      * Accept an invitation using RPC function (bypasses RLS)
      * @param {string} invitationCode - The invitation code
-     * @param {string} caregiverId - The caregiver's user ID
+     * @param {string} caregiverId - The caregiver's or medical staff's user ID
+     * @param {string} roleType - 'caregiver' or 'medical_staff' (default: 'caregiver')
      * @returns {Promise<{data, error}>}
      */
-    async acceptInvitationRPC(invitationCode, caregiverId) {
+    async acceptInvitationRPC(invitationCode, caregiverId, roleType = 'caregiver') {
         if (!this.isInitialized()) {
             return { data: null, error: initError || new Error('Supabase not initialized') };
         }
 
         try {
-            const { data, error } = await supabase.rpc('accept_invitation', {
-                p_invitation_code: invitationCode,
-                p_caregiver_id: caregiverId
-            });
+            // For now, use direct update since RPC may not support medical_staff
+            // First, get the invitation
+            const { data: invitation, error: lookupError } = await this.getInvitationByCode(invitationCode);
+            
+            if (lookupError || !invitation) {
+                return { data: null, error: lookupError || new Error('Invitation not found') };
+            }
+
+            // Update the link
+            const updateData = { status: 'accepted', accepted_at: new Date().toISOString() };
+            if (roleType === 'medical_staff') {
+                updateData.medical_staff_id = caregiverId;
+            } else {
+                updateData.caregiver_id = caregiverId;
+            }
+
+            const { data, error } = await this.updateCareTeamLink(invitation.id, updateData);
 
             if (error) {
                 console.error('❌ Accept invitation RPC error:', error);
@@ -1282,12 +1365,19 @@ export const SupabaseService = {
             // RPC returns an array, take the first item
             const result = data && data.length > 0 ? data[0] : null;
 
-            if (!result || !result.success) {
-                const errorMsg = result?.error_message || 'Failed to accept invitation';
-                return { data: null, error: new Error(errorMsg) };
+            if (error || !data) {
+                return { data: null, error: error || new Error('Failed to accept invitation') };
             }
 
-            console.log('✅ Invitation accepted via RPC:', result.survivor_name);
+            // Get survivor name for response
+            const { user: survivorData } = await this.getUserData(invitation.survivor_id);
+            const result = {
+                success: true,
+                survivor_id: invitation.survivor_id,
+                survivor_name: survivorData?.name || 'Unknown'
+            };
+
+            console.log('✅ Invitation accepted:', result.survivor_name);
             return { data: result, error: null };
         } catch (error) {
             console.error('❌ Accept invitation RPC error:', error);
@@ -1352,6 +1442,402 @@ export const SupabaseService = {
             return { error: null };
         } catch (error) {
             console.error('❌ Delete care team link error:', error);
+            return { error };
+        }
+    },
+
+    // =============================================
+    // CUSTOM EXERCISES
+    // =============================================
+
+    /**
+     * Get thumbnail color based on category (matches built-in exercises)
+     * @param {string} category - Exercise category
+     * @returns {string} Hex color code
+     */
+    _getThumbnailColorForCategory(category) {
+        const colorMap = {
+            'Arms': '#E0F2FE', // Light blue
+            'Legs': '#FED7AA', // Light orange
+            'Core': '#D1FAE5', // Light green
+            'Hands': '#E9D5FF', // Light purple
+        };
+        return colorMap[category] || '#E0F2FE';
+    },
+
+    /**
+     * Create a custom exercise
+     * @param {string} userId - User ID
+     * @param {Object} exerciseData - Exercise data
+     * @param {string} exerciseData.title - Exercise title (required)
+     * @param {string} exerciseData.category - Category: 'Arms', 'Legs', 'Core', 'Hands' (required)
+     * @param {string} exerciseData.mode - Mode: 'solo' or 'partner' (required)
+     * @param {string[]} exerciseData.instructions - Array of instruction strings (required)
+     * @param {string} [exerciseData.time] - Optional time (e.g., '3 min')
+     * @param {string} [exerciseData.target] - Optional target area
+     * @param {string} [exerciseData.description] - Optional description
+     * @param {string} [exerciseData.difficulty] - Optional difficulty: 'Beginner', 'Intermediate', 'Advanced'
+     * @param {boolean} [exerciseData.isSharedWithCareTeam] - Whether to share with care team (default: false)
+     * @returns {Promise<{data, error}>}
+     */
+    async createCustomExercise(userId, exerciseData) {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            // Validate required fields
+            if (!exerciseData.title || !exerciseData.category || !exerciseData.mode || !exerciseData.instructions) {
+                return { data: null, error: new Error('Title, category, mode, and instructions are required') };
+            }
+
+            // Auto-assign thumbnail color based on category if not provided
+            const thumbnailColor = exerciseData.thumbnailColor || this._getThumbnailColorForCategory(exerciseData.category);
+
+            const insertData = {
+                user_id: userId,
+                title: exerciseData.title.trim(),
+                category: exerciseData.category,
+                mode: exerciseData.mode.toLowerCase(),
+                time: exerciseData.time || null,
+                target: exerciseData.target || null,
+                description: exerciseData.description || null,
+                difficulty: exerciseData.difficulty || null,
+                thumbnail_color: thumbnailColor,
+                instructions: Array.isArray(exerciseData.instructions) 
+                    ? exerciseData.instructions.filter(i => i && i.trim()) 
+                    : exerciseData.instructions.split('\n').filter(i => i && i.trim()),
+                is_shared_with_care_team: exerciseData.isSharedWithCareTeam || false,
+            };
+
+            const { data, error } = await supabase
+                .from('user_exercises')
+                .insert([insertData])
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Create custom exercise error:', error);
+                return { data: null, error };
+            }
+
+            console.log('✅ Custom exercise created:', data.id);
+            return { data, error: null };
+        } catch (error) {
+            console.error('❌ Create custom exercise error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
+     * Get custom exercises for a user (and shared ones if caregiver)
+     * @param {string} userId - User ID
+     * @returns {Promise<{data, error}>}
+     */
+    async getCustomExercises(userId) {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            // Get user's own exercises + shared exercises from care team
+            const { data, error } = await supabase
+                .from('user_exercises')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('❌ Get custom exercises error:', error);
+                return { data: null, error };
+            }
+
+            // Filter exercises: user's own + shared ones they have access to
+            // RLS policies should handle this, but we'll filter client-side as well for safety
+            const filtered = data || [];
+
+            // Transform to match EXERCISES_DATA format
+            const transformed = filtered.map(ex => ({
+                id: ex.id,
+                category: ex.category,
+                mode: ex.mode,
+                title: ex.title,
+                time: ex.time || undefined,
+                target: ex.target || undefined,
+                description: ex.description || undefined,
+                difficulty: ex.difficulty || undefined,
+                thumbnailColor: ex.thumbnail_color,
+                instructions: ex.instructions || [],
+                isCustom: true,
+                userId: ex.user_id,
+                isSharedWithCareTeam: ex.is_shared_with_care_team,
+            }));
+
+            console.log(`✅ Retrieved ${transformed.length} custom exercises`);
+            return { data: transformed, error: null };
+        } catch (error) {
+            console.error('❌ Get custom exercises error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
+     * Update a custom exercise
+     * @param {string} exerciseId - Exercise ID
+     * @param {Object} exerciseData - Updated exercise data (all fields optional except those being updated)
+     * @returns {Promise<{data, error}>}
+     */
+    async updateCustomExercise(exerciseId, exerciseData) {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const updateData = {};
+
+            if (exerciseData.title !== undefined) updateData.title = exerciseData.title.trim();
+            if (exerciseData.category !== undefined) {
+                updateData.category = exerciseData.category;
+                // Update thumbnail color if category changed
+                if (!exerciseData.thumbnailColor) {
+                    updateData.thumbnail_color = this._getThumbnailColorForCategory(exerciseData.category);
+                }
+            }
+            if (exerciseData.mode !== undefined) updateData.mode = exerciseData.mode.toLowerCase();
+            if (exerciseData.time !== undefined) updateData.time = exerciseData.time || null;
+            if (exerciseData.target !== undefined) updateData.target = exerciseData.target || null;
+            if (exerciseData.description !== undefined) updateData.description = exerciseData.description || null;
+            if (exerciseData.difficulty !== undefined) updateData.difficulty = exerciseData.difficulty || null;
+            if (exerciseData.thumbnailColor !== undefined) updateData.thumbnail_color = exerciseData.thumbnailColor;
+            if (exerciseData.instructions !== undefined) {
+                updateData.instructions = Array.isArray(exerciseData.instructions)
+                    ? exerciseData.instructions.filter(i => i && i.trim())
+                    : exerciseData.instructions.split('\n').filter(i => i && i.trim());
+            }
+            if (exerciseData.isSharedWithCareTeam !== undefined) {
+                updateData.is_shared_with_care_team = exerciseData.isSharedWithCareTeam;
+            }
+
+            const { data, error } = await supabase
+                .from('user_exercises')
+                .update(updateData)
+                .eq('id', exerciseId)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Update custom exercise error:', error);
+                return { data: null, error };
+            }
+
+            console.log('✅ Custom exercise updated:', exerciseId);
+            return { data, error: null };
+        } catch (error) {
+            console.error('❌ Update custom exercise error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
+     * Delete a custom exercise
+     * @param {string} exerciseId - Exercise ID
+     * @returns {Promise<{error}>}
+     */
+    async deleteCustomExercise(exerciseId) {
+        if (!this.isInitialized()) {
+            return { error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { error } = await supabase
+                .from('user_exercises')
+                .delete()
+                .eq('id', exerciseId);
+
+            if (error) {
+                console.error('❌ Delete custom exercise error:', error);
+                return { error };
+            }
+
+            console.log('✅ Custom exercise deleted:', exerciseId);
+            return { error: null };
+        } catch (error) {
+            console.error('❌ Delete custom exercise error:', error);
+            return { error };
+        }
+    },
+
+    // =============================================
+    // EXERCISE ASSIGNMENTS
+    // =============================================
+
+    /**
+     * Assign an exercise to a survivor
+     * @param {string} survivorId - Survivor's user ID
+     * @param {string} medicalStaffId - Medical staff's user ID
+     * @param {string} exerciseId - Exercise ID (built-in or custom UUID)
+     * @param {string} exerciseType - 'built_in' or 'custom'
+     * @param {string} [dueDate] - Optional due date (YYYY-MM-DD)
+     * @param {string} [notes] - Optional notes
+     * @returns {Promise<{data, error}>}
+     */
+    async assignExercise(survivorId, medicalStaffId, exerciseId, exerciseType, dueDate = null, notes = null) {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const assignmentData = {
+                survivor_id: survivorId,
+                assigned_by_id: medicalStaffId,
+                exercise_id: exerciseId,
+                exercise_type: exerciseType,
+                assigned_date: new Date().toISOString().split('T')[0],
+                due_date: dueDate || null,
+                status: 'assigned',
+                notes: notes || null,
+            };
+
+            const { data, error } = await supabase
+                .from('exercise_assignments')
+                .insert([assignmentData])
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Assign exercise error:', error);
+                return { data: null, error };
+            }
+
+            console.log('✅ Exercise assigned:', data.id);
+            return { data, error: null };
+        } catch (error) {
+            console.error('❌ Assign exercise error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
+     * Get assigned exercises for a survivor
+     * @param {string} survivorId - Survivor's user ID
+     * @param {string} [status] - Optional status filter ('assigned', 'completed', 'skipped')
+     * @returns {Promise<{data, error}>}
+     */
+    async getAssignedExercises(survivorId, status = null) {
+        if (!this.isInitialized()) {
+            return { data: [], error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            let query = supabase
+                .from('exercise_assignments')
+                .select('*')
+                .eq('survivor_id', survivorId)
+                .order('assigned_date', { ascending: false });
+
+            if (status) {
+                query = query.eq('status', status);
+            }
+
+            const { data, error } = await query;
+
+            if (error) {
+                console.error('❌ Get assigned exercises error:', error);
+                return { data: [], error };
+            }
+
+            return { data: data || [], error: null };
+        } catch (error) {
+            console.error('❌ Get assigned exercises error:', error);
+            return { data: [], error };
+        }
+    },
+
+    /**
+     * Update assignment status
+     * @param {string} assignmentId - Assignment ID
+     * @param {string} status - New status ('assigned', 'completed', 'skipped')
+     * @returns {Promise<{data, error}>}
+     */
+    async updateAssignmentStatus(assignmentId, status) {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('exercise_assignments')
+                .update({ status, updated_at: new Date().toISOString() })
+                .eq('id', assignmentId)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Update assignment status error:', error);
+                return { data: null, error };
+            }
+
+            console.log('✅ Assignment status updated:', assignmentId);
+            return { data, error: null };
+        } catch (error) {
+            console.error('❌ Update assignment status error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
+     * Get assignments created by medical staff
+     * @param {string} medicalStaffId - Medical staff's user ID
+     * @returns {Promise<{data, error}>}
+     */
+    async getMedicalStaffAssignments(medicalStaffId) {
+        if (!this.isInitialized()) {
+            return { data: [], error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('exercise_assignments')
+                .select('*')
+                .eq('assigned_by_id', medicalStaffId)
+                .order('assigned_date', { ascending: false });
+
+            if (error) {
+                console.error('❌ Get medical staff assignments error:', error);
+                return { data: [], error };
+            }
+
+            return { data: data || [], error: null };
+        } catch (error) {
+            console.error('❌ Get medical staff assignments error:', error);
+            return { data: [], error };
+        }
+    },
+
+    /**
+     * Delete an assignment
+     * @param {string} assignmentId - Assignment ID
+     * @returns {Promise<{error}>}
+     */
+    async deleteAssignment(assignmentId) {
+        if (!this.isInitialized()) {
+            return { error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { error } = await supabase
+                .from('exercise_assignments')
+                .delete()
+                .eq('id', assignmentId);
+
+            if (error) {
+                console.error('❌ Delete assignment error:', error);
+                return { error };
+            }
+
+            console.log('✅ Assignment deleted:', assignmentId);
+            return { error: null };
+        } catch (error) {
+            console.error('❌ Delete assignment error:', error);
             return { error };
         }
     },

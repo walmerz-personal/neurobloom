@@ -201,15 +201,16 @@ export async function getPendingInvitations(survivorId) {
 }
 
 /**
- * Get a survivor's progress data (for caregivers)
- * @param {string} caregiverId - The caregiver's user ID
+ * Get a survivor's progress data (for caregivers and medical staff)
+ * @param {string} caregiverId - The caregiver's or medical staff's user ID
  * @param {string} survivorId - The survivor's user ID
+ * @param {string} [linkType] - 'caregiver' or 'medical_staff' (default: 'caregiver')
  * @returns {Promise<{progress: Object|null, error: Error|null}>}
  */
-export async function getSurvivorProgress(caregiverId, survivorId) {
+export async function getSurvivorProgress(caregiverId, survivorId, linkType = 'caregiver') {
     try {
-        // Verify the caregiver has access to this survivor
-        const { data: link, error: linkError } = await SupabaseService.getCareTeamLink(caregiverId, survivorId);
+        // Verify the caregiver/medical staff has access to this survivor
+        const { data: link, error: linkError } = await SupabaseService.getCareTeamLink(caregiverId, survivorId, linkType);
 
         if (linkError || !link || link.status !== 'accepted') {
             return { progress: null, error: new Error('Not authorized to view this survivor\'s progress') };
