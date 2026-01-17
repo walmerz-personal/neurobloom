@@ -1355,17 +1355,10 @@ export const SupabaseService = {
                 updateData.caregiver_id = caregiverId;
             }
 
-            const { data, error } = await this.updateCareTeamLink(invitation.id, updateData);
+            const { data: updatedLink, error } = await this.updateCareTeamLink(invitation.id, updateData);
 
-            if (error) {
+            if (error || !updatedLink) {
                 console.error('❌ Accept invitation RPC error:', error);
-                return { data: null, error };
-            }
-
-            // RPC returns an array, take the first item
-            const result = data && data.length > 0 ? data[0] : null;
-
-            if (error || !data) {
                 return { data: null, error: error || new Error('Failed to accept invitation') };
             }
 
