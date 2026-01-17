@@ -52,8 +52,8 @@ export async function getSurvivorProgress(medicalStaffId, survivorId) {
         return { progress: null, error: new Error('Not authorized to view this survivor\'s progress') };
     }
 
-    // Use CareTeamService method since it has same permissions
-    return await CareTeamService.getSurvivorProgress(medicalStaffId, survivorId);
+    // Use CareTeamService method since it has same permissions (pass 'medical_staff' as linkType)
+    return await CareTeamService.getSurvivorProgress(medicalStaffId, survivorId, 'medical_staff');
 }
 
 /**
