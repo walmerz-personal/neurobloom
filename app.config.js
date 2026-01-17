@@ -37,6 +37,10 @@ export default {
                 ITSAppUsesNonExemptEncryption: false,
                 NSHealthShareUsageDescription: "NeuroBloom tracks your walking speed, steadiness, and mobility to help monitor your recovery progress.",
                 NSHealthUpdateUsageDescription: "NeuroBloom saves your health metrics to track your recovery journey."
+            },
+            entitlements: {
+                "com.apple.developer.healthkit": true,
+                "com.apple.developer.healthkit.access": []
             }
         },
         android: {
