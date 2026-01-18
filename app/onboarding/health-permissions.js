@@ -1,6 +1,6 @@
 // app/onboarding/health-permissions.js
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform, Linking, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform, Linking, ActivityIndicator, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
@@ -92,80 +92,86 @@ export default function HealthPermissions() {
     return (
         <ScreenWrapper>
             <View style={styles.container}>
-                <View style={styles.header}>
-                    <Heart size={48} color={Colors.primary} />
-                    <Text style={styles.title}>Connect Apple Health</Text>
-                    <Text style={styles.subtitle}>
-                        Track your recovery progress automatically
-                    </Text>
-                </View>
+                <ScrollView 
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <View style={styles.header}>
+                        <Heart size={48} color={Colors.primary} />
+                        <Text style={styles.title}>Connect Apple Health</Text>
+                        <Text style={styles.subtitle}>
+                            Track your recovery progress automatically
+                        </Text>
+                    </View>
 
-                <View style={styles.benefits}>
-                    <View style={styles.benefitItem}>
-                        <View style={styles.benefitIcon}>
-                            <Activity size={24} color={Colors.primary} />
+                    <View style={styles.benefits}>
+                        <View style={styles.benefitItem}>
+                            <View style={styles.benefitIcon}>
+                                <Activity size={24} color={Colors.primary} />
+                            </View>
+                            <View style={styles.benefitText}>
+                                <Text style={styles.benefitTitle}>Automatic Tracking</Text>
+                                <Text style={styles.benefitDescription}>
+                                    Your iPhone tracks walking speed, steadiness, and step count automatically
+                                </Text>
+                            </View>
                         </View>
-                        <View style={styles.benefitText}>
-                            <Text style={styles.benefitTitle}>Automatic Tracking</Text>
-                            <Text style={styles.benefitDescription}>
-                                Your iPhone tracks walking speed, steadiness, and step count automatically
-                            </Text>
+
+                        <View style={styles.benefitItem}>
+                            <View style={styles.benefitIcon}>
+                                <TrendingUp size={24} color={Colors.primary} />
+                            </View>
+                            <View style={styles.benefitText}>
+                                <Text style={styles.benefitTitle}>Progress Insights</Text>
+                                <Text style={styles.benefitDescription}>
+                                    See how your mobility improves over time with detailed charts and trends
+                                </Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.benefitItem}>
+                            <View style={styles.benefitIcon}>
+                                <Shield size={24} color={Colors.primary} />
+                            </View>
+                            <View style={styles.benefitText}>
+                                <Text style={styles.benefitTitle}>Privacy First</Text>
+                                <Text style={styles.benefitDescription}>
+                                    Your health data stays private. You control who can see it.
+                                </Text>
+                            </View>
                         </View>
                     </View>
 
-                    <View style={styles.benefitItem}>
-                        <View style={styles.benefitIcon}>
-                            <TrendingUp size={24} color={Colors.primary} />
-                        </View>
-                        <View style={styles.benefitText}>
-                            <Text style={styles.benefitTitle}>Progress Insights</Text>
-                            <Text style={styles.benefitDescription}>
-                                See how your mobility improves over time with detailed charts and trends
-                            </Text>
-                        </View>
+                    <View style={styles.infoBox}>
+                        <Text style={styles.infoText}>
+                            We'll track: walking speed, step length, walking steadiness, step count, and distance walked.
+                            You can manage sharing preferences in Settings at any time.
+                        </Text>
                     </View>
 
-                    <View style={styles.benefitItem}>
-                        <View style={styles.benefitIcon}>
-                            <Shield size={24} color={Colors.primary} />
-                        </View>
-                        <View style={styles.benefitText}>
-                            <Text style={styles.benefitTitle}>Privacy First</Text>
-                            <Text style={styles.benefitDescription}>
-                                Your health data stays private. You control who can see it.
-                            </Text>
-                        </View>
-                    </View>
-                </View>
-
-                <View style={styles.infoBox}>
-                    <Text style={styles.infoText}>
-                        We'll track: walking speed, step length, walking steadiness, step count, and distance walked.
-                        You can manage sharing preferences in Settings at any time.
-                    </Text>
-                </View>
-
-                <View style={styles.buttonContainer}>
-                    <PrimaryButton
-                        title={loading ? 'Requesting...' : 'Connect Apple Health'}
-                        onPress={handleRequestPermissions}
-                        disabled={loading || permissionGranted}
-                    />
-                    {loading && (
-                        <ActivityIndicator
-                            size="small"
-                            color={Colors.primary}
-                            style={styles.loader}
+                    <View style={styles.buttonContainer}>
+                        <PrimaryButton
+                            title={loading ? 'Requesting...' : 'Connect Apple Health'}
+                            onPress={handleRequestPermissions}
+                            disabled={loading || permissionGranted}
                         />
-                    )}
-                    <TouchableOpacity
-                        style={styles.skipButton}
-                        onPress={handleSkip}
-                        disabled={loading}
-                    >
-                        <Text style={styles.skipButtonText}>Skip for now</Text>
-                    </TouchableOpacity>
-                </View>
+                        {loading && (
+                            <ActivityIndicator
+                                size="small"
+                                color={Colors.primary}
+                                style={styles.loader}
+                            />
+                        )}
+                        <TouchableOpacity
+                            style={styles.skipButton}
+                            onPress={handleSkip}
+                            disabled={loading}
+                        >
+                            <Text style={styles.skipButtonText}>Skip for now</Text>
+                        </TouchableOpacity>
+                    </View>
+                </ScrollView>
             </View>
         </ScreenWrapper>
     );
@@ -174,8 +180,11 @@ export default function HealthPermissions() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 24,
         backgroundColor: Colors.background,
+    },
+    scrollContent: {
+        padding: 24,
+        paddingBottom: 40,
     },
     header: {
         alignItems: 'center',
@@ -234,7 +243,7 @@ const styles = StyleSheet.create({
         lineHeight: 18,
     },
     buttonContainer: {
-        marginTop: 'auto',
+        marginTop: 32,
         marginBottom: 40,
     },
     loader: {
