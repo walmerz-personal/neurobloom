@@ -13,6 +13,9 @@ jest.mock('../../services/SupabaseService', () => ({
         getDailyLogs: jest.fn(),
         getUserProfile: jest.fn(),
         getUserData: jest.fn(),
+        createAccessRequest: jest.fn(),
+        getAccessRequestByToken: jest.fn(),
+        acceptAccessRequest: jest.fn(),
     },
 }));
 
@@ -225,19 +228,355 @@ describe('CareTeamService', () => {
         });
     });
 
-    describe('updatePermissions', () => {
-        it('should update permissions for a link', async () => {
+    describe('createAccessRequest', () => {
+        it('should create an access request successfully', async () => {
+            SupabaseService.createAccessRequest.mockResolvedValue({
+                token: 'ACCESS1234567890',
+                linkId: 'link-123',
+                error: null,
+            });
+
+            const { token, linkId, error } = await CareTeamService.createAccessRequest('caregiver-123', '+1234567890');
+
+            expect(token).toBe('ACCESS1234567890');
+            expect(linkId).toBe('link-123');
+            expect(error).toBeNull();
+            expect(SupabaseService.createAccessRequest).toHaveBeenCalledWith('caregiver-123', '+1234567890', 'caregiver');
+        });
+
+        it('should handle errors creating access request', async () => {
+            SupabaseService.createAccessRequest.mockResolvedValue({
+                token: null,
+                linkId: null,
+                error: new Error('Database error'),
+            });
+
+            const { token, error } = await CareTeamService.createAccessRequest('caregiver-123', '+1234567890');
+
+            expect(token).toBeNull();
+            expect(error).toBeTruthy();
+        });
+
+        it('should handle exceptions when creating access request', async () => {
+            SupabaseService.createAccessRequest.mockRejectedValue(new Error('Network error'));
+
+            const { token, error } = await CareTeamService.createAccessRequest('caregiver-123', '+1234567890');
+
+            expect(token).toBeNull();
+            expect(error).toBeTruthy();
+        });
+    });
+
+    describe('getAccessRequestByToken', () => {
+        it('should get access request by token', async () => {
+            SupabaseService.getAccessRequestByToken.mockResolvedValue({
+                data: { id: 'link-123', requester_name: 'John' },
+                error: null,
+            });
+
+            const { data, error } = await CareTeamService.getAccessRequestByToken('TOKEN123');
+
+            expect(data).toBeTruthy();
+            expect(data.requester_name).toBe('John');
+            expect(error).toBeNull();
+        });
+
+        it('should handle errors getting access request', async () => {
+            SupabaseService.getAccessRequestByToken.mockResolvedValue({
+                data: null,
+                error: new Error('Not found'),
+            });
+
+            const { data, error } = await CareTeamService.getAccessRequestByToken('INVALID');
+
+            expect(data).toBeNull();
+            expect(error).toBeTruthy();
+        });
+
+        it('should handle exceptions', async () => {
+            SupabaseService.getAccessRequestByToken.mockRejectedValue(new Error('Network error'));
+
+            const { data, error } = await CareTeamService.getAccessRequestByToken('TOKEN123');
+
+            expect(data).toBeNull();
+            expect(error).toBeTruthy();
+        });
+    });
+
+    describe('acceptAccessRequest', () => {
+        it('should accept an access request successfully', async () => {
+            SupabaseService.acceptAccessRequest.mockResolvedValue({
+                data: {
+                    success: true,
+                    requester_id: 'caregiver-123',
+                    requester_name: 'John',
+                    requester_role: 'caregiver',
+                },
+                error: null,
+            });
+
+            const { success, requester, error } = await CareTeamService.acceptAccessRequest('TOKEN123', 'survivor-123');
+
+            expect(success).toBe(true);
+            expect(requester.name).toBe('John');
+            expect(requester.id).toBe('caregiver-123');
+            expect(error).toBeNull();
+        });
+
+        it('should handle errors accepting access request', async () => {
+            SupabaseService.acceptAccessRequest.mockResolvedValue({
+                data: null,
+                error: new Error('Invalid token'),
+            });
+
+            const { success, requester, error } = await CareTeamService.acceptAccessRequest('INVALID', 'survivor-123');
+
+            expect(success).toBe(false);
+            expect(requester).toBeNull();
+            expect(error).toBeTruthy();
+        });
+
+        it('should handle exceptions', async () => {
+            SupabaseService.acceptAccessRequest.mockRejectedValue(new Error('Network error'));
+
+            const { success, requester, error } = await CareTeamService.acceptAccessRequest('TOKEN123', 'survivor-123');
+
+            expect(success).toBe(false);
+            expect(requester).toBeNull();
+            expect(error).toBeTruthy();
+        });
+    });
+
+    describe('declineInvitation', () => {
+        it('should decline an invitation successfully', async () => {
+            SupabaseService.getInvitationByCode.mockResolvedValue({
+                data: { id: 'link-123', status: 'pending' },
+                error: null,
+            });
             SupabaseService.updateCareTeamLink.mockResolvedValue({
                 data: {},
                 error: null,
             });
 
-            const newPermissions = { viewProgress: true, viewNotes: true };
-            const { success, error } = await CareTeamService.updatePermissions('survivor-123', 'link-123', newPermissions);
+            const { success, error } = await CareTeamService.declineInvitation('caregiver-123', 'ABCD1234');
 
             expect(success).toBe(true);
             expect(error).toBeNull();
-            expect(SupabaseService.updateCareTeamLink).toHaveBeenCalledWith('link-123', { permissions: newPermissions });
+            expect(SupabaseService.updateCareTeamLink).toHaveBeenCalledWith('link-123', {
+                caregiver_id: 'caregiver-123',
+                status: 'declined',
+            });
+        });
+
+        it('should handle invalid invitation code', async () => {
+            SupabaseService.getInvitationByCode.mockResolvedValue({
+                data: null,
+                error: new Error('Not found'),
+            });
+
+            const { success, error } = await CareTeamService.declineInvitation('caregiver-123', 'INVALID');
+
+            expect(success).toBe(false);
+            expect(error.message).toContain('Invalid invitation code');
+        });
+
+        it('should handle update errors', async () => {
+            SupabaseService.getInvitationByCode.mockResolvedValue({
+                data: { id: 'link-123' },
+                error: null,
+            });
+            SupabaseService.updateCareTeamLink.mockResolvedValue({
+                data: null,
+                error: new Error('Update failed'),
+            });
+
+            const { success, error } = await CareTeamService.declineInvitation('caregiver-123', 'ABCD1234');
+
+            expect(success).toBe(false);
+            expect(error).toBeTruthy();
+        });
+
+        it('should handle exceptions', async () => {
+            SupabaseService.getInvitationByCode.mockRejectedValue(new Error('Network error'));
+
+            const { success, error } = await CareTeamService.declineInvitation('caregiver-123', 'ABCD1234');
+
+            expect(success).toBe(false);
+            expect(error).toBeTruthy();
+        });
+    });
+
+    describe('getPendingInvitations', () => {
+        it('should return pending invitations for survivor', async () => {
+            SupabaseService.getCareTeamLinks.mockResolvedValue({
+                data: [
+                    { id: 'link-1', status: 'pending', invitation_code: 'ABC123', relationship: 'spouse', created_at: '2024-01-01' },
+                    { id: 'link-2', status: 'accepted', caregiver_id: 'cg1' },
+                    { id: 'link-3', status: 'pending', invitation_code: 'XYZ789', relationship: 'friend', created_at: '2024-01-02' },
+                ],
+                error: null,
+            });
+
+            const { invitations, error } = await CareTeamService.getPendingInvitations('survivor-123');
+
+            expect(invitations).toHaveLength(2);
+            expect(invitations[0].code).toBe('ABC123');
+            expect(invitations[1].code).toBe('XYZ789');
+            expect(error).toBeNull();
+        });
+
+        it('should return empty array on error', async () => {
+            SupabaseService.getCareTeamLinks.mockResolvedValue({
+                data: null,
+                error: new Error('Database error'),
+            });
+
+            const { invitations, error } = await CareTeamService.getPendingInvitations('survivor-123');
+
+            expect(invitations).toEqual([]);
+            expect(error).toBeTruthy();
+        });
+
+        it('should handle exceptions', async () => {
+            SupabaseService.getCareTeamLinks.mockRejectedValue(new Error('Network error'));
+
+            const { invitations, error } = await CareTeamService.getPendingInvitations('survivor-123');
+
+            expect(invitations).toEqual([]);
+            expect(error).toBeTruthy();
+        });
+    });
+
+    describe('getSurvivorProgress', () => {
+        it('should handle case when link status is not accepted', async () => {
+            SupabaseService.getCareTeamLink.mockResolvedValue({
+                data: { status: 'pending' },
+                error: null,
+            });
+
+            const { progress, error } = await CareTeamService.getSurvivorProgress('caregiver-123', 'survivor-123');
+
+            expect(progress).toBeNull();
+            expect(error.message).toContain('Not authorized');
+        });
+
+        it('should handle errors getting daily logs', async () => {
+            SupabaseService.getCareTeamLink.mockResolvedValue({
+                data: { status: 'accepted', permissions: {} },
+                error: null,
+            });
+            SupabaseService.getDailyLogs.mockResolvedValue({
+                logs: [],
+                error: new Error('Failed to get logs'),
+            });
+
+            const { progress, error } = await CareTeamService.getSurvivorProgress('caregiver-123', 'survivor-123');
+
+            expect(progress).toBeNull();
+            expect(error).toBeTruthy();
+        });
+
+        it('should handle empty logs', async () => {
+            SupabaseService.getCareTeamLink.mockResolvedValue({
+                data: { status: 'accepted', permissions: {} },
+                error: null,
+            });
+            SupabaseService.getDailyLogs.mockResolvedValue({
+                logs: [],
+                error: null,
+            });
+            SupabaseService.getUserProfile.mockResolvedValue({
+                profile: null,
+            });
+            SupabaseService.getUserData.mockResolvedValue({
+                user: { name: 'Katie' },
+            });
+
+            const { progress, error } = await CareTeamService.getSurvivorProgress('caregiver-123', 'survivor-123');
+
+            expect(progress).toBeTruthy();
+            expect(progress.stats.checkInRate).toBe(0);
+            expect(progress.stats.exercisesDone).toBe(0);
+            expect(error).toBeNull();
+        });
+
+        it('should calculate streak correctly', async () => {
+            const today = new Date().toISOString().split('T')[0];
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+            SupabaseService.getCareTeamLink.mockResolvedValue({
+                data: { status: 'accepted', permissions: {} },
+                error: null,
+            });
+            SupabaseService.getDailyLogs.mockResolvedValue({
+                logs: [
+                    { log_date: today, mood: '😄', exercises_completed: ['ex1'] },
+                    { log_date: yesterdayStr, mood: '🙂', exercises_completed: ['ex2'] },
+                ],
+                error: null,
+            });
+            SupabaseService.getUserProfile.mockResolvedValue({ profile: {} });
+            SupabaseService.getUserData.mockResolvedValue({ user: { name: 'Katie' } });
+
+            const { progress } = await CareTeamService.getSurvivorProgress('caregiver-123', 'survivor-123');
+
+            expect(progress.stats.streak).toBeGreaterThanOrEqual(1);
+        });
+
+        it('should handle exceptions', async () => {
+            SupabaseService.getCareTeamLink.mockRejectedValue(new Error('Network error'));
+
+            const { progress, error } = await CareTeamService.getSurvivorProgress('caregiver-123', 'survivor-123');
+
+            expect(progress).toBeNull();
+            expect(error).toBeTruthy();
+        });
+    });
+
+    describe('removeCareTeamLink', () => {
+        it('should handle errors when removing link', async () => {
+            SupabaseService.deleteCareTeamLink.mockResolvedValue({
+                error: new Error('Delete failed'),
+            });
+
+            const { success, error } = await CareTeamService.removeCareTeamLink('user-123', 'link-123');
+
+            expect(success).toBe(false);
+            expect(error).toBeTruthy();
+        });
+
+        it('should handle exceptions', async () => {
+            SupabaseService.deleteCareTeamLink.mockRejectedValue(new Error('Network error'));
+
+            const { success, error } = await CareTeamService.removeCareTeamLink('user-123', 'link-123');
+
+            expect(success).toBe(false);
+            expect(error).toBeTruthy();
+        });
+    });
+
+    describe('updatePermissions', () => {
+        it('should handle errors when updating permissions', async () => {
+            SupabaseService.updateCareTeamLink.mockResolvedValue({
+                data: null,
+                error: new Error('Update failed'),
+            });
+
+            const { success, error } = await CareTeamService.updatePermissions('survivor-123', 'link-123', {});
+
+            expect(success).toBe(false);
+            expect(error).toBeTruthy();
+        });
+
+        it('should handle exceptions', async () => {
+            SupabaseService.updateCareTeamLink.mockRejectedValue(new Error('Network error'));
+
+            const { success, error } = await CareTeamService.updatePermissions('survivor-123', 'link-123', {});
+
+            expect(success).toBe(false);
+            expect(error).toBeTruthy();
         });
     });
 });
