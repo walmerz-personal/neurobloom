@@ -356,7 +356,7 @@
 				CODE_SIGN_ENTITLEMENTS = NeuroBloom/NeuroBloom.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";
-				CURRENT_PROJECT_VERSION = 27;
+				CURRENT_PROJECT_VERSION = 28;
 				DEVELOPMENT_TEAM = Y885MQBBP4;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -396,7 +396,7 @@
 				CODE_SIGN_ENTITLEMENTS = NeuroBloom/NeuroBloom.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";
-				CURRENT_PROJECT_VERSION = 27;
+				CURRENT_PROJECT_VERSION = 28;
 				DEVELOPMENT_TEAM = Y885MQBBP4;
 				INFOPLIST_FILE = NeuroBloom/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
