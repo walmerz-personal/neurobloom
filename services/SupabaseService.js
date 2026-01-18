@@ -1456,7 +1456,7 @@ export const SupabaseService = {
     /**
      * Create an access request (creates care_team_link with access_request_token)
      * @param {string} requesterId - The caregiver's or medical staff's user ID
-     * @param {string} phoneNumber - The survivor's phone number
+     * @param {string|null} phoneNumber - The survivor's phone number (optional, can be null)
      * @param {string} roleType - 'caregiver' or 'medical_staff'
      * @returns {Promise<{token: string|null, error: Error|null}>}
      */

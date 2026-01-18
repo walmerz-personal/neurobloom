@@ -1,56 +1,31 @@
 // app/caregiver/request-access.js
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../contexts/AuthContext';
 import { CareTeamService } from '../../services/CareTeamService';
 import { MedicalStaffService } from '../../services/MedicalStaffService';
-import { ArrowLeft, MessageSquare, Phone } from 'lucide-react-native';
+import { ArrowLeft, MessageSquare } from 'lucide-react-native';
 
 export default function RequestAccess() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const { userData, user } = useAuth();
-    const [phoneNumber, setPhoneNumber] = useState('');
     const [loading, setLoading] = useState(false);
 
     const roleType = userData?.role; // 'caregiver' or 'medical_staff'
 
-    // Format phone number as user types (removes non-numeric characters)
-    const handlePhoneChange = (text) => {
-        const cleaned = text.replace(/\D/g, '');
-        // Format: (XXX) XXX-XXXX
-        let formatted = '';
-        if (cleaned.length > 0) {
-            formatted = '(' + cleaned.substring(0, 3);
-        }
-        if (cleaned.length >= 4) {
-            formatted += ') ' + cleaned.substring(3, 6);
-        }
-        if (cleaned.length >= 7) {
-            formatted += '-' + cleaned.substring(6, 10);
-        }
-        setPhoneNumber(formatted);
-    };
-
     const handleRequestAccess = async () => {
-        // Validate phone number (at least 10 digits)
-        const cleaned = phoneNumber.replace(/\D/g, '');
-        if (cleaned.length < 10) {
-            Alert.alert('Invalid Phone Number', 'Please enter a valid 10-digit phone number.');
-            return;
-        }
-
         setLoading(true);
         try {
-            // Create access request
+            // Create access request without phone number
             let token, error;
             if (roleType === 'medical_staff') {
-                ({ token, error } = await MedicalStaffService.createAccessRequest(user.id, cleaned));
+                ({ token, error } = await MedicalStaffService.createAccessRequest(user.id, null));
             } else {
-                ({ token, error } = await CareTeamService.createAccessRequest(user.id, cleaned));
+                ({ token, error } = await CareTeamService.createAccessRequest(user.id, null));
             }
 
             if (error || !token) {
@@ -66,15 +41,15 @@ export default function RequestAccess() {
             const requesterRole = roleType === 'medical_staff' ? 'medical staff member' : 'caregiver';
             const message = `Hi! ${requesterName} (${requesterRole}) is requesting access to your NeuroBloom progress. Tap to approve: ${deepLink}`;
 
-            // Open SMS app with pre-filled message
-            const smsUrl = `sms:${cleaned}?body=${encodeURIComponent(message)}`;
+            // Open Messages app with pre-filled message (no phone number, allowing contact selection)
+            const smsUrl = `sms:?body=${encodeURIComponent(message)}`;
             const canOpen = await Linking.canOpenURL(smsUrl);
             
             if (canOpen) {
                 await Linking.openURL(smsUrl);
                 Alert.alert(
-                    'SMS Prepared',
-                    'Your SMS message is ready. Send it to the survivor to request access.',
+                    'Messages Opened',
+                    'Select a contact from your address book to send the access request link.',
                     [{ text: 'OK', onPress: () => router.back() }]
                 );
             } else {
@@ -113,32 +88,18 @@ export default function RequestAccess() {
 
                 <Text style={styles.title}>Request Access via SMS</Text>
                 <Text style={styles.subtitle}>
-                    Enter the survivor's phone number to send them a link to approve your access request.
+                    Tap the button below to open Messages and select a contact to send the access request link.
                 </Text>
-
-                <View style={styles.inputContainer}>
-                    <Phone size={20} color={Colors.textSecondary} style={styles.inputIcon} />
-                    <TextInput
-                        style={styles.phoneInput}
-                        value={phoneNumber}
-                        onChangeText={handlePhoneChange}
-                        placeholder="(123) 456-7890"
-                        placeholderTextColor={Colors.textTertiary}
-                        keyboardType="phone-pad"
-                        autoCorrect={false}
-                        maxLength={14} // (XXX) XXX-XXXX
-                    />
-                </View>
 
                 <TouchableOpacity
                     style={[styles.sendButton, loading && styles.disabledButton]}
                     onPress={handleRequestAccess}
-                    disabled={loading || phoneNumber.replace(/\D/g, '').length < 10}
+                    disabled={loading}
                 >
                     {loading ? (
                         <ActivityIndicator size="small" color="white" />
                     ) : (
-                        <Text style={styles.sendButtonText}>Send Access Request</Text>
+                        <Text style={styles.sendButtonText}>Open Messages</Text>
                     )}
                 </TouchableOpacity>
 
@@ -198,27 +159,6 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: 32,
         lineHeight: 22,
-    },
-    inputContainer: {
-        width: '100%',
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'white',
-        borderWidth: 2,
-        borderColor: Colors.border,
-        borderRadius: 16,
-        paddingHorizontal: 16,
-        marginBottom: 24,
-    },
-    inputIcon: {
-        marginRight: 12,
-    },
-    phoneInput: {
-        flex: 1,
-        paddingVertical: 18,
-        fontSize: 16,
-        fontFamily: 'Inter_600SemiBold',
-        color: Colors.text,
     },
     sendButton: {
         width: '100%',

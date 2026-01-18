@@ -22,7 +22,7 @@ function generateInvitationCode() {
 /**
  * Create an access request (SMS-based)
  * @param {string} requesterId - The caregiver's user ID
- * @param {string} phoneNumber - The survivor's phone number
+ * @param {string|null} phoneNumber - The survivor's phone number (optional, can be null)
  * @returns {Promise<{token: string|null, error: Error|null}>}
  */
 export async function createAccessRequest(requesterId, phoneNumber) {

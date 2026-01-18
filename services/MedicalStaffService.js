@@ -182,7 +182,7 @@ export async function getMedicalStaffAssignments(medicalStaffId) {
 /**
  * Create an access request (SMS-based)
  * @param {string} medicalStaffId - The medical staff's user ID
- * @param {string} phoneNumber - The survivor's phone number
+ * @param {string|null} phoneNumber - The survivor's phone number (optional, can be null)
  * @returns {Promise<{token: string|null, error: Error|null}>}
  */
 export async function createAccessRequest(medicalStaffId, phoneNumber) {
