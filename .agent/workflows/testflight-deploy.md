@@ -1,12 +1,16 @@
 ---
-description: Build and submit the NeuroBloom iOS app to Apple TestFlight
+description: Build and submit the NeuroBloom iOS app to Apple TestFlight using EAS
 ---
 
 # TestFlight Deployment Workflow
 
+**⚠️ CRITICAL:** This workflow uses EAS (Expo Application Services) for remote builds. For the proven, working process, see `TESTFLIGHT_DEPLOYMENT.md` in the project root.
+
+**IMPORTANT:** NeuroBloom requires build number synchronization across 4 files. See `TESTFLIGHT_DEPLOYMENT.md` for the complete process.
+
 This workflow builds and submits the NeuroBloom iOS app to Apple TestFlight.
-**Standard Method:** Local Build (xcodebuild) - Uses local machine resources.
-**Alternative Method:** Remote Build (EAS Cloud) - Uses Expo servers.
+**RECOMMENDED:** Remote Build (EAS Cloud) - See `TESTFLIGHT_DEPLOYMENT.md`
+**ALTERNATIVE:** Local Build (xcodebuild) - Uses local machine resources (below).
 
 ## Method 1: Local Build (xcodebuild) - Standard
 
