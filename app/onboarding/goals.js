@@ -82,7 +82,12 @@ export default function Goals() {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}
             >
-                <ScrollView contentContainerStyle={styles.scrollContent}>
+                <ScrollView 
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    showsVerticalScrollIndicator={false}
+                >
                     <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                         <Ionicons name="arrow-back" size={24} color={Colors.text} />
                     </TouchableOpacity>
@@ -129,6 +134,9 @@ export default function Goals() {
                                 multiline
                                 numberOfLines={4}
                                 textAlignVertical="top"
+                                returnKeyType="done"
+                                textContentType="none"
+                                accessibilityLabel="Recovery goals"
                             />
                         </>
                     )}
@@ -152,6 +160,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         padding: 24,
+        paddingBottom: 150,
     },
     backButton: {
         marginBottom: 16,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, Platform, Switch, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, Platform, Switch, Linking, KeyboardAvoidingView } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper } from '../components/ScreenWrapper';
@@ -213,7 +213,17 @@ export default function Profile() {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{ flex: 1 }}
+            >
+                <ScrollView 
+                    style={styles.content} 
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    showsVerticalScrollIndicator={false}
+                >
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Personal Information</Text>
 
@@ -228,6 +238,9 @@ export default function Profile() {
                             onChangeText={setName}
                             placeholder="Enter your name"
                             placeholderTextColor={Colors.textTertiary}
+                            returnKeyType="done"
+                            textContentType="name"
+                            accessibilityLabel="Full name"
                         />
                     </View>
 
@@ -336,6 +349,9 @@ export default function Profile() {
                             placeholderTextColor={Colors.textTertiary}
                             multiline
                             numberOfLines={3}
+                            returnKeyType="done"
+                            textContentType="none"
+                            accessibilityLabel="Impairments and challenges"
                         />
                         <Text style={styles.helperText}>Separate with commas</Text>
                     </View>
@@ -353,6 +369,9 @@ export default function Profile() {
                             placeholderTextColor={Colors.textTertiary}
                             multiline
                             numberOfLines={3}
+                            returnKeyType="done"
+                            textContentType="none"
+                            accessibilityLabel="Recovery goals"
                         />
                     </View>
                 </View>
@@ -450,7 +469,8 @@ export default function Profile() {
                         </TouchableOpacity>
                     </View>
                 </View>
-            </ScrollView>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </ScreenWrapper >
     );
 }
@@ -496,6 +516,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         padding: 24,
+        paddingBottom: 100,
     },
     section: {
         marginBottom: 32,

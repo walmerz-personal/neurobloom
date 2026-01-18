@@ -25,28 +25,28 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>8/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">61.53% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>6/6</span>
+                <span class='fraction'>8/13</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/0</span>
+                <span class='fraction'>1/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>8/8</span>
             </div>
         
             
@@ -78,9 +78,46 @@
 <a name='L13'></a><a href='#L13'>13</a>
 <a name='L14'></a><a href='#L14'>14</a>
 <a name='L15'></a><a href='#L15'>15</a>
-<a name='L16'></a><a href='#L16'>16</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -90,24 +127,50 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import Constants from 'expo-constants';
 &nbsp;
-export const Config = {
-    // Load from environment variables (set in app.config.js)
-    OPENAI_API_KEY: Constants.expoConfig?.extra?.openaiApiKey || '',
-    SUPABASE_URL: Constants.expoConfig?.extra?.supabaseUrl || '',
-    SUPABASE_ANON_KEY: Constants.expoConfig?.extra?.supabaseAnonKey || '',
+// Helper to safely get config values with detailed logging
+function getConfigValue(name, envKey, extraKey) {
+    // In production builds, process.env.EXPO_PUBLIC_* is undefined at runtime
+    // because Metro only inlines them from .env files (not from EAS Secrets)
+    // So we prioritize Constants.expoConfig.extra which is set by app.config.js
+    const fromExtra = Constants.expoConfig?.extra?.[extraKey];
+    const fromEnv = process.env[envKey];
 &nbsp;
-    // API Configuration
+    const value = fromExtra || fromEnv || '';
+    const source = fromExtra ? <span class="branch-0 cbranch-no" title="branch not covered" >'Constants.expoConfig.extra' </span>: (fromEnv ? <span class="branch-0 cbranch-no" title="branch not covered" >'process.env' </span>: 'missing');
+&nbsp;
+    console.log(`📋 Config.${name}: ${value ? <span class="branch-0 cbranch-no" title="branch not covered" >`✅ Loaded from ${source} (${value.length} chars)` </span>: `❌ Not found`}`);
+&nbsp;
+    return value;
+}
+&nbsp;
+export const Config = {
+    // Supabase Configuration
+    // Prioritize Constants.expoConfig.extra for production builds (works with EAS Secrets)
+    // Fall back to process.env for local development (works with .env.local)
+    SUPABASE_URL: getConfigValue('SUPABASE_URL', 'EXPO_PUBLIC_SUPABASE_URL', 'supabaseUrl'),
+    SUPABASE_ANON_KEY: getConfigValue('SUPABASE_ANON_KEY', 'EXPO_PUBLIC_SUPABASE_ANON_KEY', 'supabaseAnonKey'),
+&nbsp;
+    // OpenAI Configuration
+    OPENAI_API_KEY: getConfigValue('OPENAI_API_KEY', 'EXPO_PUBLIC_OPENAI_API_KEY', 'openaiApiKey'),
     API_URL: 'https://api.openai.com/v1/chat/completions',
-    // gpt-4o-mini: Best balance of cost and quality for expert responses
-    // gpt-4o: Most capable, higher cost
-    // gpt-3.5-turbo: Cheapest, less nuanced
     MODEL: 'gpt-4o-mini',
 };
+&nbsp;
+// Log configuration status (in both dev and production for debugging)
+console.log('🔑 Config Summary:', {
+    supabase: Config.SUPABASE_URL ? <span class="branch-0 cbranch-no" title="branch not covered" >'✅ Ready' </span>: '❌ Missing',
+    environment: __DEV__ ? 'Development' : <span class="branch-1 cbranch-no" title="branch not covered" >'Production',</span>
+});
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -115,7 +178,7 @@ export const Config = {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-12-01T00:24:15.558Z
+                at 2026-01-18T01:52:12.750Z
             </div>
         <script src="../prettify.js"></script>
         <script>

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -17,24 +17,36 @@ export default function RoleSelection() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.content}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.text} />
-                </TouchableOpacity>
-                <Text style={styles.title}>Who is this account for?</Text>
-                <Text style={styles.subtitle}>
-                    This helps us personalize your experience.
-                </Text>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{ flex: 1 }}
+            >
+                <ScrollView 
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    showsVerticalScrollIndicator={false}
+                >
+                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                        <Ionicons name="arrow-back" size={24} color={Colors.text} />
+                    </TouchableOpacity>
+                    <Text style={styles.title}>Who is this account for?</Text>
+                    <Text style={styles.subtitle}>
+                        This helps us personalize your experience.
+                    </Text>
 
-                <TextInput
-                    style={styles.nameInput}
-                    placeholder="What's your first name?"
-                    placeholderTextColor={Colors.textSecondary}
-                    value={name}
-                    onChangeText={setName}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                />
+                    <TextInput
+                        style={styles.nameInput}
+                        placeholder="What's your first name?"
+                        placeholderTextColor={Colors.textSecondary}
+                        value={name}
+                        onChangeText={setName}
+                        autoCapitalize="words"
+                        autoCorrect={false}
+                        returnKeyType="done"
+                        textContentType="givenName"
+                        accessibilityLabel="First name"
+                    />
 
                 <View style={styles.optionsContainer}>
                     <TouchableOpacity
@@ -76,7 +88,8 @@ export default function RoleSelection() {
                         </View>
                     </TouchableOpacity>
                 </View>
-            </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
@@ -86,9 +99,9 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: Colors.background,
     },
-    content: {
-        flex: 1,
+    scrollContent: {
         padding: 24,
+        paddingBottom: 40,
     },
     backButton: {
         marginBottom: 16,

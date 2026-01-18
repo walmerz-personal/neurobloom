@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -40,35 +40,47 @@ export default function ForgotPassword() {
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.content}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
             >
-                <View style={styles.header}>
-                    <Logo style={styles.logo} />
-                    <Text style={styles.title}>Reset Password</Text>
-                    <Text style={styles.subtitle}>Enter your email to receive reset instructions</Text>
-                </View>
+                <ScrollView 
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.header}>
+                        <Logo style={styles.logo} />
+                        <Text style={styles.title}>Reset Password</Text>
+                        <Text style={styles.subtitle}>Enter your email to receive reset instructions</Text>
+                    </View>
 
-                <View style={styles.form}>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Email"
-                        placeholderTextColor={Colors.textSecondary}
-                        value={email}
-                        onChangeText={setEmail}
-                        autoCapitalize="none"
-                        keyboardType="email-address"
-                        autoCorrect={false}
-                    />
+                    <View style={styles.form}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Email"
+                            placeholderTextColor={Colors.textSecondary}
+                            value={email}
+                            onChangeText={setEmail}
+                            autoCapitalize="none"
+                            keyboardType="email-address"
+                            autoCorrect={false}
+                            returnKeyType="done"
+                            onSubmitEditing={handleResetPassword}
+                            textContentType="emailAddress"
+                            accessibilityLabel="Email address"
+                        />
 
-                    <PrimaryButton
-                        title={loading ? "Sending..." : "Send Instructions"}
-                        onPress={handleResetPassword}
-                        disabled={loading}
-                    />
+                        <PrimaryButton
+                            title={loading ? "Sending..." : "Send Instructions"}
+                            onPress={handleResetPassword}
+                            disabled={loading}
+                        />
 
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                        <Text style={styles.backLink}>Back to Login</Text>
-                    </TouchableOpacity>
-                </View>
+                        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                            <Text style={styles.backLink}>Back to Login</Text>
+                        </TouchableOpacity>
+                    </View>
+                </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
     );
@@ -81,8 +93,12 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
         padding: 24,
         justifyContent: 'center',
+        paddingBottom: 40,
     },
     header: {
         alignItems: 'center',

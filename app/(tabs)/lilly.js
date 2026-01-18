@@ -213,7 +213,7 @@ export default function Lilly() {
 
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
                     style={styles.inputContainer}
                 >
                     {isTranscribing && (
@@ -247,6 +247,8 @@ export default function Lilly() {
                             returnKeyType="send"
                             onSubmitEditing={handleSend}
                             editable={!recorderState.isRecording && !isTranscribing}
+                            textContentType="none"
+                            accessibilityLabel="Message input"
                         />
 
                         <TouchableOpacity

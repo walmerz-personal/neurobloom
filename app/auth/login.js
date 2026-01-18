@@ -1,19 +1,22 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { PrimaryButton } from '../../components/Button';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { useAuth } from '../../contexts/AuthContext';
 import Logo from '../../components/Logo';
+import { Eye, EyeOff } from 'lucide-react-native';
 
 export default function Login() {
     const router = useRouter();
     const { signIn } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const passwordInputRef = useRef(null);
 
     const handleLogin = async () => {
         if (!email || !password) {
@@ -42,56 +45,86 @@ export default function Login() {
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.content}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
             >
-                <View style={styles.header}>
-                    <Text style={styles.appName}>NeuroBloom</Text>
-                    <Logo style={styles.logo} />
-                    <Text style={styles.title}>Welcome Back</Text>
-                    <Text style={styles.subtitle}>Log in to continue your recovery journey</Text>
-                </View>
-
-                <View style={styles.form}>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Email"
-                        placeholderTextColor={Colors.textSecondary}
-                        value={email}
-                        onChangeText={setEmail}
-                        autoCapitalize="none"
-                        keyboardType="email-address"
-                        autoCorrect={false}
-                    />
-
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Password"
-                        placeholderTextColor={Colors.textSecondary}
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                    />
-
-                    <View style={styles.forgotPasswordContainer}>
-                        <TouchableOpacity onPress={() => router.push('/auth/forgot-password')}>
-                            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-                        </TouchableOpacity>
+                <ScrollView 
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.header}>
+                        <Text style={styles.appName}>NeuroBloom</Text>
+                        <Logo style={styles.logo} />
+                        <Text style={styles.title}>Welcome Back</Text>
+                        <Text style={styles.subtitle}>Log in to continue your recovery journey</Text>
                     </View>
 
-                    <PrimaryButton
-                        title={loading ? "Logging in..." : "Log In"}
-                        onPress={handleLogin}
-                        disabled={loading}
-                    />
+                    <View style={styles.form}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Email"
+                            placeholderTextColor={Colors.textSecondary}
+                            value={email}
+                            onChangeText={setEmail}
+                            autoCapitalize="none"
+                            keyboardType="email-address"
+                            autoCorrect={false}
+                            returnKeyType="next"
+                            onSubmitEditing={() => passwordInputRef.current?.focus()}
+                            textContentType="emailAddress"
+                            accessibilityLabel="Email address"
+                        />
 
-                    <View style={styles.signupContainer}>
-                        <Text style={styles.signupText}>Don't have an account? </Text>
-                        <TouchableOpacity onPress={handleSignUp}>
-                            <Text style={styles.signupLink}>Sign Up</Text>
-                        </TouchableOpacity>
+                        <View style={styles.passwordContainer}>
+                            <TextInput
+                                ref={passwordInputRef}
+                                style={styles.passwordInput}
+                                placeholder="Password"
+                                placeholderTextColor={Colors.textSecondary}
+                                value={password}
+                                onChangeText={setPassword}
+                                secureTextEntry={!showPassword}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                returnKeyType="done"
+                                onSubmitEditing={handleLogin}
+                                textContentType="password"
+                                accessibilityLabel="Password"
+                            />
+                            <TouchableOpacity
+                                style={styles.eyeIcon}
+                                onPress={() => setShowPassword(!showPassword)}
+                                accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                            >
+                                {showPassword ? (
+                                    <EyeOff size={20} color={Colors.textSecondary} />
+                                ) : (
+                                    <Eye size={20} color={Colors.textSecondary} />
+                                )}
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.forgotPasswordContainer}>
+                            <TouchableOpacity onPress={() => router.push('/auth/forgot-password')}>
+                                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <PrimaryButton
+                            title={loading ? "Logging in..." : "Log In"}
+                            onPress={handleLogin}
+                            disabled={loading}
+                        />
+
+                        <View style={styles.signupContainer}>
+                            <Text style={styles.signupText}>Don't have an account? </Text>
+                            <TouchableOpacity onPress={handleSignUp}>
+                                <Text style={styles.signupLink}>Sign Up</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                </View>
+                </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
     );
@@ -104,8 +137,12 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
         padding: 24,
         justifyContent: 'center',
+        paddingBottom: 40,
     },
     header: {
         alignItems: 'center',
@@ -142,6 +179,25 @@ const styles = StyleSheet.create({
         padding: 16,
         fontSize: 17,
         color: Colors.text,
+    },
+    passwordContainer: {
+        position: 'relative',
+    },
+    passwordInput: {
+        backgroundColor: Colors.card,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        borderRadius: 12,
+        padding: 16,
+        paddingRight: 48,
+        fontSize: 17,
+        color: Colors.text,
+    },
+    eyeIcon: {
+        position: 'absolute',
+        right: 16,
+        top: 16,
+        padding: 4,
     },
     forgotPasswordContainer: {
         alignItems: 'flex-end',

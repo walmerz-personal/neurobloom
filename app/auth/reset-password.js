@@ -1,7 +1,7 @@
-import { View, Text, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import * as Linking from 'expo-linking';
 import { PrimaryButton } from '../../components/Button';
 import { Colors } from '../../constants/Colors';
@@ -9,13 +9,17 @@ import { Typography } from '../../constants/Typography';
 import { useAuth } from '../../contexts/AuthContext';
 import Logo from '../../components/Logo';
 import { SupabaseService } from '../../services/SupabaseService';
+import { Eye, EyeOff } from 'lucide-react-native';
 
 export default function ResetPassword() {
     const router = useRouter();
     const { updatePassword } = useAuth();
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const confirmPasswordInputRef = useRef(null);
     const url = Linking.useURL();
 
     useEffect(() => {
@@ -97,42 +101,85 @@ export default function ResetPassword() {
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.content}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
             >
-                <View style={styles.header}>
-                    <Logo style={styles.logo} />
-                    <Text style={styles.title}>Reset Password</Text>
-                    <Text style={styles.subtitle}>Enter your new password</Text>
-                </View>
+                <ScrollView 
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.header}>
+                        <Logo style={styles.logo} />
+                        <Text style={styles.title}>Reset Password</Text>
+                        <Text style={styles.subtitle}>Enter your new password</Text>
+                    </View>
 
-                <View style={styles.form}>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="New Password"
-                        placeholderTextColor={Colors.textSecondary}
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                    />
+                    <View style={styles.form}>
+                        <View style={styles.passwordContainer}>
+                            <TextInput
+                                style={styles.passwordInput}
+                                placeholder="New Password"
+                                placeholderTextColor={Colors.textSecondary}
+                                value={password}
+                                onChangeText={setPassword}
+                                secureTextEntry={!showPassword}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                returnKeyType="next"
+                                onSubmitEditing={() => confirmPasswordInputRef.current?.focus()}
+                                textContentType="newPassword"
+                                accessibilityLabel="New password"
+                            />
+                            <TouchableOpacity
+                                style={styles.eyeIcon}
+                                onPress={() => setShowPassword(!showPassword)}
+                                accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                            >
+                                {showPassword ? (
+                                    <EyeOff size={20} color={Colors.textSecondary} />
+                                ) : (
+                                    <Eye size={20} color={Colors.textSecondary} />
+                                )}
+                            </TouchableOpacity>
+                        </View>
 
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Confirm Password"
-                        placeholderTextColor={Colors.textSecondary}
-                        value={confirmPassword}
-                        onChangeText={setConfirmPassword}
-                        secureTextEntry
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                    />
+                        <View style={styles.passwordContainer}>
+                            <TextInput
+                                ref={confirmPasswordInputRef}
+                                style={styles.passwordInput}
+                                placeholder="Confirm Password"
+                                placeholderTextColor={Colors.textSecondary}
+                                value={confirmPassword}
+                                onChangeText={setConfirmPassword}
+                                secureTextEntry={!showConfirmPassword}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                returnKeyType="done"
+                                onSubmitEditing={handleUpdatePassword}
+                                textContentType="newPassword"
+                                accessibilityLabel="Confirm new password"
+                            />
+                            <TouchableOpacity
+                                style={styles.eyeIcon}
+                                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                                accessibilityLabel={showConfirmPassword ? "Hide password" : "Show password"}
+                            >
+                                {showConfirmPassword ? (
+                                    <EyeOff size={20} color={Colors.textSecondary} />
+                                ) : (
+                                    <Eye size={20} color={Colors.textSecondary} />
+                                )}
+                            </TouchableOpacity>
+                        </View>
 
-                    <PrimaryButton
-                        title={loading ? "Updating..." : "Update Password"}
-                        onPress={handleUpdatePassword}
-                        disabled={loading}
-                    />
-                </View>
+                        <PrimaryButton
+                            title={loading ? "Updating..." : "Update Password"}
+                            onPress={handleUpdatePassword}
+                            disabled={loading}
+                        />
+                    </View>
+                </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
     );
@@ -145,8 +192,12 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
         padding: 24,
         justifyContent: 'center',
+        paddingBottom: 40,
     },
     header: {
         alignItems: 'center',
@@ -177,5 +228,24 @@ const styles = StyleSheet.create({
         padding: 16,
         fontSize: 17,
         color: Colors.text,
+    },
+    passwordContainer: {
+        position: 'relative',
+    },
+    passwordInput: {
+        backgroundColor: Colors.card,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        borderRadius: 12,
+        padding: 16,
+        paddingRight: 48,
+        fontSize: 17,
+        color: Colors.text,
+    },
+    eyeIcon: {
+        position: 'absolute',
+        right: 16,
+        top: 16,
+        padding: 4,
     },
 });

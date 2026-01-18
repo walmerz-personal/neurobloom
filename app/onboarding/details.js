@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, TextInput, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -80,7 +80,16 @@ export default function Details() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{ flex: 1 }}
+            >
+                <ScrollView 
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    showsVerticalScrollIndicator={false}
+                >
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <Ionicons name="arrow-back" size={24} color={Colors.text} />
                 </TouchableOpacity>
@@ -122,6 +131,9 @@ export default function Details() {
                                     value={otherRole}
                                     onChangeText={setOtherRole}
                                     autoCapitalize="words"
+                                    returnKeyType="done"
+                                    textContentType="name"
+                                    accessibilityLabel="Your role"
                                 />
                             </View>
                         )}
@@ -212,7 +224,8 @@ export default function Details() {
                         </TouchableOpacity>
                     )}
                 </View>
-            </ScrollView>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
@@ -224,6 +237,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         padding: 24,
+        paddingBottom: 40,
     },
     backButton: {
         marginBottom: 16,

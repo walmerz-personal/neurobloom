@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenWrapper } from '../components/ScreenWrapper';
 import { PrimaryButton } from '../components/Button';
@@ -99,7 +99,17 @@ export default function CheckIn() {
                 <View style={{ width: 60 }} />
             </View>
 
-            <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{ flex: 1 }}
+            >
+                <ScrollView 
+                    style={styles.content} 
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    showsVerticalScrollIndicator={false}
+                >
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>How's your mood today?</Text>
                     <View style={styles.emojiScale}>
@@ -198,6 +208,9 @@ export default function CheckIn() {
                         multiline
                         value={notes}
                         onChangeText={setNotes}
+                        returnKeyType="done"
+                        textContentType="none"
+                        accessibilityLabel="Notes"
                     />
                 </View>
 
@@ -208,7 +221,8 @@ export default function CheckIn() {
                         disabled={saving}
                     />
                 </View>
-            </ScrollView>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </ScreenWrapper>
     );
 }
@@ -242,6 +256,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         padding: 20,
+        paddingBottom: 100,
     },
     section: {
         backgroundColor: 'white',

@@ -10,7 +10,9 @@ import {
     TextInput, 
     ActivityIndicator,
     Alert,
-    Switch
+    Switch,
+    KeyboardAvoidingView,
+    Platform
 } from 'react-native';
 import { X, Save } from 'lucide-react-native';
 import { Colors } from '../constants/Colors';
@@ -140,11 +142,18 @@ export function CustomExerciseModal({
                         </TouchableOpacity>
                     </View>
 
-                    <ScrollView 
-                        style={styles.scrollView}
-                        contentContainerStyle={styles.scrollContent}
-                        showsVerticalScrollIndicator={false}
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        style={{ flex: 1 }}
+                        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
                     >
+                        <ScrollView 
+                            style={styles.scrollView}
+                            contentContainerStyle={styles.scrollContent}
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="on-drag"
+                        >
                         {/* Title */}
                         <View style={styles.field}>
                             <Text style={styles.label}>Title *</Text>
@@ -155,6 +164,9 @@ export function CustomExerciseModal({
                                 placeholder="e.g., Shoulder Shrugs"
                                 placeholderTextColor={Colors.textSecondary}
                                 editable={!saving}
+                                returnKeyType="next"
+                                textContentType="none"
+                                accessibilityLabel="Exercise title"
                             />
                         </View>
 
@@ -289,6 +301,9 @@ export function CustomExerciseModal({
                                 numberOfLines={6}
                                 textAlignVertical="top"
                                 editable={!saving}
+                                returnKeyType="done"
+                                textContentType="none"
+                                accessibilityLabel="Exercise instructions"
                             />
                         </View>
 
@@ -338,7 +353,8 @@ export function CustomExerciseModal({
                                 <Text style={styles.cancelText}>Cancel</Text>
                             </TouchableOpacity>
                         </View>
-                    </ScrollView>
+                        </ScrollView>
+                    </KeyboardAvoidingView>
                 </View>
             </View>
         </Modal>
@@ -380,7 +396,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         padding: 24,
-        paddingBottom: 40,
+        paddingBottom: 100,
     },
     field: {
         marginBottom: 20,
