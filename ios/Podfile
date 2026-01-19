@@ -56,5 +56,49 @@ target 'NeuroBloom' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
+    
+    # Suppress nullability warnings from dependencies
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
+        config.build_settings['CLANG_WARN_UNGUARDED_AVAILABILITY'] = 'NO'
+        # Suppress nullability warnings
+        config.build_settings['CLANG_WARN_NULLABILITY'] = 'NO'
+        # Suppress deprecation warnings
+        config.build_settings['GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS'] = 'NO'
+        # Add compiler flags to suppress nullability warnings
+        if config.build_settings['OTHER_CFLAGS']
+          config.build_settings['OTHER_CFLAGS'] << '-Wno-nullability-completeness'
+        else
+          config.build_settings['OTHER_CFLAGS'] = ['-Wno-nullability-completeness']
+        end
+      end
+    end
+    
+    # Suppress warnings for problematic pods (including ExpoModulesCore)
+    installer.pods_project.targets.each do |target|
+      if ['ExpoModulesCore', 'ExpoFileSystem', 'EXAV', 'ExpoAudio'].include?(target.name)
+        target.build_configurations.each do |config|
+          config.build_settings['CLANG_WARN_NULLABILITY'] = 'NO'
+          config.build_settings['GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS'] = 'NO'
+          # Add compiler flags
+          if config.build_settings['OTHER_CFLAGS']
+            config.build_settings['OTHER_CFLAGS'] << '-Wno-nullability-completeness'
+          else
+            config.build_settings['OTHER_CFLAGS'] = ['-Wno-nullability-completeness']
+          end
+        end
+      end
+    end
+    
+    # Add warning flags to suppress nullability warnings via compiler flags
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        # Use WARNING_CFLAGS to suppress nullability warnings
+        warning_flags = config.build_settings['WARNING_CFLAGS'] || ['$(inherited)']
+        warning_flags << '-Wno-nullability-completeness' unless warning_flags.include?('-Wno-nullability-completeness')
+        config.build_settings['WARNING_CFLAGS'] = warning_flags
+      end
+    end
   end
 end
