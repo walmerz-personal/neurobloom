@@ -135,11 +135,16 @@ target 'NeuroBloom' do
         end
       end
       
-      # lottie-ios: Suppress Swift Sendable warnings
+      # lottie-ios: Suppress Swift Sendable warnings and remove unsupported flags
       if target_name.include?('lottie-ios') || target_name.include?('Lottie')
         target.build_configurations.each do |config|
           config.build_settings['SWIFT_SUPPRESS_WARNINGS'] = 'YES'
-      end
+          # Remove -warn-long-function-bodies flag that's not supported by lottie-ios
+          swift_flags = config.build_settings['OTHER_SWIFT_FLAGS'] || '$(inherited)'
+          swift_flags = swift_flags.to_s
+          swift_flags = swift_flags.gsub(/-warn-long-function-bodies=\d+\s*/, '')
+          config.build_settings['OTHER_SWIFT_FLAGS'] = swift_flags.strip
+        end
       end
       # RNScreens: Suppress integer precision and protocol warnings
       if target_name.include?('RNScreens') || target_name.include?('react-native-screens')
