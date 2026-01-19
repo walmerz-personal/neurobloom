@@ -99,17 +99,15 @@ target 'NeuroBloom' do
         config.build_settings['OTHER_CFLAGS'] = cflags
         
         # Swift compiler flags
+        # Note: -warn-long-function-bodies flag removed as it's not supported by all pods
+        # (causes issues with lottie-ios, rive-react-native, etc.)
         swift_flags = config.build_settings['OTHER_SWIFT_FLAGS'] || '$(inherited)'
         swift_flags = swift_flags.to_s
-        swift_flag_additions = [
-          '-warn-long-function-bodies=0',
-        ]
         
-        swift_flag_additions.each do |flag|
-          swift_flags += " #{flag}" unless swift_flags.include?(flag)
-        end
+        # Remove any existing -warn-long-function-bodies flags that might cause issues
+        swift_flags = swift_flags.gsub(/-warn-long-function-bodies=\d+\s*/, '')
         
-        config.build_settings['OTHER_SWIFT_FLAGS'] = swift_flags
+        config.build_settings['OTHER_SWIFT_FLAGS'] = swift_flags.strip
         
         # WARNING_CFLAGS for additional suppression
         warning_flags = config.build_settings['WARNING_CFLAGS'] || ['$(inherited)']
