@@ -1,12 +1,21 @@
 // services/HealthKitService.js
 import { Platform } from 'react-native';
-import HealthKit from '@kingstinct/react-native-healthkit';
 
 /**
  * HealthKit Service
  * Handles all interactions with Apple HealthKit
  * Note: Requires custom dev client (doesn't work in Expo Go)
  */
+
+// Try to import HealthKit module - will be null in Expo Go
+let HealthKit = null;
+try {
+    HealthKit = require('@kingstinct/react-native-healthkit').default || require('@kingstinct/react-native-healthkit');
+} catch (error) {
+    // HealthKit module not available (e.g., in Expo Go)
+    console.warn('⚠️ HealthKit module not available. HealthKit features will be disabled.');
+    HealthKit = null;
+}
 
 // HealthKit quantity type identifiers
 const QUANTITY_TYPES = {
@@ -24,9 +33,9 @@ const CATEGORY_TYPES = {
     WALKING_STEADINESS: 'appleWalkingSteadinessEvent',
 };
 
-// Check if HealthKit is available (iOS only)
+// Check if HealthKit is available (iOS only and module loaded)
 const isHealthKitAvailable = () => {
-    return Platform.OS === 'ios' && HealthKit.isAvailable();
+    return Platform.OS === 'ios' && HealthKit !== null && HealthKit.isAvailable && HealthKit.isAvailable();
 };
 
 /**
@@ -34,7 +43,7 @@ const isHealthKitAvailable = () => {
  * @returns {Promise<{granted: boolean, error: Error|null}>}
  */
 export async function requestHealthKitPermissions() {
-    if (!isHealthKitAvailable()) {
+    if (!isHealthKitAvailable() || !HealthKit) {
         return { granted: false, error: new Error('HealthKit is not available on this device') };
     }
 
@@ -72,7 +81,7 @@ export async function requestHealthKitPermissions() {
  * @returns {Promise<{granted: boolean, error: Error|null}>}
  */
 export async function checkHealthKitPermissions() {
-    if (!isHealthKitAvailable()) {
+    if (!isHealthKitAvailable() || !HealthKit) {
         return { granted: false, error: new Error('HealthKit is not available on this device') };
     }
 
@@ -107,7 +116,7 @@ export async function checkHealthKitPermissions() {
  * @returns {Promise<{data: Array, error: Error|null}>}
  */
 export async function getWalkingSpeed(startDate, endDate) {
-    if (!isHealthKitAvailable()) {
+    if (!isHealthKitAvailable() || !HealthKit) {
         return { data: [], error: new Error('HealthKit is not available') };
     }
 
@@ -135,7 +144,7 @@ export async function getWalkingSpeed(startDate, endDate) {
  * @returns {Promise<{data: Array, error: Error|null}>}
  */
 export async function getWalkingStepLength(startDate, endDate) {
-    if (!isHealthKitAvailable()) {
+    if (!isHealthKitAvailable() || !HealthKit) {
         return { data: [], error: new Error('HealthKit is not available') };
     }
 
@@ -163,7 +172,7 @@ export async function getWalkingStepLength(startDate, endDate) {
  * @returns {Promise<{data: Array, error: Error|null}>}
  */
 export async function getWalkingAsymmetry(startDate, endDate) {
-    if (!isHealthKitAvailable()) {
+    if (!isHealthKitAvailable() || !HealthKit) {
         return { data: [], error: new Error('HealthKit is not available') };
     }
 
@@ -191,7 +200,7 @@ export async function getWalkingAsymmetry(startDate, endDate) {
  * @returns {Promise<{data: Array, error: Error|null}>}
  */
 export async function getWalkingDoubleSupport(startDate, endDate) {
-    if (!isHealthKitAvailable()) {
+    if (!isHealthKitAvailable() || !HealthKit) {
         return { data: [], error: new Error('HealthKit is not available') };
     }
 
@@ -219,7 +228,7 @@ export async function getWalkingDoubleSupport(startDate, endDate) {
  * @returns {Promise<{data: Array, error: Error|null}>}
  */
 export async function getWalkingSteadiness(startDate, endDate) {
-    if (!isHealthKitAvailable()) {
+    if (!isHealthKitAvailable() || !HealthKit) {
         return { data: [], error: new Error('HealthKit is not available') };
     }
 
@@ -246,7 +255,7 @@ export async function getWalkingSteadiness(startDate, endDate) {
  * @returns {Promise<{data: Array, error: Error|null}>}
  */
 export async function getSixMinuteWalkDistance(startDate, endDate) {
-    if (!isHealthKitAvailable()) {
+    if (!isHealthKitAvailable() || !HealthKit) {
         return { data: [], error: new Error('HealthKit is not available') };
     }
 
@@ -274,7 +283,7 @@ export async function getSixMinuteWalkDistance(startDate, endDate) {
  * @returns {Promise<{data: Array, error: Error|null}>}
  */
 export async function getStepCount(startDate, endDate) {
-    if (!isHealthKitAvailable()) {
+    if (!isHealthKitAvailable() || !HealthKit) {
         return { data: [], error: new Error('HealthKit is not available') };
     }
 
@@ -302,7 +311,7 @@ export async function getStepCount(startDate, endDate) {
  * @returns {Promise<{data: Array, error: Error|null}>}
  */
 export async function getDistanceWalked(startDate, endDate) {
-    if (!isHealthKitAvailable()) {
+    if (!isHealthKitAvailable() || !HealthKit) {
         return { data: [], error: new Error('HealthKit is not available') };
     }
 
@@ -330,7 +339,7 @@ export async function getDistanceWalked(startDate, endDate) {
  * @returns {Promise<{success: boolean, error: Error|null}>}
  */
 export async function setupBackgroundObserver(callback) {
-    if (!isHealthKitAvailable()) {
+    if (!isHealthKitAvailable() || !HealthKit) {
         return { success: false, error: new Error('HealthKit is not available') };
     }
 
@@ -354,7 +363,7 @@ export async function setupBackgroundObserver(callback) {
  * @returns {Promise<{data: Object, error: Error|null}>}
  */
 export async function syncHealthData(startDate, endDate) {
-    if (!isHealthKitAvailable()) {
+    if (!isHealthKitAvailable() || !HealthKit) {
         return { data: null, error: new Error('HealthKit is not available') };
     }
 

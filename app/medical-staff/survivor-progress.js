@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
+import { Typography } from '../../constants/Typography';
 import { useAuth } from '../../contexts/AuthContext';
 import { MedicalStaffService } from '../../services/MedicalStaffService';
 import { CareTeamService } from '../../services/CareTeamService';
@@ -761,7 +762,7 @@ const styles = StyleSheet.create({
         borderColor: Colors.border,
     },
     healthDescription: {
-        ...Typography.caption,
+        ...Typography.caption1,
         color: Colors.textSecondary,
         marginBottom: 16,
     },
@@ -784,7 +785,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     metricLabel: {
-        ...Typography.caption,
+        ...Typography.caption1,
         color: Colors.textSecondary,
         marginBottom: 4,
     },

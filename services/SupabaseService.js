@@ -435,6 +435,15 @@ export const SupabaseService = {
                 .eq('id', userId);
 
             if (error) {
+                // Handle missing column gracefully (column doesn't exist or schema cache issue)
+                if (error.code === '42703' || error.code === 'PGRST204') {
+                    // Column doesn't exist - silently succeed (migration may not be applied yet)
+                    if (!this._lastActivityColumnWarningShown) {
+                        console.warn('⚠️ last_activity_at column not found. Activity tracking disabled until migration is applied.');
+                        this._lastActivityColumnWarningShown = true;
+                    }
+                    return { success: true, error: null };
+                }
                 console.error('❌ Update last activity error:', error);
                 return { success: false, error };
             }
@@ -442,6 +451,14 @@ export const SupabaseService = {
             console.log('✅ Last activity updated for user:', userId);
             return { success: true, error: null };
         } catch (error) {
+            // Handle missing column in catch block as well
+            if (error.code === '42703' || error.code === 'PGRST204') {
+                if (!this._lastActivityColumnWarningShown) {
+                    console.warn('⚠️ last_activity_at column not found. Activity tracking disabled until migration is applied.');
+                    this._lastActivityColumnWarningShown = true;
+                }
+                return { success: true, error: null };
+            }
             console.error('❌ Update last activity error:', error);
             return { success: false, error };
         }
@@ -465,12 +482,29 @@ export const SupabaseService = {
                 .single();
 
             if (error) {
+                // Handle missing column gracefully (column doesn't exist or schema cache issue)
+                if (error.code === '42703' || error.code === 'PGRST204') {
+                    // Column doesn't exist - return null without error
+                    if (!this._lastActivityColumnWarningShown) {
+                        console.warn('⚠️ last_activity_at column not found. Activity tracking disabled until migration is applied.');
+                        this._lastActivityColumnWarningShown = true;
+                    }
+                    return { lastActivity: null, error: null };
+                }
                 console.error('❌ Get last activity error:', error);
                 return { lastActivity: null, error };
             }
 
             return { lastActivity: data?.last_activity_at || null, error: null };
         } catch (error) {
+            // Handle missing column in catch block as well
+            if (error.code === '42703' || error.code === 'PGRST204') {
+                if (!this._lastActivityColumnWarningShown) {
+                    console.warn('⚠️ last_activity_at column not found. Activity tracking disabled until migration is applied.');
+                    this._lastActivityColumnWarningShown = true;
+                }
+                return { lastActivity: null, error: null };
+            }
             console.error('❌ Get last activity error:', error);
             return { lastActivity: null, error };
         }
