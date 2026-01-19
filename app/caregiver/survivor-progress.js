@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
+import { Typography } from '../../constants/Typography';
 import { useAuth } from '../../contexts/AuthContext';
 import { CareTeamService } from '../../services/CareTeamService';
 import { ArrowLeft, Activity, Smile, Zap, Target, TrendingUp, Calendar, Heart, AlertTriangle } from 'lucide-react-native';
@@ -532,7 +533,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     alertText: {
-        ...Typography.caption,
+        ...Typography.caption1,
         color: Colors.error,
         flex: 1,
     },

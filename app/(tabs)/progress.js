@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Linking, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Linking, Platform, Alert } from 'react-native';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
@@ -172,7 +172,28 @@ export default function Progress() {
     };
 
     const handleConnectHealth = () => {
-        router.push('/onboarding/health-permissions');
+        console.log('handleConnectHealth: Button clicked, attempting navigation to /onboarding/health-permissions');
+        
+        try {
+            // Use router.push for navigation (synchronous in Expo Router)
+            router.push('/onboarding/health-permissions');
+            console.log('handleConnectHealth: Navigation command executed');
+        } catch (error) {
+            console.error('handleConnectHealth: Navigation failed with error:', error);
+            console.error('Error details:', JSON.stringify(error, null, 2));
+            
+            // Show user-friendly error message
+            Alert.alert(
+                'Navigation Error',
+                'Unable to open the Health permissions screen. Please try again or restart the app.',
+                [
+                    {
+                        text: 'OK',
+                        style: 'default',
+                    },
+                ]
+            );
+        }
     };
 
     const handleSyncHealth = async () => {
