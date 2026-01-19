@@ -57,47 +57,109 @@ target 'NeuroBloom' do
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
     
-    # Suppress nullability warnings from dependencies
+    # Comprehensive warning suppression for all pod targets
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |config|
+        # Suppress various Clang warnings
         config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
         config.build_settings['CLANG_WARN_UNGUARDED_AVAILABILITY'] = 'NO'
-        # Suppress nullability warnings
         config.build_settings['CLANG_WARN_NULLABILITY'] = 'NO'
-        # Suppress deprecation warnings
+        config.build_settings['CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS'] = 'NO'
+        
+        # Suppress GCC warnings
         config.build_settings['GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS'] = 'NO'
-        # Add compiler flags to suppress nullability warnings
-        if config.build_settings['OTHER_CFLAGS']
-          config.build_settings['OTHER_CFLAGS'] << '-Wno-nullability-completeness'
-        else
-          config.build_settings['OTHER_CFLAGS'] = ['-Wno-nullability-completeness']
+        config.build_settings['GCC_WARN_64_TO_32_BIT_CONVERSION'] = 'NO'
+        config.build_settings['GCC_WARN_UNUSED_FUNCTION'] = 'NO'
+        
+        # Swift-specific warning suppression
+        config.build_settings['SWIFT_SUPPRESS_WARNINGS'] = 'YES'
+        
+        # Build up comprehensive compiler flags
+        cflags = config.build_settings['OTHER_CFLAGS'] || ['$(inherited)']
+        cflags = [cflags] unless cflags.is_a?(Array)
+        
+        # C++ and Objective-C warning suppressions
+        warning_suppressions = [
+          '-Wno-nullability-completeness',
+          '-Wno-error',
+          '-Wno-vla-extension',
+          '-Wno-unused-function',
+          '-Wno-switch',
+          '-Wno-switch-enum',
+          '-Wno-format',
+          '-Wno-protocol',
+          '-Wno-objc-missing-super-calls',
+          '-Wno-objc-property-synthesis',
+        ]
+        
+        warning_suppressions.each do |flag|
+          cflags << flag unless cflags.include?(flag)
         end
-      end
-    end
-    
-    # Suppress warnings for problematic pods (including ExpoModulesCore)
-    installer.pods_project.targets.each do |target|
-      if ['ExpoModulesCore', 'ExpoFileSystem', 'EXAV', 'ExpoAudio'].include?(target.name)
-        target.build_configurations.each do |config|
-          config.build_settings['CLANG_WARN_NULLABILITY'] = 'NO'
-          config.build_settings['GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS'] = 'NO'
-          # Add compiler flags
-          if config.build_settings['OTHER_CFLAGS']
-            config.build_settings['OTHER_CFLAGS'] << '-Wno-nullability-completeness'
-          else
-            config.build_settings['OTHER_CFLAGS'] = ['-Wno-nullability-completeness']
-          end
+        
+        config.build_settings['OTHER_CFLAGS'] = cflags
+        
+        # Swift compiler flags
+        swift_flags = config.build_settings['OTHER_SWIFT_FLAGS'] || '$(inherited)'
+        swift_flags = swift_flags.to_s
+        swift_flag_additions = [
+          '-warn-long-function-bodies=0',
+        ]
+        
+        swift_flag_additions.each do |flag|
+          swift_flags += " #{flag}" unless swift_flags.include?(flag)
         end
-      end
-    end
-    
-    # Add warning flags to suppress nullability warnings via compiler flags
-    installer.pods_project.targets.each do |target|
-      target.build_configurations.each do |config|
-        # Use WARNING_CFLAGS to suppress nullability warnings
+        
+        config.build_settings['OTHER_SWIFT_FLAGS'] = swift_flags
+        
+        # WARNING_CFLAGS for additional suppression
         warning_flags = config.build_settings['WARNING_CFLAGS'] || ['$(inherited)']
+        warning_flags = [warning_flags] unless warning_flags.is_a?(Array)
         warning_flags << '-Wno-nullability-completeness' unless warning_flags.include?('-Wno-nullability-completeness')
         config.build_settings['WARNING_CFLAGS'] = warning_flags
+      end
+    end
+    
+    # Target-specific suppressions for problematic pods
+    installer.pods_project.targets.each do |target|
+      target_name = target.name
+      
+      # RNSVG: Suppress C++ errors and Yoga namespace issues
+      if target_name.include?('RNSVG') || target_name.include?('react-native-svg')
+        target.build_configurations.each do |config|
+          cflags = config.build_settings['OTHER_CFLAGS'] || ['$(inherited)']
+          cflags = [cflags] unless cflags.is_a?(Array)
+          ['-Wno-error', '-Wno-vla-extension', '-Wno-unused-function'].each do |flag|
+            cflags << flag unless cflags.include?(flag)
+          end
+          config.build_settings['OTHER_CFLAGS'] = cflags
+        end
+      end
+      
+      # lottie-ios: Suppress Swift Sendable warnings
+      if target_name.include?('lottie-ios') || target_name.include?('Lottie')
+        target.build_configurations.each do |config|
+          config.build_settings['SWIFT_SUPPRESS_WARNINGS'] = 'YES'
+      end
+      end
+      # RNScreens: Suppress integer precision and protocol warnings
+      if target_name.include?('RNScreens') || target_name.include?('react-native-screens')
+        target.build_configurations.each do |config|
+          config.build_settings['GCC_WARN_64_TO_32_BIT_CONVERSION'] = 'NO'
+          cflags = config.build_settings['OTHER_CFLAGS'] || ['$(inherited)']
+          cflags = [cflags] unless cflags.is_a?(Array)
+          ['-Wno-switch', '-Wno-switch-enum', '-Wno-format', '-Wno-protocol'].each do |flag|
+            cflags << flag unless cflags.include?(flag)
+          end
+          config.build_settings['OTHER_CFLAGS'] = cflags
+        end
+      end
+      
+      # kingstinct-react-native-healthkit: Suppress deprecation warnings
+      if target_name.include?('healthkit') || target_name.include?('Healthkit')
+        target.build_configurations.each do |config|
+          config.build_settings['GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS'] = 'NO'
+          config.build_settings['CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS'] = 'NO'
+        end
       end
     end
   end
