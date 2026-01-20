@@ -9,34 +9,56 @@ import { Platform } from 'react-native';
 
 // Try to import HealthKit module - will be null in Expo Go
 let HealthKit = null;
+let HKQuantityTypeIdentifier = null;
+let HKCategoryTypeIdentifier = null;
+
 try {
-    HealthKit = require('@kingstinct/react-native-healthkit').default || require('@kingstinct/react-native-healthkit');
+    const healthKitModule = require('@kingstinct/react-native-healthkit');
+    HealthKit = healthKitModule.default || healthKitModule;
+    // Import enum types if available
+    HKQuantityTypeIdentifier = healthKitModule.HKQuantityTypeIdentifier;
+    HKCategoryTypeIdentifier = healthKitModule.HKCategoryTypeIdentifier;
 } catch (error) {
     // HealthKit module not available (e.g., in Expo Go)
     console.warn('⚠️ HealthKit module not available. HealthKit features will be disabled.');
     HealthKit = null;
 }
 
-// HealthKit quantity type identifiers
+// HealthKit quantity type identifiers (using full Apple identifiers)
+// Note: Some iOS 14+ walking metrics may not be in the library enum, using full string format
 const QUANTITY_TYPES = {
-    WALKING_SPEED: 'walkingSpeed',
-    WALKING_STEP_LENGTH: 'walkingStepLength',
-    WALKING_ASYMMETRY: 'walkingAsymmetryPercentage',
-    WALKING_DOUBLE_SUPPORT: 'walkingDoubleSupportPercentage',
-    SIX_MINUTE_WALK: 'sixMinuteWalkTestDistance',
-    STEP_COUNT: 'stepCount',
-    DISTANCE_WALKING_RUNNING: 'distanceWalkingRunning',
+    WALKING_SPEED: 'HKQuantityTypeIdentifierWalkingSpeed',
+    WALKING_STEP_LENGTH: 'HKQuantityTypeIdentifierWalkingStepLength',
+    WALKING_ASYMMETRY: 'HKQuantityTypeIdentifierWalkingAsymmetryPercentage',
+    WALKING_DOUBLE_SUPPORT: 'HKQuantityTypeIdentifierWalkingDoubleSupportPercentage',
+    SIX_MINUTE_WALK: 'HKQuantityTypeIdentifierSixMinuteWalkTestDistance',
+    STEP_COUNT: HKQuantityTypeIdentifier?.stepCount || 'HKQuantityTypeIdentifierStepCount',
+    DISTANCE_WALKING_RUNNING: HKQuantityTypeIdentifier?.distanceWalkingRunning || 'HKQuantityTypeIdentifierDistanceWalkingRunning',
 };
 
 // HealthKit category type identifiers
 const CATEGORY_TYPES = {
-    WALKING_STEADINESS: 'appleWalkingSteadinessEvent',
+    WALKING_STEADINESS: 'HKCategoryTypeIdentifierAppleWalkingSteadinessEvent',
 };
 
 // Check if HealthKit is available (iOS only and module loaded)
-const isHealthKitAvailable = () => {
-    return Platform.OS === 'ios' && HealthKit !== null && HealthKit.isAvailable && HealthKit.isAvailable();
+// Note: This is a synchronous check. For actual availability, use isHealthDataAvailable() async method
+export const isHealthKitAvailable = () => {
+    return Platform.OS === 'ios' && HealthKit !== null;
 };
+
+// Async check for actual HealthKit availability on device
+export async function checkHealthKitDataAvailable() {
+    if (!isHealthKitAvailable() || !HealthKit) {
+        return false;
+    }
+    try {
+        return await HealthKit.isHealthDataAvailable();
+    } catch (error) {
+        console.error('❌ Error checking HealthKit availability:', error);
+        return false;
+    }
+}
 
 /**
  * Request HealthKit permissions for all required metrics
@@ -48,20 +70,20 @@ export async function requestHealthKitPermissions() {
     }
 
     try {
-        const permissions = {
-            read: [
-                QUANTITY_TYPES.WALKING_SPEED,
-                QUANTITY_TYPES.WALKING_STEP_LENGTH,
-                QUANTITY_TYPES.WALKING_ASYMMETRY,
-                QUANTITY_TYPES.WALKING_DOUBLE_SUPPORT,
-                QUANTITY_TYPES.SIX_MINUTE_WALK,
-                QUANTITY_TYPES.STEP_COUNT,
-                QUANTITY_TYPES.DISTANCE_WALKING_RUNNING,
-                CATEGORY_TYPES.WALKING_STEADINESS,
-            ],
-        };
+        // Build read permissions array (use library enum if available, otherwise use full string identifiers)
+        const readPermissions = [
+            QUANTITY_TYPES.WALKING_SPEED,
+            QUANTITY_TYPES.WALKING_STEP_LENGTH,
+            QUANTITY_TYPES.WALKING_ASYMMETRY,
+            QUANTITY_TYPES.WALKING_DOUBLE_SUPPORT,
+            QUANTITY_TYPES.SIX_MINUTE_WALK,
+            QUANTITY_TYPES.STEP_COUNT,
+            QUANTITY_TYPES.DISTANCE_WALKING_RUNNING,
+            CATEGORY_TYPES.WALKING_STEADINESS,
+        ];
 
-        const result = await HealthKit.requestAuthorization(permissions);
+        // requestAuthorization expects (readArray, writeArray) - two array parameters
+        const result = await HealthKit.requestAuthorization(readPermissions, []);
         
         if (result === true) {
             console.log('✅ HealthKit permissions granted');
@@ -97,10 +119,10 @@ export async function checkHealthKitPermissions() {
             CATEGORY_TYPES.WALKING_STEADINESS,
         ];
 
-        const authorizationStatus = await HealthKit.getAuthorizationStatusForType(permissions[0]);
+        const authorizationStatus = await HealthKit.authorizationStatusFor(permissions[0]);
         
-        // Check if at least one permission is granted
-        const granted = authorizationStatus === 'sharingAuthorized' || authorizationStatus === 'sharingDenied';
+        // Check if at least one permission is granted (authorizationStatus returns a number: 0=notDetermined, 1=sharingDenied, 2=sharingAuthorized)
+        const granted = authorizationStatus === 2; // sharingAuthorized
         
         return { granted, error: null };
     } catch (error) {
@@ -121,7 +143,7 @@ export async function getWalkingSpeed(startDate, endDate) {
     }
 
     try {
-        const samples = await HealthKit.getQuantitySamples(
+        const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.WALKING_SPEED,
             {
                 from: startDate,
@@ -149,7 +171,7 @@ export async function getWalkingStepLength(startDate, endDate) {
     }
 
     try {
-        const samples = await HealthKit.getQuantitySamples(
+        const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.WALKING_STEP_LENGTH,
             {
                 from: startDate,
@@ -177,7 +199,7 @@ export async function getWalkingAsymmetry(startDate, endDate) {
     }
 
     try {
-        const samples = await HealthKit.getQuantitySamples(
+        const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.WALKING_ASYMMETRY,
             {
                 from: startDate,
@@ -205,7 +227,7 @@ export async function getWalkingDoubleSupport(startDate, endDate) {
     }
 
     try {
-        const samples = await HealthKit.getQuantitySamples(
+        const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.WALKING_DOUBLE_SUPPORT,
             {
                 from: startDate,
@@ -233,7 +255,7 @@ export async function getWalkingSteadiness(startDate, endDate) {
     }
 
     try {
-        const samples = await HealthKit.getCategorySamples(
+        const samples = await HealthKit.queryCategorySamples(
             CATEGORY_TYPES.WALKING_STEADINESS,
             {
                 from: startDate,
@@ -260,7 +282,7 @@ export async function getSixMinuteWalkDistance(startDate, endDate) {
     }
 
     try {
-        const samples = await HealthKit.getQuantitySamples(
+        const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.SIX_MINUTE_WALK,
             {
                 from: startDate,
@@ -288,7 +310,7 @@ export async function getStepCount(startDate, endDate) {
     }
 
     try {
-        const samples = await HealthKit.getQuantitySamples(
+        const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.STEP_COUNT,
             {
                 from: startDate,
@@ -316,7 +338,7 @@ export async function getDistanceWalked(startDate, endDate) {
     }
 
     try {
-        const samples = await HealthKit.getQuantitySamples(
+        const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.DISTANCE_WALKING_RUNNING,
             {
                 from: startDate,
@@ -421,4 +443,5 @@ export default {
     setupBackgroundObserver,
     syncHealthData,
     isHealthKitAvailable,
+    checkHealthKitDataAvailable,
 };

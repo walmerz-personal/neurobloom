@@ -189,15 +189,9 @@ export function MedicalStaffHomeView({ userData, user, onLogout, onNavigateToMed
                     <Text style={styles.emptyText}>No patients connected yet.</Text>
                     <TouchableOpacity
                         style={styles.connectButton}
-                        onPress={() => onNavigateToMedicalStaff?.('accept-invitation')}
+                        onPress={() => router.push('/connection-options?mode=connect')}
                     >
-                        <Text style={styles.connectButtonText}>Enter Invitation Code</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.requestAccessButton}
-                        onPress={() => onNavigateToMedicalStaff?.('request-access')}
-                    >
-                        <Text style={styles.requestAccessButtonText}>Request Access</Text>
+                        <Text style={styles.connectButtonText}>Connect to Patient</Text>
                     </TouchableOpacity>
                 </View>
             ) : (
@@ -249,7 +243,7 @@ export function MedicalStaffHomeView({ userData, user, onLogout, onNavigateToMed
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.addSurvivorButton}
-                        onPress={() => onNavigateToMedicalStaff?.('accept-invitation')}
+                        onPress={() => router.push('/connection-options?mode=connect')}
                     >
                         <Heart size={16} color={Colors.primary} />
                         <Text style={styles.addSurvivorText}>Connect Another Patient</Text>

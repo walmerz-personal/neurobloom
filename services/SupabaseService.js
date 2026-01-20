@@ -1576,7 +1576,8 @@ export const SupabaseService = {
                 .select(`
                     *,
                     requester:caregiver_id(id, name, email, role),
-                    requester_medical:medical_staff_id(id, name, email, role)
+                    requester_medical:medical_staff_id(id, name, email, role),
+                    requester_survivor:survivor_id(id, name, email, role)
                 `)
                 .eq('access_request_token', token)
                 .single();
@@ -1597,9 +1598,17 @@ export const SupabaseService = {
                 }
             }
 
-            // Get the requester info (either from caregiver_id or medical_staff_id)
-            const requester = data.requester || data.requester_medical;
-            const requesterRole = data.caregiver_id ? 'caregiver' : 'medical_staff';
+            // Determine if this is a survivor-initiated invite or caregiver/medical staff request
+            let requester, requesterRole;
+            if (data.survivor_id && !data.caregiver_id && !data.medical_staff_id) {
+                // Survivor-initiated invite
+                requester = data.requester_survivor;
+                requesterRole = 'survivor';
+            } else {
+                // Caregiver/medical staff-initiated request
+                requester = data.requester || data.requester_medical;
+                requesterRole = data.caregiver_id ? 'caregiver' : 'medical_staff';
+            }
 
             return {
                 data: {
@@ -1665,6 +1674,138 @@ export const SupabaseService = {
             return { data: result, error: null };
         } catch (error) {
             console.error('❌ Accept access request error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
+     * Create a survivor-initiated invite (survivor invites caregiver/medical staff via SMS)
+     * @param {string} survivorId - The survivor's user ID
+     * @param {string|null} phoneNumber - The caregiver's/medical staff's phone number (optional, can be null)
+     * @returns {Promise<{token: string|null, error: Error|null}>}
+     */
+    async createSurvivorInvite(survivorId, phoneNumber) {
+        if (!this.isInitialized()) {
+            return { token: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            // Generate unique token
+            let token;
+            let tokenExists = true;
+            let attempts = 0;
+            const maxAttempts = 10;
+
+            while (tokenExists && attempts < maxAttempts) {
+                token = this.generateAccessRequestToken();
+                // Check if token exists
+                const { data: existing } = await supabase
+                    .from('care_team_links')
+                    .select('id')
+                    .eq('access_request_token', token)
+                    .single();
+                tokenExists = !!existing;
+                attempts++;
+            }
+
+            if (tokenExists) {
+                return { token: null, error: new Error('Failed to generate unique token') };
+            }
+
+            // Set expiration (7 days from now)
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + 7);
+
+            const linkData = {
+                survivor_id: survivorId,
+                access_request_token: token,
+                access_request_phone: phoneNumber,
+                access_request_expires_at: expiresAt.toISOString(),
+                status: 'pending',
+                relationship: 'other',
+                // caregiver_id and medical_staff_id remain null until accepted
+            };
+
+            const { data, error } = await supabase
+                .from('care_team_links')
+                .insert([linkData])
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Create survivor invite error:', error);
+                return { token: null, error };
+            }
+
+            console.log('✅ Survivor invite created with token:', token);
+            return { token, linkId: data?.id, error: null };
+        } catch (error) {
+            console.error('❌ Create survivor invite error:', error);
+            return { token: null, error };
+        }
+    },
+
+    /**
+     * Accept a survivor-initiated invite (caregiver/medical staff accepts survivor's invite)
+     * @param {string} token - Access request token
+     * @param {string} acceptorId - The caregiver's or medical staff's user ID
+     * @param {string} roleType - 'caregiver' or 'medical_staff'
+     * @returns {Promise<{data, error}>}
+     */
+    async acceptSurvivorInvite(token, acceptorId, roleType = 'caregiver') {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            // Get the access request
+            const { data: request, error: lookupError } = await this.getAccessRequestByToken(token);
+
+            if (lookupError || !request) {
+                return { data: null, error: lookupError || new Error('Access request not found') };
+            }
+
+            // Verify this is a survivor-initiated invite
+            if (!request.survivor_id || request.caregiver_id || request.medical_staff_id) {
+                return { data: null, error: new Error('Invalid invite type') };
+            }
+
+            // Update the link to accept it
+            const updateData = {
+                status: 'accepted',
+                accepted_at: new Date().toISOString(),
+                // Clear access request fields
+                access_request_token: null,
+                access_request_phone: null,
+                access_request_expires_at: null,
+            };
+
+            // Set acceptor ID based on role type
+            if (roleType === 'medical_staff') {
+                updateData.medical_staff_id = acceptorId;
+            } else {
+                updateData.caregiver_id = acceptorId;
+            }
+
+            const { data: updatedLink, error: updateError } = await this.updateCareTeamLink(request.id, updateData);
+
+            if (updateError || !updatedLink) {
+                console.error('❌ Accept survivor invite error:', updateError);
+                return { data: null, error: updateError || new Error('Failed to accept invite') };
+            }
+
+            // Get survivor info for response (from requester field set by getAccessRequestByToken)
+            const survivor = request.requester;
+            const result = {
+                success: true,
+                survivor_id: request.survivor_id,
+                survivor_name: survivor?.name || 'Unknown',
+            };
+
+            console.log('✅ Survivor invite accepted:', result.survivor_name);
+            return { data: result, error: null };
+        } catch (error) {
+            console.error('❌ Accept survivor invite error:', error);
             return { data: null, error };
         }
     },

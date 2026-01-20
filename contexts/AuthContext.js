@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }) => {
 
                 if (session?.user) {
                     // Load user data from users table
-                    await loadUserData(session.user.id);
+                    await loadUserData(session.user.id, session.user);
                     // Track app launch activity
                     await trackActivityAndCheckInactivity(session.user.id);
                 } else {
@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }) => {
             // Wrap entire session check + user data loading in timeout
             // This handles both AsyncStorage cold start AND Supabase paused scenarios
             const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Session check timeout')), 5000)
+                setTimeout(() => reject(new Error('Session check timeout')), 15000)
             );
 
             await Promise.race([
@@ -69,7 +69,7 @@ export const AuthProvider = ({ children }) => {
                     setUser(session?.user ?? null);
 
                     if (session?.user) {
-                        await loadUserData(session.user.id);
+                        await loadUserData(session.user.id, session.user);
                         // Track app launch activity
                         await trackActivityAndCheckInactivity(session.user.id);
                     }
@@ -84,15 +84,48 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const loadUserData = async (userId) => {
+    const loadUserData = async (userId, authUser = null) => {
         try {
             const { user: dbUser, error } = await SupabaseService.getUserData(userId);
             if (!error && dbUser) {
                 setUserData(dbUser);
                 console.log('✅ User data loaded:', dbUser.name);
+                return;
+            }
+            
+            // Fallback: use auth metadata if users table entry missing
+            if (authUser?.user_metadata) {
+                const fallbackData = {
+                    id: userId,
+                    name: authUser.user_metadata.name || 'Friend',
+                    role: authUser.user_metadata.role || 'survivor',
+                    email: authUser.email,
+                };
+                setUserData(fallbackData);
+                console.log('⚠️ User data not in DB, using auth metadata:', fallbackData.name);
+            } else if (authUser) {
+                // Even if no metadata, create minimal userData
+                const fallbackData = {
+                    id: userId,
+                    name: 'Friend',
+                    role: 'survivor',
+                    email: authUser.email || '',
+                };
+                setUserData(fallbackData);
+                console.log('⚠️ User data not in DB, using minimal fallback');
             }
         } catch (error) {
             console.error('❌ Error loading user data:', error);
+            // Try fallback if we have auth user
+            if (authUser?.user_metadata) {
+                const fallbackData = {
+                    id: userId,
+                    name: authUser.user_metadata.name || 'Friend',
+                    role: authUser.user_metadata.role || 'survivor',
+                    email: authUser.email,
+                };
+                setUserData(fallbackData);
+            }
         }
     };
 
@@ -129,7 +162,7 @@ export const AuthProvider = ({ children }) => {
 
             setUser(user);
             setSession(session);
-            await loadUserData(user.id);
+            await loadUserData(user.id, user);
             // Track login activity
             await trackActivityAndCheckInactivity(user.id);
 
@@ -160,14 +193,22 @@ export const AuthProvider = ({ children }) => {
 
     const signOut = async () => {
         try {
-            await SupabaseService.signOut();
+            const { error } = await SupabaseService.signOut();
+            // Always clear local state regardless of Supabase result
             setUser(null);
             setSession(null);
             setUserData(null);
-            return { error: null };
+            if (error) {
+                console.warn('⚠️ Supabase signOut had error, but local state cleared:', error);
+            }
+            return { error: null }; // Return success since local state is cleared
         } catch (error) {
+            // Still clear local state
+            setUser(null);
+            setSession(null);
+            setUserData(null);
             console.error('❌ Sign out error:', error);
-            return { error };
+            return { error: null }; // Local state cleared, consider it success
         }
     };
 

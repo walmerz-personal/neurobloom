@@ -33,6 +33,17 @@ export default function HealthPermissions() {
             return;
         }
 
+        // Check actual device availability
+        const isAvailable = await HealthKitService.checkHealthKitDataAvailable();
+        if (!isAvailable) {
+            Alert.alert(
+                'HealthKit Not Available',
+                'HealthKit is not available on this device. This feature requires an iPhone with iOS 14 or later.',
+                [{ text: 'OK', onPress: () => router.back() }]
+            );
+            return;
+        }
+
         setLoading(true);
         try {
             const { granted, error } = await HealthKitService.requestHealthKitPermissions();

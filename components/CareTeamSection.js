@@ -1,6 +1,7 @@
 // components/CareTeamSection.js
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Share } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Colors } from '../constants/Colors';
 import { Users, UserPlus, Copy, X, ChevronRight } from 'lucide-react-native';
 import { CareTeamService } from '../services/CareTeamService';
@@ -11,6 +12,7 @@ import * as Clipboard from 'expo-clipboard';
  * Shows different views for survivors vs caregivers
  */
 export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
+    const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [caregivers, setCaregivers] = useState([]);
     const [survivors, setSurvivors] = useState([]);
@@ -147,17 +149,10 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
                     </View>
                     <TouchableOpacity
                         style={styles.addButton}
-                        onPress={handleCreateInvitation}
-                        disabled={creatingInvitation}
+                        onPress={() => router.push('/connection-options?mode=invite')}
                     >
-                        {creatingInvitation ? (
-                            <ActivityIndicator size="small" color={Colors.primary} />
-                        ) : (
-                            <>
-                                <UserPlus size={18} color={Colors.primary} />
-                                <Text style={styles.addButtonText}>Invite</Text>
-                            </>
-                        )}
+                        <UserPlus size={18} color={Colors.primary} />
+                        <Text style={styles.addButtonText}>Invite</Text>
                     </TouchableOpacity>
                 </View>
 

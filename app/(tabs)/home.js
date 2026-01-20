@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
@@ -148,8 +148,12 @@ export default function Home() {
     };
 
     const handleLogout = async () => {
-        await signOut();
-        router.replace('/auth/login');
+        const { error } = await signOut();
+        if (error) {
+            Alert.alert('Logout Failed', 'Please try again');
+            return;
+        }
+        router.replace('/');
     };
 
     const handleNavigateToCaregiver = (action, survivor) => {

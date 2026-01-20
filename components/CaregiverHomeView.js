@@ -196,15 +196,9 @@ export function CaregiverHomeView({ userData, user, onLogout, onNavigateToCaregi
                     <Text style={styles.emptyText}>No survivors connected yet.</Text>
                     <TouchableOpacity
                         style={styles.connectButton}
-                        onPress={() => onNavigateToCaregiver?.('accept-invitation')}
+                        onPress={() => router.push('/connection-options?mode=connect')}
                     >
-                        <Text style={styles.connectButtonText}>Enter Invitation Code</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.requestAccessButton}
-                        onPress={() => onNavigateToCaregiver?.('request-access')}
-                    >
-                        <Text style={styles.requestAccessButtonText}>Request Access</Text>
+                        <Text style={styles.connectButtonText}>Connect to Survivor</Text>
                     </TouchableOpacity>
                 </View>
             ) : (
@@ -248,7 +242,7 @@ export function CaregiverHomeView({ userData, user, onLogout, onNavigateToCaregi
             {survivors.length > 0 && (
                 <TouchableOpacity
                     style={styles.addSurvivorButton}
-                    onPress={() => onNavigateToCaregiver?.('accept-invitation')}
+                    onPress={() => router.push('/connection-options?mode=connect')}
                 >
                     <Heart size={16} color={Colors.primary} />
                     <Text style={styles.addSurvivorText}>Connect Another Survivor</Text>

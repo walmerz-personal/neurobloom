@@ -434,6 +434,60 @@ export async function updatePermissions(survivorId, linkId, permissions) {
     }
 }
 
+/**
+ * Create a survivor-initiated invite (survivor invites caregiver/medical staff via SMS)
+ * @param {string} survivorId - The survivor's user ID
+ * @param {string|null} phoneNumber - The caregiver's/medical staff's phone number (optional, can be null)
+ * @returns {Promise<{token: string|null, error: Error|null}>}
+ */
+export async function createSurvivorInvite(survivorId, phoneNumber) {
+    try {
+        const { token, linkId, error } = await SupabaseService.createSurvivorInvite(survivorId, phoneNumber);
+
+        if (error) {
+            console.error('❌ Error creating survivor invite:', error);
+            return { token: null, error };
+        }
+
+        console.log('✅ Survivor invite created with token:', token);
+        return { token, linkId, error: null };
+    } catch (error) {
+        console.error('❌ Error creating survivor invite:', error);
+        return { token: null, error };
+    }
+}
+
+/**
+ * Accept a survivor-initiated invite (caregiver/medical staff accepts survivor's invite)
+ * @param {string} token - Access request token
+ * @param {string} acceptorId - The caregiver's or medical staff's user ID
+ * @param {string} roleType - 'caregiver' or 'medical_staff'
+ * @returns {Promise<{success: boolean, survivor: Object|null, error: Error|null}>}
+ */
+export async function acceptSurvivorInvite(token, acceptorId, roleType = 'caregiver') {
+    try {
+        const { data: result, error } = await SupabaseService.acceptSurvivorInvite(token, acceptorId, roleType);
+
+        if (error) {
+            console.error('❌ Error accepting survivor invite:', error);
+            return { success: false, survivor: null, error };
+        }
+
+        console.log('✅ Survivor invite accepted');
+        return {
+            success: true,
+            survivor: {
+                id: result.survivor_id,
+                name: result.survivor_name,
+            },
+            error: null,
+        };
+    } catch (error) {
+        console.error('❌ Error accepting survivor invite:', error);
+        return { success: false, survivor: null, error };
+    }
+}
+
 export const CareTeamService = {
     createInvitation,
     acceptInvitation,
@@ -441,6 +495,8 @@ export const CareTeamService = {
     createAccessRequest,
     getAccessRequestByToken,
     acceptAccessRequest,
+    createSurvivorInvite,
+    acceptSurvivorInvite,
     getLinkedCaregivers,
     getLinkedSurvivors,
     getPendingInvitations,
