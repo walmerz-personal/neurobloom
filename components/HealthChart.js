@@ -99,7 +99,23 @@ export function HealthChart({ data, metricName, unit = '', minValue, maxValue })
             return (val * 100).toFixed(0); // Convert to cm/s
         }
         if (unit === 'steps') {
+            // Format steps with appropriate precision
+            if (val >= 1000) {
+                return (val / 1000).toFixed(1) + 'k';
+            }
             return Math.round(val).toLocaleString();
+        }
+        if (unit === 'km') {
+            // Convert meters to kilometers
+            const km = val / 1000;
+            if (km >= 1) {
+                return km.toFixed(2);
+            }
+            return (val / 1000).toFixed(3); // Show 3 decimals for sub-km distances
+        }
+        if (unit === 'cm') {
+            // Convert meters to centimeters
+            return (val * 100).toFixed(0);
         }
         return val.toFixed(1);
     };

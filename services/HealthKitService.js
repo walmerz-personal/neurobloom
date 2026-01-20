@@ -1,11 +1,14 @@
 // services/HealthKitService.js
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * HealthKit Service
  * Handles all interactions with Apple HealthKit
  * Note: Requires custom dev client (doesn't work in Expo Go)
  */
+
+const HEALTH_PERMISSIONS_KEY = '@neurobloom_healthkit_permissions_granted';
 
 // Try to import HealthKit module - will be null in Expo Go
 let HealthKit = null;
@@ -87,6 +90,8 @@ export async function requestHealthKitPermissions() {
         
         if (result === true) {
             console.log('✅ HealthKit permissions granted');
+            // Save flag to AsyncStorage for reliable permission checking
+            await saveHealthPermissionsGranted();
             return { granted: true, error: null };
         } else {
             console.log('❌ HealthKit permissions denied');
@@ -99,7 +104,37 @@ export async function requestHealthKitPermissions() {
 }
 
 /**
+ * Save health permissions granted flag to AsyncStorage
+ * @returns {Promise<{success: boolean, error: Error|null}>}
+ */
+export async function saveHealthPermissionsGranted() {
+    try {
+        await AsyncStorage.setItem(HEALTH_PERMISSIONS_KEY, 'true');
+        console.log('✅ Health permissions flag saved to AsyncStorage');
+        return { success: true, error: null };
+    } catch (error) {
+        console.error('❌ Error saving health permissions flag:', error);
+        return { success: false, error };
+    }
+}
+
+/**
+ * Check if health permissions have been granted (from AsyncStorage)
+ * @returns {Promise<boolean>}
+ */
+export async function hasHealthPermissionsBeenGranted() {
+    try {
+        const value = await AsyncStorage.getItem(HEALTH_PERMISSIONS_KEY);
+        return value === 'true';
+    } catch (error) {
+        console.error('❌ Error reading health permissions flag:', error);
+        return false;
+    }
+}
+
+/**
  * Check if HealthKit permissions are already granted
+ * Uses AsyncStorage flag first (more reliable on iOS), then falls back to authorizationStatusFor
  * @returns {Promise<{granted: boolean, error: Error|null}>}
  */
 export async function checkHealthKitPermissions() {
@@ -108,6 +143,13 @@ export async function checkHealthKitPermissions() {
     }
 
     try {
+        // Check AsyncStorage flag first - more reliable than iOS authorizationStatusFor for READ permissions
+        const hasBeenGranted = await hasHealthPermissionsBeenGranted();
+        if (hasBeenGranted) {
+            return { granted: true, error: null };
+        }
+
+        // Fallback: Try to check authorization status (unreliable for READ permissions on iOS)
         const permissions = [
             QUANTITY_TYPES.WALKING_SPEED,
             QUANTITY_TYPES.WALKING_STEP_LENGTH,
@@ -432,6 +474,8 @@ export async function syncHealthData(startDate, endDate) {
 export default {
     requestHealthKitPermissions,
     checkHealthKitPermissions,
+    saveHealthPermissionsGranted,
+    hasHealthPermissionsBeenGranted,
     getWalkingSpeed,
     getWalkingStepLength,
     getWalkingAsymmetry,

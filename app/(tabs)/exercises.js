@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
 import { useState, useEffect } from 'react';
+import * as Haptics from 'expo-haptics';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
@@ -8,6 +9,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { SupabaseService } from '../../services/SupabaseService';
 import { MedicalStaffService } from '../../services/MedicalStaffService';
 import { CustomExerciseModal } from '../../components/CustomExerciseModal';
+import { ConfettiBurst } from '../../components/ConfettiBurst';
 
 const CATEGORIES = ['All', 'Arms', 'Legs', 'Core', 'Hands'];
 const MODE_TYPES = ['All', 'Solo', 'Partner'];
@@ -238,7 +240,7 @@ const EXERCISES_DATA = [
 ];
 
 export default function Exercises() {
-    const { user } = useAuth();
+    const { user, userData } = useAuth();
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [selectedMode, setSelectedMode] = useState('All');
     const [expandedCardId, setExpandedCardId] = useState(null);
@@ -502,6 +504,7 @@ export default function Exercises() {
             <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {filteredExercises.map((exercise) => {
                     const isAssigned = assignedExercises.includes(exercise.id);
+                    const isShared = exercise.isCustom && exercise.userId !== user?.id;
                     return (
                         <ExerciseCard
                             key={exercise.id}
@@ -510,10 +513,11 @@ export default function Exercises() {
                             isCompleted={completedExercises.includes(exercise.id)}
                             isCustom={exercise.isCustom}
                             isAssigned={isAssigned}
+                            isShared={isShared}
                             onPress={() => toggleExpand(exercise.id)}
                             onToggleComplete={() => toggleCompletion(exercise.id)}
-                            onEdit={exercise.isCustom ? () => handleEditExercise(exercise) : undefined}
-                            onDelete={exercise.isCustom ? () => handleDeleteExercise(exercise.id) : undefined}
+                            onEdit={exercise.isCustom && !isShared ? () => handleEditExercise(exercise) : undefined}
+                            onDelete={exercise.isCustom && !isShared ? () => handleDeleteExercise(exercise.id) : undefined}
                         />
                     );
                 })}
@@ -526,12 +530,33 @@ export default function Exercises() {
                 exercise={exerciseToEdit}
                 onSave={handleSaveExercise}
                 userId={user?.id}
+                userRole={userData?.role || 'survivor'}
             />
         </ScreenWrapper>
     );
 }
 
-function ExerciseCard({ data, isExpanded, isCompleted, isCustom, isAssigned, onPress, onToggleComplete, onEdit, onDelete }) {
+function ExerciseCard({ data, isExpanded, isCompleted, isCustom, isAssigned, isShared, onPress, onToggleComplete, onEdit, onDelete }) {
+    const [showConfetti, setShowConfetti] = useState(false);
+
+    const handleToggleComplete = (e) => {
+        e.stopPropagation();
+        
+        // Only celebrate when completing, not un-completing
+        if (!isCompleted) {
+            // Trigger haptic feedback
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            // Trigger confetti animation
+            setShowConfetti(true);
+        }
+        
+        onToggleComplete();
+    };
+
+    const handleConfettiComplete = () => {
+        setShowConfetti(false);
+    };
+
     return (
         <TouchableOpacity
             style={[styles.card, isExpanded && styles.cardExpanded, isCustom && styles.cardCustom, isAssigned && styles.cardAssigned]}
@@ -571,19 +596,22 @@ function ExerciseCard({ data, isExpanded, isCompleted, isCustom, isAssigned, onP
                             <Trash2 size={18} color="#EF4444" />
                         </TouchableOpacity>
                     )}
-                    <TouchableOpacity
-                        style={styles.checkboxContainer}
-                        onPress={(e) => {
-                            e.stopPropagation();
-                            onToggleComplete();
-                        }}
-                    >
-                        {isCompleted ? (
-                            <CheckCircle size={28} color={Colors.primary} fill="white" />
-                        ) : (
-                            <Circle size={28} color="rgba(0,0,0,0.3)" fill="rgba(255,255,255,0.8)" />
-                        )}
-                    </TouchableOpacity>
+                    <View style={styles.checkboxWrapper}>
+                        <TouchableOpacity
+                            style={styles.checkboxContainer}
+                            onPress={handleToggleComplete}
+                        >
+                            {isCompleted ? (
+                                <CheckCircle size={28} color={Colors.primary} fill="white" />
+                            ) : (
+                                <Circle size={28} color="rgba(0,0,0,0.3)" fill="rgba(255,255,255,0.8)" />
+                            )}
+                        </TouchableOpacity>
+                        <ConfettiBurst 
+                            trigger={showConfetti} 
+                            onComplete={handleConfettiComplete}
+                        />
+                    </View>
                 </View>
             </View>
 
@@ -618,6 +646,12 @@ function ExerciseCard({ data, isExpanded, isCompleted, isCustom, isAssigned, onP
                         </View>
                     )}
                 </View>
+
+                {isShared && data.creatorName && (
+                    <Text style={styles.sharedBy}>
+                        Shared by {data.creatorName}
+                    </Text>
+                )}
 
                 {data.description && (
                     <Text style={styles.description}>{data.description}</Text>
@@ -837,6 +871,12 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
         elevation: 2,
     },
+    checkboxWrapper: {
+        position: 'relative',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'visible',
+    },
     checkboxContainer: {
         // Checkbox is positioned within topLeftActions flex container
     },
@@ -891,6 +931,13 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: Colors.textSecondary,
         lineHeight: 24,
+    },
+    sharedBy: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 13,
+        color: Colors.primary,
+        marginBottom: 12,
+        fontStyle: 'italic',
     },
     instructionsContainer: {
         marginTop: 20,

@@ -79,8 +79,13 @@ export default function CreateAccount() {
                 console.log('✅ Profile saved to Supabase');
             }
 
-            // Navigate to completion
-            router.replace('/onboarding/completion');
+            // Navigate to reminders screen (for survivors) or completion (for others)
+            const userRole = userData?.role || params.role || 'survivor';
+            if (userRole === 'survivor') {
+                router.replace('/onboarding/reminders');
+            } else {
+                router.replace('/onboarding/completion');
+            }
         } catch (error) {
             console.error('❌ Account creation error:', error);
             Alert.alert('Error', 'Failed to create account. Please try again.');

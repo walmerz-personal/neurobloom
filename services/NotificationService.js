@@ -15,10 +15,16 @@ Notifications.setNotificationHandler({
 });
 
 const NOTIFICATION_PREFS_KEY = '@neurobloom_notification_prefs';
-const DAILY_REMINDER_ID = 'daily-exercise-reminder';
+const DAILY_REMINDER_ID_PREFIX = 'daily-exercise-reminder-';
 const LAST_INACTIVITY_REMINDER_KEY = '@neurobloom_last_inactivity_reminder';
 
-// Default reminder time: 8:30 AM
+// Default reminder times: 8:30 AM and 12:30 PM
+const DEFAULT_TIMES = [
+    { hour: 8, minute: 30 },
+    { hour: 12, minute: 30 }
+];
+
+// Legacy defaults for backward compatibility
 const DEFAULT_HOUR = 8;
 const DEFAULT_MINUTE = 30;
 
@@ -50,35 +56,66 @@ export async function requestPermissions() {
 }
 
 /**
- * Schedule a daily reminder notification at the specified time
- * @param {number} hour - Hour of day (0-23)
- * @param {number} minute - Minute (0-59)
- * @returns {Promise<string|null>} - Notification identifier or null on failure
+ * Schedule daily reminder notifications at the specified times
+ * @param {Array<{hour: number, minute: number}>|number} timesOrHour - Array of {hour, minute} objects, or single hour for backward compatibility
+ * @param {number} minute - Minute (0-59) - only used if first param is a number (backward compatibility)
+ * @returns {Promise<Array<string>|string|null>} - Array of notification identifiers, single identifier, or null on failure
  */
-export async function scheduleDailyReminder(hour = DEFAULT_HOUR, minute = DEFAULT_MINUTE) {
+export async function scheduleDailyReminder(timesOrHour = DEFAULT_TIMES, minute = undefined) {
     try {
         // Cancel any existing reminders first
         await cancelAllReminders();
 
-        // Schedule the new daily reminder
-        const identifier = await Notifications.scheduleNotificationAsync({
-            content: {
-                title: "Time for Your Exercises! 🌸",
-                body: "A few minutes of exercise can make a big difference. Your recovery journey continues today!",
-                sound: true,
-                data: { type: 'daily-reminder' },
-            },
-            trigger: {
-                type: Notifications.SchedulableTriggerInputTypes.DAILY,
-                hour,
-                minute,
-            },
-        });
+        // Handle backward compatibility: if first param is a number, treat as single hour
+        let times;
+        if (typeof timesOrHour === 'number') {
+            times = [{ hour: timesOrHour, minute: minute !== undefined ? minute : DEFAULT_MINUTE }];
+        } else if (Array.isArray(timesOrHour)) {
+            times = timesOrHour;
+        } else {
+            times = DEFAULT_TIMES;
+        }
 
-        console.log(`✅ Daily reminder scheduled for ${hour}:${minute.toString().padStart(2, '0')}`);
-        return identifier;
+        // Validate times array
+        if (!Array.isArray(times) || times.length === 0) {
+            console.error('❌ Invalid times array:', times);
+            return null;
+        }
+
+        // Schedule reminders for each time
+        const identifiers = [];
+        for (let i = 0; i < times.length; i++) {
+            const { hour, minute: min } = times[i];
+            
+            try {
+                const identifier = await Notifications.scheduleNotificationAsync({
+                    content: {
+                        title: "Time for Your Exercises! 🌸",
+                        body: "A few minutes of exercise can make a big difference. Your recovery journey continues today!",
+                        sound: true,
+                        data: { type: 'daily-reminder', index: i },
+                    },
+                    trigger: {
+                        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+                        hour,
+                        minute: min,
+                    },
+                });
+                identifiers.push(identifier);
+                console.log(`✅ Daily reminder ${i + 1} scheduled for ${hour}:${min.toString().padStart(2, '0')}`);
+            } catch (error) {
+                console.error(`❌ Error scheduling reminder ${i + 1}:`, error);
+            }
+        }
+
+        // Return single identifier for backward compatibility if only one reminder
+        if (identifiers.length === 1) {
+            return identifiers[0];
+        }
+        
+        return identifiers.length > 0 ? identifiers : null;
     } catch (error) {
-        console.error('❌ Error scheduling daily reminder:', error);
+        console.error('❌ Error scheduling daily reminders:', error);
         return null;
     }
 }
@@ -112,12 +149,25 @@ export async function getScheduledNotifications() {
 
 /**
  * Save notification preferences locally
- * @param {Object} prefs - { enabled: boolean, hour: number, minute: number }
+ * @param {Object} prefs - { enabled: boolean, times?: Array<{hour, minute}>, hour?: number, minute?: number }
+ * Supports both new format (times array) and old format (hour, minute) for backward compatibility
  */
 export async function saveNotificationPrefs(prefs) {
     try {
-        await AsyncStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(prefs));
-        console.log('✅ Notification preferences saved:', prefs);
+        // Normalize to new format if old format is provided
+        let normalizedPrefs = { ...prefs };
+        if (normalizedPrefs.hour !== undefined && normalizedPrefs.minute !== undefined && !normalizedPrefs.times) {
+            normalizedPrefs.times = [{ hour: normalizedPrefs.hour, minute: normalizedPrefs.minute }];
+            // Keep hour and minute for backward compatibility
+        } else if (normalizedPrefs.times && normalizedPrefs.times.length > 0) {
+            // New format - ensure times is an array
+            if (!Array.isArray(normalizedPrefs.times)) {
+                normalizedPrefs.times = [normalizedPrefs.times];
+            }
+        }
+        
+        await AsyncStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(normalizedPrefs));
+        console.log('✅ Notification preferences saved:', normalizedPrefs);
     } catch (error) {
         console.error('❌ Error saving notification preferences:', error);
     }
@@ -125,13 +175,28 @@ export async function saveNotificationPrefs(prefs) {
 
 /**
  * Load notification preferences
- * @returns {Promise<Object|null>} - Saved preferences or null
+ * @returns {Promise<Object|null>} - Saved preferences (migrated to new format) or null
+ * Migrates old format (hour, minute) to new format (times array)
  */
 export async function loadNotificationPrefs() {
     try {
         const prefsJson = await AsyncStorage.getItem(NOTIFICATION_PREFS_KEY);
         if (prefsJson) {
-            return JSON.parse(prefsJson);
+            const prefs = JSON.parse(prefsJson);
+            
+            // Migrate old format to new format
+            if (prefs.hour !== undefined && prefs.minute !== undefined && !prefs.times) {
+                console.log('🔄 Migrating old notification preferences format to new format');
+                prefs.times = [{ hour: prefs.hour, minute: prefs.minute }];
+                // Save migrated format
+                await saveNotificationPrefs(prefs);
+            } else if (!prefs.times || !Array.isArray(prefs.times)) {
+                // Invalid format, use defaults
+                console.warn('⚠️ Invalid notification preferences format, using defaults');
+                return { enabled: prefs.enabled !== false, times: DEFAULT_TIMES };
+            }
+            
+            return prefs;
         }
         return null;
     } catch (error) {
@@ -148,10 +213,10 @@ export async function initializeNotifications() {
     try {
         const prefs = await loadNotificationPrefs();
 
-        if (prefs && prefs.enabled) {
+        if (prefs && prefs.enabled && prefs.times && Array.isArray(prefs.times) && prefs.times.length > 0) {
             const hasPermission = await requestPermissions();
             if (hasPermission) {
-                await scheduleDailyReminder(prefs.hour, prefs.minute);
+                await scheduleDailyReminder(prefs.times);
             }
         }
     } catch (error) {
@@ -282,6 +347,7 @@ export const NotificationService = {
     initializeNotifications,
     checkAndSendInactivityReminder,
     sendKudosNotification,
-    DEFAULT_HOUR,
-    DEFAULT_MINUTE,
+    DEFAULT_TIMES,
+    DEFAULT_HOUR, // For backward compatibility
+    DEFAULT_MINUTE, // For backward compatibility
 };

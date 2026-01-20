@@ -7,7 +7,7 @@ import { Colors } from '../constants/Colors';
 import { Typography } from '../constants/Typography';
 import { useAuth } from '../contexts/AuthContext';
 import { SupabaseService } from '../services/SupabaseService';
-import { ArrowLeft, Save, User, Calendar, Activity, Target, Mail, Trash2, Bell } from 'lucide-react-native';
+import { ArrowLeft, Save, User, Calendar, Activity, Target, Mail, Trash2, Bell, Plus, X } from 'lucide-react-native';
 import { CareTeamSection } from '../components/CareTeamSection';
 import { HealthSharingSection } from '../components/HealthSharingSection';
 import { NotificationService } from '../services/NotificationService';
@@ -29,8 +29,11 @@ export default function Profile() {
 
     // Notification State
     const [notificationsEnabled, setNotificationsEnabled] = useState(true); // On by default
-    const [reminderTime, setReminderTime] = useState(new Date(2000, 0, 1, 8, 30)); // Default 8:30 AM
-    const [showTimePicker, setShowTimePicker] = useState(false);
+    const [reminderTimes, setReminderTimes] = useState([
+        new Date(2000, 0, 1, 8, 30),  // Default 8:30 AM
+        new Date(2000, 0, 1, 12, 30), // Default 12:30 PM
+    ]);
+    const [showTimePickers, setShowTimePickers] = useState({});
 
     useEffect(() => {
         loadProfile();
@@ -42,19 +45,30 @@ export default function Profile() {
         if (prefs) {
             // User has saved preferences, use them
             setNotificationsEnabled(prefs.enabled);
-            if (prefs.hour !== undefined && prefs.minute !== undefined) {
-                setReminderTime(new Date(2000, 0, 1, prefs.hour, prefs.minute));
+            
+            // Load times array (migrated from old format)
+            if (prefs.times && Array.isArray(prefs.times) && prefs.times.length > 0) {
+                const times = prefs.times.map(({ hour, minute }) => 
+                    new Date(2000, 0, 1, hour, minute)
+                );
+                setReminderTimes(times);
+            } else if (prefs.hour !== undefined && prefs.minute !== undefined) {
+                // Old format - migrate to array
+                setReminderTimes([new Date(2000, 0, 1, prefs.hour, prefs.minute)]);
+            } else {
+                // No times found, use defaults
+                setReminderTimes([
+                    new Date(2000, 0, 1, 8, 30),
+                    new Date(2000, 0, 1, 12, 30),
+                ]);
             }
         } else {
-            // First time - enable notifications by default
-            const hasPermission = await NotificationService.requestPermissions();
-            if (hasPermission) {
-                await NotificationService.scheduleDailyReminder(8, 30);
-                await NotificationService.saveNotificationPrefs({ enabled: true, hour: 8, minute: 30 });
-                setNotificationsEnabled(true);
-            } else {
-                setNotificationsEnabled(false);
-            }
+            // First time - use defaults
+            setNotificationsEnabled(true);
+            setReminderTimes([
+                new Date(2000, 0, 1, 8, 30),
+                new Date(2000, 0, 1, 12, 30),
+            ]);
         }
     };
 
@@ -125,32 +139,99 @@ export default function Profile() {
                 );
                 return;
             }
-            // Schedule the reminder
-            const hour = reminderTime.getHours();
-            const minute = reminderTime.getMinutes();
-            await NotificationService.scheduleDailyReminder(hour, minute);
-            await NotificationService.saveNotificationPrefs({ enabled: true, hour, minute });
+            // Schedule the reminders
+            const times = reminderTimes.map(time => ({
+                hour: time.getHours(),
+                minute: time.getMinutes()
+            }));
+            await NotificationService.scheduleDailyReminder(times);
+            await NotificationService.saveNotificationPrefs({ enabled: true, times });
             setNotificationsEnabled(true);
         } else {
             // Cancel all reminders
             await NotificationService.cancelAllReminders();
-            await NotificationService.saveNotificationPrefs({ enabled: false, hour: reminderTime.getHours(), minute: reminderTime.getMinutes() });
+            const times = reminderTimes.map(time => ({
+                hour: time.getHours(),
+                minute: time.getMinutes()
+            }));
+            await NotificationService.saveNotificationPrefs({ enabled: false, times });
             setNotificationsEnabled(false);
         }
     };
 
-    const handleTimeChange = async (event, selectedTime) => {
+    const handleTimeChange = async (index, event, selectedTime) => {
         if (Platform.OS === 'android') {
-            setShowTimePicker(false);
+            const newPickers = { ...showTimePickers };
+            delete newPickers[index];
+            setShowTimePickers(newPickers);
         }
+        
         if (selectedTime && event.type !== 'dismissed') {
-            setReminderTime(selectedTime);
+            const newTimes = [...reminderTimes];
+            newTimes[index] = selectedTime;
+            setReminderTimes(newTimes);
+            
             if (notificationsEnabled) {
-                const hour = selectedTime.getHours();
-                const minute = selectedTime.getMinutes();
-                await NotificationService.scheduleDailyReminder(hour, minute);
-                await NotificationService.saveNotificationPrefs({ enabled: true, hour, minute });
+                const times = newTimes.map(time => ({
+                    hour: time.getHours(),
+                    minute: time.getMinutes()
+                }));
+                await NotificationService.scheduleDailyReminder(times);
+                await NotificationService.saveNotificationPrefs({ enabled: true, times });
             }
+        }
+    };
+
+    const addReminder = async () => {
+        if (reminderTimes.length >= 3) {
+            Alert.alert('Maximum Reminders', 'You can have up to 3 reminders per day.');
+            return;
+        }
+        
+        // Add new reminder 4 hours after the last one (default)
+        const lastTime = reminderTimes[reminderTimes.length - 1];
+        const newTime = new Date(lastTime);
+        newTime.setHours(newTime.getHours() + 4);
+        
+        // If it would go past midnight, set to 6:00 PM
+        if (newTime.getHours() >= 24) {
+            newTime.setHours(18, 0);
+        }
+        
+        const newTimes = [...reminderTimes, newTime];
+        setReminderTimes(newTimes);
+        
+        if (notificationsEnabled) {
+            const times = newTimes.map(time => ({
+                hour: time.getHours(),
+                minute: time.getMinutes()
+            }));
+            await NotificationService.scheduleDailyReminder(times);
+            await NotificationService.saveNotificationPrefs({ enabled: true, times });
+        }
+    };
+
+    const removeReminder = async (index) => {
+        if (reminderTimes.length <= 1) {
+            Alert.alert('Minimum Reminders', 'You must have at least 1 reminder.');
+            return;
+        }
+        
+        const newTimes = reminderTimes.filter((_, i) => i !== index);
+        setReminderTimes(newTimes);
+        
+        // Close the time picker if it was open for this index
+        const newPickers = { ...showTimePickers };
+        delete newPickers[index];
+        setShowTimePickers(newPickers);
+        
+        if (notificationsEnabled) {
+            const times = newTimes.map(time => ({
+                hour: time.getHours(),
+                minute: time.getMinutes()
+            }));
+            await NotificationService.scheduleDailyReminder(times);
+            await NotificationService.saveNotificationPrefs({ enabled: true, times });
         }
     };
 
@@ -422,29 +503,62 @@ export default function Profile() {
 
                         {notificationsEnabled && (
                             <View style={styles.timePickerSection}>
-                                <Text style={styles.timeLabel}>Reminder Time</Text>
-                                <TouchableOpacity
-                                    style={styles.timeButton}
-                                    onPress={() => setShowTimePicker(true)}
-                                >
-                                    <Text style={styles.timeButtonText}>
-                                        {reminderTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </Text>
-                                </TouchableOpacity>
-                                {showTimePicker && (
-                                    <DateTimePicker
-                                        value={reminderTime}
-                                        mode="time"
-                                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                                        onChange={handleTimeChange}
-                                    />
-                                )}
-                                {Platform.OS === 'ios' && showTimePicker && (
+                                <Text style={styles.timeLabel}>Reminder Times</Text>
+                                {reminderTimes.map((time, index) => (
+                                    <View key={index} style={styles.reminderRow}>
+                                        <TouchableOpacity
+                                            style={styles.timeButton}
+                                            onPress={() => {
+                                                setShowTimePickers({ ...showTimePickers, [index]: true });
+                                            }}
+                                        >
+                                            <Text style={styles.timeButtonText}>
+                                                {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </Text>
+                                        </TouchableOpacity>
+                                        
+                                        {reminderTimes.length > 1 && (
+                                            <TouchableOpacity
+                                                style={styles.deleteReminderButton}
+                                                onPress={() => removeReminder(index)}
+                                                accessibilityLabel="Remove reminder"
+                                            >
+                                                <X size={18} color={Colors.error || '#DC2626'} />
+                                            </TouchableOpacity>
+                                        )}
+                                        
+                                        {showTimePickers[index] && (
+                                            <View style={styles.pickerContainer}>
+                                                <DateTimePicker
+                                                    value={time}
+                                                    mode="time"
+                                                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                                    onChange={(event, selectedTime) => handleTimeChange(index, event, selectedTime)}
+                                                />
+                                                {Platform.OS === 'ios' && (
+                                                    <TouchableOpacity
+                                                        style={styles.datePickerDone}
+                                                        onPress={() => {
+                                                            const newPickers = { ...showTimePickers };
+                                                            delete newPickers[index];
+                                                            setShowTimePickers(newPickers);
+                                                        }}
+                                                    >
+                                                        <Text style={styles.datePickerDoneText}>Done</Text>
+                                                    </TouchableOpacity>
+                                                )}
+                                            </View>
+                                        )}
+                                    </View>
+                                ))}
+                                
+                                {reminderTimes.length < 3 && (
                                     <TouchableOpacity
-                                        style={styles.datePickerDone}
-                                        onPress={() => setShowTimePicker(false)}
+                                        style={styles.addReminderButton}
+                                        onPress={addReminder}
                                     >
-                                        <Text style={styles.datePickerDoneText}>Done</Text>
+                                        <Plus size={18} color={Colors.primary} />
+                                        <Text style={styles.addReminderButtonText}>Add Another Reminder</Text>
                                     </TouchableOpacity>
                                 )}
                             </View>
@@ -678,9 +792,16 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter_500Medium',
         fontSize: 14,
         color: Colors.textSecondary,
-        marginBottom: 8,
+        marginBottom: 12,
+    },
+    reminderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+        gap: 8,
     },
     timeButton: {
+        flex: 1,
         backgroundColor: Colors.surfaceHighlight,
         borderRadius: 8,
         padding: 12,
@@ -689,6 +810,37 @@ const styles = StyleSheet.create({
     timeButtonText: {
         fontFamily: 'Inter_600SemiBold',
         fontSize: 18,
+        color: Colors.primary,
+    },
+    deleteReminderButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#FEE2E2',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    pickerContainer: {
+        width: '100%',
+        marginTop: 8,
+        alignItems: 'center',
+    },
+    addReminderButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        padding: 12,
+        borderWidth: 2,
+        borderColor: Colors.primary,
+        borderStyle: 'dashed',
+        borderRadius: 8,
+        backgroundColor: Colors.primaryLight + '10',
+        marginTop: 8,
+    },
+    addReminderButtonText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 14,
         color: Colors.primary,
     },
 });

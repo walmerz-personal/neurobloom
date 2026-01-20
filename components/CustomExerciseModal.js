@@ -26,7 +26,8 @@ export function CustomExerciseModal({
     onClose,
     exercise = null, // If provided, we're editing; otherwise creating
     onSave,
-    userId
+    userId,
+    userRole = 'survivor' // 'survivor', 'caregiver', or 'medical_staff'
 }) {
     const [saving, setSaving] = useState(false);
     const [title, setTitle] = useState('');
@@ -311,9 +312,15 @@ export function CustomExerciseModal({
                         <View style={styles.field}>
                             <View style={styles.switchRow}>
                                 <View style={styles.switchLabelContainer}>
-                                    <Text style={styles.label}>Share with Care Team</Text>
+                                    <Text style={styles.label}>
+                                        {userRole === 'survivor' 
+                                            ? 'Share with Care Team' 
+                                            : 'Share with my Circle'}
+                                    </Text>
                                     <Text style={styles.hint}>
-                                        Let your circle see this exercise
+                                        {userRole === 'survivor'
+                                            ? 'Let your circle see this exercise'
+                                            : 'Connected survivors and their care team will see this exercise'}
                                     </Text>
                                 </View>
                                 <Switch

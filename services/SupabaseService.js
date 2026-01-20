@@ -1905,9 +1905,13 @@ export const SupabaseService = {
 
         try {
             // Get user's own exercises + shared exercises from care team
+            // Join with users table to get creator name for shared exercises
             const { data, error } = await supabase
                 .from('user_exercises')
-                .select('*')
+                .select(`
+                    *,
+                    creator:users(name)
+                `)
                 .order('created_at', { ascending: false });
 
             if (error) {
@@ -1934,6 +1938,7 @@ export const SupabaseService = {
                 isCustom: true,
                 userId: ex.user_id,
                 isSharedWithCareTeam: ex.is_shared_with_care_team,
+                creatorName: ex.creator?.name || null,
             }));
 
             console.log(`✅ Retrieved ${transformed.length} custom exercises`);

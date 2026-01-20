@@ -8,10 +8,14 @@ import { Typography } from '../../constants/Typography';
 import { PrimaryButton } from '../../components/Button';
 import { Heart, Activity, TrendingUp, Shield } from 'lucide-react-native';
 import * as HealthKitService from '../../services/HealthKitService';
+import * as HealthMetricsService from '../../services/HealthMetricsService';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function HealthPermissions() {
     const router = useRouter();
+    const { user } = useAuth();
     const [loading, setLoading] = useState(false);
+    const [syncing, setSyncing] = useState(false);
     const [permissionGranted, setPermissionGranted] = useState(false);
 
     const handleRequestPermissions = async () => {
@@ -60,19 +64,80 @@ export default function HealthPermissions() {
 
             if (granted) {
                 setPermissionGranted(true);
-                Alert.alert(
-                    'Permissions Granted',
-                    'Great! NeuroBloom can now track your walking and mobility metrics automatically.',
-                    [
-                        {
-                            text: 'Continue',
-                            onPress: () => {
-                                // Navigate to next screen or back
-                                router.back();
+                
+                // Trigger sync of health data immediately after permissions granted
+                if (user) {
+                    setSyncing(true);
+                    try {
+                        const endDate = new Date();
+                        const startDate = new Date();
+                        startDate.setDate(startDate.getDate() - 60); // Sync last 60 days
+
+                        const { success, synced, error: syncError } = await HealthMetricsService.syncAndSaveHealthData(
+                            user.id,
+                            startDate,
+                            endDate
+                        );
+
+                        if (success) {
+                            Alert.alert(
+                                'Permissions Granted',
+                                `Great! NeuroBloom can now track your walking and mobility metrics automatically.${synced > 0 ? ` Synced ${synced} days of data.` : ''}`,
+                                [
+                                    {
+                                        text: 'Continue',
+                                        onPress: () => {
+                                            router.back();
+                                        },
+                                    },
+                                ]
+                            );
+                        } else {
+                            console.error('Error syncing health data:', syncError);
+                            Alert.alert(
+                                'Permissions Granted',
+                                'Great! NeuroBloom can now track your walking and mobility metrics automatically. You can sync your data from the Progress tab.',
+                                [
+                                    {
+                                        text: 'Continue',
+                                        onPress: () => {
+                                            router.back();
+                                        },
+                                    },
+                                ]
+                            );
+                        }
+                    } catch (syncError) {
+                        console.error('Error syncing health data:', syncError);
+                        Alert.alert(
+                            'Permissions Granted',
+                            'Great! NeuroBloom can now track your walking and mobility metrics automatically. You can sync your data from the Progress tab.',
+                            [
+                                {
+                                    text: 'Continue',
+                                    onPress: () => {
+                                        router.back();
+                                    },
+                                },
+                            ]
+                        );
+                    } finally {
+                        setSyncing(false);
+                    }
+                } else {
+                    Alert.alert(
+                        'Permissions Granted',
+                        'Great! NeuroBloom can now track your walking and mobility metrics automatically.',
+                        [
+                            {
+                                text: 'Continue',
+                                onPress: () => {
+                                    router.back();
+                                },
                             },
-                        },
-                    ]
-                );
+                        ]
+                    );
+                }
             } else {
                 Alert.alert(
                     'Permissions Denied',
@@ -163,11 +228,11 @@ export default function HealthPermissions() {
 
                     <View style={styles.buttonContainer}>
                         <PrimaryButton
-                            title={loading ? 'Requesting...' : 'Connect Apple Health'}
+                            title={loading ? 'Requesting...' : syncing ? 'Syncing data...' : 'Connect Apple Health'}
                             onPress={handleRequestPermissions}
-                            disabled={loading || permissionGranted}
+                            disabled={loading || syncing || permissionGranted}
                         />
-                        {loading && (
+                        {(loading || syncing) && (
                             <ActivityIndicator
                                 size="small"
                                 color={Colors.primary}
@@ -177,7 +242,7 @@ export default function HealthPermissions() {
                         <TouchableOpacity
                             style={styles.skipButton}
                             onPress={handleSkip}
-                            disabled={loading}
+                            disabled={loading || syncing}
                         >
                             <Text style={styles.skipButtonText}>Skip for now</Text>
                         </TouchableOpacity>

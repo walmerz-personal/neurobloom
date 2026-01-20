@@ -30,7 +30,7 @@ const CATEGORIES = ['All', 'Arms', 'Legs', 'Core', 'Hands'];
 
 export default function AssignExercises() {
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, userData } = useAuth();
     const params = useLocalSearchParams();
     const preSelectedSurvivorId = params.survivorId;
     const [survivors, setSurvivors] = useState([]);
@@ -290,6 +290,7 @@ export default function AssignExercises() {
                     }
                 }}
                 userId={user?.id}
+                userRole={userData?.role || 'medical_staff'}
             />
         </ScreenWrapper>
     );

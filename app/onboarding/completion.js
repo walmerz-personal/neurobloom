@@ -1,28 +1,12 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
 import { PrimaryButton } from '../../components/Button';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
-import { NotificationService } from '../../services/NotificationService';
 
 export default function Completion() {
     const router = useRouter();
-
-    // Request notification permissions on mount
-    useEffect(() => {
-        const setupNotifications = async () => {
-            const hasPermission = await NotificationService.requestPermissions();
-            if (hasPermission) {
-                // Schedule default daily reminder at 8:30 AM
-                await NotificationService.scheduleDailyReminder(8, 30);
-                await NotificationService.saveNotificationPrefs({ enabled: true, hour: 8, minute: 30 });
-                console.log('✅ Notifications enabled during onboarding');
-            }
-        };
-        setupNotifications();
-    }, []);
 
     const handleGoHome = () => {
         router.replace('/(tabs)/home');

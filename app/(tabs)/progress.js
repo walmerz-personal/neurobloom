@@ -38,6 +38,9 @@ export default function Progress() {
     const [healthMetrics, setHealthMetrics] = useState(null);
     const [healthLoading, setHealthLoading] = useState(true);
     const [healthChartData, setHealthChartData] = useState([]);
+    const [stepsChartData, setStepsChartData] = useState([]);
+    const [distanceChartData, setDistanceChartData] = useState([]);
+    const [stepLengthChartData, setStepLengthChartData] = useState([]);
     const [healthPermissionsGranted, setHealthPermissionsGranted] = useState(false);
 
     useEffect(() => {
@@ -116,6 +119,26 @@ export default function Progress() {
         try {
             const { granted } = await HealthKitService.checkHealthKitPermissions();
             setHealthPermissionsGranted(granted);
+            
+            // Auto-sync if permissions granted but no data exists
+            if (granted && user) {
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() - 60);
+                
+                // Check if we have any data
+                const { data: existingMetrics } = await SupabaseService.getHealthMetrics(
+                    user.id,
+                    startDate,
+                    endDate
+                );
+                
+                // If no data exists, trigger sync
+                if (!existingMetrics || existingMetrics.length === 0) {
+                    console.log('No health data found, triggering auto-sync...');
+                    await handleSyncHealth();
+                }
+            }
         } catch (error) {
             console.error('Error checking health permissions:', error);
             setHealthPermissionsGranted(false);
@@ -127,10 +150,10 @@ export default function Progress() {
         
         setHealthLoading(true);
         try {
-            // Get last 30 days of health metrics
+            // Get last 60 days of health metrics
             const endDate = new Date();
             const startDate = new Date();
-            startDate.setDate(startDate.getDate() - 30);
+            startDate.setDate(startDate.getDate() - 60);
 
             const { data: metrics, error } = await SupabaseService.getHealthMetrics(
                 user.id,
@@ -163,6 +186,42 @@ export default function Progress() {
                     .filter(d => d.value !== null && d.value !== undefined);
 
                 setHealthChartData(chartData);
+
+                // Prepare chart data for steps (last 14 days)
+                const stepsData = metrics
+                    .slice(0, 14)
+                    .reverse()
+                    .map(m => ({
+                        date: m.metric_date,
+                        value: m.step_count,
+                    }))
+                    .filter(d => d.value !== null && d.value !== undefined);
+
+                setStepsChartData(stepsData);
+
+                // Prepare chart data for distance walked (last 14 days)
+                const distanceData = metrics
+                    .slice(0, 14)
+                    .reverse()
+                    .map(m => ({
+                        date: m.metric_date,
+                        value: m.distance_walked,
+                    }))
+                    .filter(d => d.value !== null && d.value !== undefined);
+
+                setDistanceChartData(distanceData);
+
+                // Prepare chart data for step length (last 14 days)
+                const stepLengthData = metrics
+                    .slice(0, 14)
+                    .reverse()
+                    .map(m => ({
+                        date: m.metric_date,
+                        value: m.walking_step_length_avg,
+                    }))
+                    .filter(d => d.value !== null && d.value !== undefined);
+
+                setStepLengthChartData(stepLengthData);
             }
         } catch (error) {
             console.error('Error fetching health data:', error);
@@ -203,7 +262,7 @@ export default function Progress() {
             setHealthLoading(true);
             const endDate = new Date();
             const startDate = new Date();
-            startDate.setDate(startDate.getDate() - 30);
+            startDate.setDate(startDate.getDate() - 60);
 
             const { success, error } = await HealthMetricsService.syncAndSaveHealthData(
                 user.id,
@@ -479,6 +538,69 @@ export default function Progress() {
                                         </View>
                                         <Text style={styles.cardFooter}>
                                             Your walking speed over the last 14 days. Higher is better!
+                                        </Text>
+                                    </View>
+                                )}
+
+                                {stepsChartData.length > 0 && (
+                                    <View style={styles.card}>
+                                        <View style={styles.cardHeader}>
+                                            <View style={[styles.iconContainer, { backgroundColor: Colors.primaryLight + '20' }]}>
+                                                <Activity size={24} color={Colors.primary} />
+                                            </View>
+                                            <Text style={styles.cardTitle}>Daily Steps</Text>
+                                        </View>
+                                        <View style={styles.chartContainer}>
+                                            <HealthChart
+                                                data={stepsChartData}
+                                                metricName="Steps"
+                                                unit="steps"
+                                            />
+                                        </View>
+                                        <Text style={styles.cardFooter}>
+                                            Your daily step count over the last 14 days. Keep moving!
+                                        </Text>
+                                    </View>
+                                )}
+
+                                {distanceChartData.length > 0 && (
+                                    <View style={styles.card}>
+                                        <View style={styles.cardHeader}>
+                                            <View style={[styles.iconContainer, { backgroundColor: Colors.secondaryLight + '20' }]}>
+                                                <TrendingUp size={24} color={Colors.secondary} />
+                                            </View>
+                                            <Text style={styles.cardTitle}>Distance Walked</Text>
+                                        </View>
+                                        <View style={styles.chartContainer}>
+                                            <HealthChart
+                                                data={distanceChartData}
+                                                metricName="Distance"
+                                                unit="km"
+                                            />
+                                        </View>
+                                        <Text style={styles.cardFooter}>
+                                            Distance walked over the last 14 days. Track your progress!
+                                        </Text>
+                                    </View>
+                                )}
+
+                                {stepLengthChartData.length > 0 && (
+                                    <View style={styles.card}>
+                                        <View style={styles.cardHeader}>
+                                            <View style={[styles.iconContainer, { backgroundColor: Colors.success + '20' }]}>
+                                                <TrendingUp size={24} color={Colors.success} />
+                                            </View>
+                                            <Text style={styles.cardTitle}>Step Length Trend</Text>
+                                        </View>
+                                        <View style={styles.chartContainer}>
+                                            <HealthChart
+                                                data={stepLengthChartData}
+                                                metricName="Step Length"
+                                                unit="cm"
+                                            />
+                                        </View>
+                                        <Text style={styles.cardFooter}>
+                                            Average step length over the last 14 days. Longer steps indicate improved mobility.
                                         </Text>
                                     </View>
                                 )}
