@@ -143,7 +143,7 @@ export function CustomExerciseModal({
                     </View>
 
                     <KeyboardAvoidingView
-                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        behavior={Platform.OS === 'ios' ? 'position' : 'height'}
                         style={{ flex: 1 }}
                         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
                     >
@@ -313,7 +313,7 @@ export function CustomExerciseModal({
                                 <View style={styles.switchLabelContainer}>
                                     <Text style={styles.label}>Share with Care Team</Text>
                                     <Text style={styles.hint}>
-                                        Let your caregivers see this exercise
+                                        Let your circle see this exercise
                                     </Text>
                                 </View>
                                 <Switch
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         padding: 24,
-        paddingBottom: 100,
+        paddingBottom: 200,
     },
     field: {
         marginBottom: 20,

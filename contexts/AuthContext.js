@@ -1,7 +1,9 @@
 // contexts/AuthContext.js
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { SupabaseService } from '../services/SupabaseService';
 import { NotificationService } from '../services/NotificationService';
+import { supabase } from '../services/SupabaseService';
+import { KudosService } from '../services/KudosService';
 
 const AuthContext = createContext({});
 
@@ -10,39 +12,78 @@ export const AuthProvider = ({ children }) => {
     const [session, setSession] = useState(null);
     const [loading, setLoading] = useState(true);
     const [userData, setUserData] = useState(null); // Name, role, etc from users table
+    const kudosChannelRef = useRef(null); // Store Realtime channel reference
 
     useEffect(() => {
         // Check for existing session on mount
         checkSession();
 
-        // Only set up auth listener if Supabase is initialized
-        if (!SupabaseService.isInitialized()) {
-            console.warn('⚠️ Skipping auth state listener: Supabase not initialized');
-            return;
-        }
+        // Set up auth listener - retry if Supabase isn't ready yet
+        let authListener = null;
+        let retryCount = 0;
+        const maxRetries = 5;
+        const retryDelay = 1000; // 1 second
 
-        // Listen for auth changes
-        const { data: authListener } = SupabaseService.onAuthStateChange(
-            async (event, session) => {
-                console.log('🔐 Auth event:', event);
-                setSession(session);
-                setUser(session?.user ?? null);
-
-                if (session?.user) {
-                    // Load user data from users table
-                    await loadUserData(session.user.id, session.user);
-                    // Track app launch activity
-                    await trackActivityAndCheckInactivity(session.user.id);
+        const setupAuthListener = () => {
+            if (!SupabaseService.isInitialized()) {
+                if (retryCount < maxRetries) {
+                    retryCount++;
+                    console.warn(`⚠️ Supabase not initialized, retrying auth listener setup (${retryCount}/${maxRetries})...`);
+                    setTimeout(setupAuthListener, retryDelay);
+                    return;
                 } else {
-                    setUserData(null);
+                    console.error('❌ Failed to set up auth state listener: Supabase not initialized after retries');
+                    return;
                 }
             }
-        );
+
+            // Listen for auth changes
+            const listenerResult = SupabaseService.onAuthStateChange(
+                async (event, session) => {
+                    console.log('🔐 Auth event:', event);
+                    setSession(session);
+                    setUser(session?.user ?? null);
+
+                    if (session?.user) {
+                        // Load user data from users table with retry
+                        await loadUserDataWithRetry(session.user.id, session.user).catch(error => {
+                            console.error('❌ Failed to load user data after retries in auth listener:', error);
+                        });
+                        // Track app launch activity
+                        trackActivityAndCheckInactivity(session.user.id).catch(error => {
+                            console.error('❌ Failed to track activity:', error);
+                        });
+                    } else {
+                        // No session - clear user data and cleanup
+                        setUserData(null);
+                        cleanupKudosSubscription();
+                    }
+                }
+            );
+
+            authListener = listenerResult?.data || listenerResult;
+        };
+
+        setupAuthListener();
 
         return () => {
-            authListener?.subscription.unsubscribe();
+            if (authListener?.subscription) {
+                try {
+                    authListener.subscription.unsubscribe();
+                } catch (error) {
+                    console.error('❌ Error unsubscribing auth listener:', error);
+                }
+            }
+            cleanupKudosSubscription();
         };
     }, []);
+
+    // Clean up kudos subscription if user role changes from survivor to something else
+    useEffect(() => {
+        if (userData && userData.role !== 'survivor') {
+            cleanupKudosSubscription();
+        }
+    }, [userData?.role]);
 
     const checkSession = async () => {
         try {
@@ -56,76 +97,139 @@ export const AuthProvider = ({ children }) => {
                 return;
             }
 
-            // Wrap entire session check + user data loading in timeout
-            // This handles both AsyncStorage cold start AND Supabase paused scenarios
-            const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Session check timeout')), 15000)
+            // Separate session check from user data loading for better reliability
+            // First, check for session with a shorter timeout
+            const sessionTimeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Session check timeout')), 10000)
             );
 
-            await Promise.race([
-                (async () => {
-                    const { session } = await SupabaseService.getSession();
-                    setSession(session);
-                    setUser(session?.user ?? null);
+            let session = null;
+            try {
+                const sessionResult = await Promise.race([
+                    SupabaseService.getSession(),
+                    sessionTimeoutPromise
+                ]);
+                session = sessionResult.session;
+            } catch (error) {
+                console.error('❌ Error getting session:', error);
+                // Continue without session - user will need to login
+                setLoading(false);
+                return;
+            }
 
-                    if (session?.user) {
-                        await loadUserData(session.user.id, session.user);
-                        // Track app launch activity
-                        await trackActivityAndCheckInactivity(session.user.id);
-                    }
-                })(),
-                timeoutPromise
-            ]);
+            // Update session state immediately
+            setSession(session);
+            setUser(session?.user ?? null);
+
+            // If we have a session, load user data with retry logic
+            if (session?.user) {
+                // Load user data with retry - don't block session restoration
+                loadUserDataWithRetry(session.user.id, session.user).catch(error => {
+                    console.error('❌ Failed to load user data after retries:', error);
+                    // Even if userData fails, we have a session, so continue
+                });
+
+                // Track activity in background - don't block session check
+                trackActivityAndCheckInactivity(session.user.id).catch(error => {
+                    console.error('❌ Failed to track activity:', error);
+                    // Non-critical error - don't block app
+                });
+            }
         } catch (error) {
             console.error('❌ Error checking session:', error);
-            // On timeout or error, proceed without session (user will need to login)
+            // On any error, proceed without session (user will need to login)
         } finally {
+            // Always set loading to false, even if there were errors
             setLoading(false);
+        }
+    };
+
+    /**
+     * Load user data with retry logic
+     * Retries up to 3 times with exponential backoff
+     */
+    const loadUserDataWithRetry = async (userId, authUser = null, retries = 3) => {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                await loadUserData(userId, authUser);
+                return; // Success, exit retry loop
+            } catch (error) {
+                console.warn(`⚠️ Load user data attempt ${attempt}/${retries} failed:`, error);
+                
+                if (attempt < retries) {
+                    // Exponential backoff: 500ms, 1000ms, 2000ms
+                    const delay = 500 * Math.pow(2, attempt - 1);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    // Last attempt failed, throw error
+                    throw error;
+                }
+            }
         }
     };
 
     const loadUserData = async (userId, authUser = null) => {
         try {
+            // Try to load from database first
             const { user: dbUser, error } = await SupabaseService.getUserData(userId);
             if (!error && dbUser) {
                 setUserData(dbUser);
                 console.log('✅ User data loaded:', dbUser.name);
+                
+                // Set up kudos Realtime subscription for survivors
+                if (dbUser.role === 'survivor') {
+                    setupKudosSubscription(userId);
+                }
                 return;
             }
             
-            // Fallback: use auth metadata if users table entry missing
-            if (authUser?.user_metadata) {
-                const fallbackData = {
-                    id: userId,
-                    name: authUser.user_metadata.name || 'Friend',
-                    role: authUser.user_metadata.role || 'survivor',
-                    email: authUser.email,
-                };
-                setUserData(fallbackData);
-                console.log('⚠️ User data not in DB, using auth metadata:', fallbackData.name);
-            } else if (authUser) {
-                // Even if no metadata, create minimal userData
-                const fallbackData = {
-                    id: userId,
-                    name: 'Friend',
-                    role: 'survivor',
-                    email: authUser.email || '',
-                };
-                setUserData(fallbackData);
-                console.log('⚠️ User data not in DB, using minimal fallback');
-            }
+            // Database query failed or returned no data - use fallback
+            console.warn('⚠️ User data not found in DB, using fallback data');
+            setFallbackUserData(userId, authUser);
+            
         } catch (error) {
             console.error('❌ Error loading user data:', error);
-            // Try fallback if we have auth user
-            if (authUser?.user_metadata) {
-                const fallbackData = {
-                    id: userId,
-                    name: authUser.user_metadata.name || 'Friend',
-                    role: authUser.user_metadata.role || 'survivor',
-                    email: authUser.email,
-                };
-                setUserData(fallbackData);
-            }
+            // Always set fallback data if we have an authUser - never leave userData as null
+            setFallbackUserData(userId, authUser);
+        }
+    };
+
+    /**
+     * Set fallback user data from auth metadata
+     * Ensures userData is never null when user has a valid session
+     */
+    const setFallbackUserData = (userId, authUser) => {
+        if (!authUser) {
+            console.warn('⚠️ No authUser provided for fallback data');
+            return;
+        }
+
+        let fallbackData;
+        
+        if (authUser.user_metadata) {
+            fallbackData = {
+                id: userId,
+                name: authUser.user_metadata.name || 'Friend',
+                role: authUser.user_metadata.role || 'survivor',
+                email: authUser.email || '',
+            };
+            console.log('⚠️ Using auth metadata fallback:', fallbackData.name);
+        } else {
+            // Minimal fallback - at least we have a user
+            fallbackData = {
+                id: userId,
+                name: 'Friend',
+                role: 'survivor',
+                email: authUser.email || '',
+            };
+            console.log('⚠️ Using minimal fallback data');
+        }
+
+        setUserData(fallbackData);
+        
+        // Set up kudos Realtime subscription for survivors
+        if (fallbackData.role === 'survivor') {
+            setupKudosSubscription(userId);
         }
     };
 
@@ -149,6 +253,84 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
             console.error('❌ Error tracking activity:', error);
             // Non-critical error - don't block app functionality
+        }
+    };
+
+    /**
+     * Set up Supabase Realtime subscription for kudos notifications
+     * Only for survivors - listens for new kudos where survivor_id matches current user
+     */
+    const setupKudosSubscription = (survivorId) => {
+        // Clean up any existing subscription first
+        cleanupKudosSubscription();
+
+        // Only set up if Supabase is initialized
+        if (!SupabaseService.isInitialized()) {
+            console.warn('⚠️ Skipping kudos subscription: Supabase not initialized');
+            return;
+        }
+
+        try {
+            // Create a channel for kudos notifications
+            const channel = supabase
+                .channel(`kudos-notifications-${survivorId}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'kudos',
+                        filter: `survivor_id=eq.${survivorId}`,
+                    },
+                    async (payload) => {
+                        console.log('🎉 New kudos received via Realtime:', payload);
+                        
+                        // Get caregiver name from the payload or fetch it
+                        let caregiverName = 'Someone';
+                        
+                        if (payload.new?.caregiver_id) {
+                            try {
+                                // Fetch caregiver name
+                                const { user: caregiver, error } = await SupabaseService.getUserData(payload.new.caregiver_id);
+                                if (!error && caregiver?.name) {
+                                    caregiverName = caregiver.name.split(' ')[0]; // Use first name
+                                }
+                            } catch (error) {
+                                console.warn('⚠️ Could not fetch caregiver name, using default:', error);
+                            }
+                        }
+
+                        // Send push notification
+                        await NotificationService.sendKudosNotification(caregiverName);
+                    }
+                )
+                .subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        console.log('✅ Kudos Realtime subscription active for survivor:', survivorId);
+                    } else if (status === 'CHANNEL_ERROR') {
+                        console.error('❌ Kudos Realtime subscription error');
+                    }
+                });
+
+            // Store channel reference for cleanup
+            kudosChannelRef.current = channel;
+        } catch (error) {
+            console.error('❌ Error setting up kudos subscription:', error);
+        }
+    };
+
+    /**
+     * Clean up kudos Realtime subscription
+     */
+    const cleanupKudosSubscription = () => {
+        if (kudosChannelRef.current) {
+            try {
+                supabase.removeChannel(kudosChannelRef.current);
+                console.log('✅ Kudos Realtime subscription cleaned up');
+            } catch (error) {
+                console.error('❌ Error cleaning up kudos subscription:', error);
+            }
+            kudosChannelRef.current = null;
         }
     };
 
@@ -193,17 +375,32 @@ export const AuthProvider = ({ children }) => {
 
     const signOut = async () => {
         try {
-            const { error } = await SupabaseService.signOut();
-            // Always clear local state regardless of Supabase result
+            // Clean up kudos subscription before signing out
+            cleanupKudosSubscription();
+            
+            // Clear local state first - this ensures UI updates immediately
+            // The auth state listener will also fire and clear state again, which is fine
             setUser(null);
             setSession(null);
             setUserData(null);
-            if (error) {
-                console.warn('⚠️ Supabase signOut had error, but local state cleared:', error);
+            
+            // Then sign out from Supabase (this will trigger auth state change)
+            if (SupabaseService.isInitialized()) {
+                const { error } = await SupabaseService.signOut();
+                if (error) {
+                    console.warn('⚠️ Supabase signOut had error, but local state cleared:', error);
+                    // Even if Supabase signOut fails, local state is already cleared
+                } else {
+                    console.log('✅ Successfully signed out from Supabase');
+                }
+            } else {
+                console.warn('⚠️ Supabase not initialized, but local state cleared');
             }
+            
             return { error: null }; // Return success since local state is cleared
         } catch (error) {
-            // Still clear local state
+            // Still clear local state on any error
+            cleanupKudosSubscription();
             setUser(null);
             setSession(null);
             setUserData(null);

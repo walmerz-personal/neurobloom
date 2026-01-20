@@ -148,12 +148,42 @@ export default function Home() {
     };
 
     const handleLogout = async () => {
-        const { error } = await signOut();
-        if (error) {
-            Alert.alert('Logout Failed', 'Please try again');
-            return;
+        try {
+            // Show confirmation dialog
+            Alert.alert(
+                'Log Out',
+                'Are you sure you want to log out?',
+                [
+                    {
+                        text: 'Cancel',
+                        style: 'cancel',
+                    },
+                    {
+                        text: 'Log Out',
+                        style: 'destructive',
+                        onPress: async () => {
+                            // Sign out - this clears local state immediately
+                            const { error } = await signOut();
+                            
+                            if (error) {
+                                Alert.alert('Logout Failed', 'Please try again');
+                                return;
+                            }
+                            
+                            // Wait a brief moment for auth state to update
+                            // Then navigate to index which will redirect to login
+                            setTimeout(() => {
+                                router.replace('/');
+                            }, 100);
+                        },
+                    },
+                ],
+                { cancelable: true }
+            );
+        } catch (error) {
+            console.error('❌ Logout error:', error);
+            Alert.alert('Logout Failed', 'An error occurred. Please try again.');
         }
-        router.replace('/');
     };
 
     const handleNavigateToCaregiver = (action, survivor) => {

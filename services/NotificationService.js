@@ -160,6 +160,44 @@ export async function initializeNotifications() {
 }
 
 /**
+ * Send an immediate push notification for a kudos received
+ * @param {string} caregiverName - Name of the caregiver/medical professional who sent the kudos
+ * @returns {Promise<{sent, error}>} - Whether notification was sent
+ */
+export async function sendKudosNotification(caregiverName) {
+    try {
+        // Check if we have notification permissions
+        const { status } = await Notifications.getPermissionsAsync();
+        if (status !== 'granted') {
+            console.log('⏭️ Skipping kudos notification: notification permissions not granted');
+            return { sent: false, error: null };
+        }
+
+        // Send the kudos notification immediately
+        const notificationId = await Notifications.scheduleNotificationAsync({
+            content: {
+                title: "You received a kudos! 🎉",
+                body: `You received a kudos from ${caregiverName}! 🎉`,
+                sound: true,
+                data: { type: 'kudos' },
+            },
+            trigger: null, // Send immediately
+        });
+
+        if (notificationId) {
+            console.log(`✅ Kudos notification sent from ${caregiverName}`);
+            return { sent: true, error: null };
+        } else {
+            console.error('❌ Failed to send kudos notification: notification ID not returned');
+            return { sent: false, error: new Error('Notification scheduling failed') };
+        }
+    } catch (error) {
+        console.error('❌ Error sending kudos notification:', error);
+        return { sent: false, error };
+    }
+}
+
+/**
  * Check if user hasn't opened app for 2+ days and send reminder notification
  * @param {string} userId - User ID
  * @param {string} lastActivityAt - ISO timestamp of last activity (from database)
@@ -243,6 +281,7 @@ export const NotificationService = {
     loadNotificationPrefs,
     initializeNotifications,
     checkAndSendInactivityReminder,
+    sendKudosNotification,
     DEFAULT_HOUR,
     DEFAULT_MINUTE,
 };
