@@ -12,6 +12,7 @@ import * as HealthKitService from '../../services/HealthKitService';
 import * as HealthMetricsService from '../../services/HealthMetricsService';
 import { useRouter } from 'expo-router';
 import Svg, { Path, Circle, Line, Text as SvgText } from 'react-native-svg';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 
 const MOOD_MAP = {
     '😄': 5,
@@ -47,7 +48,12 @@ export default function Progress() {
         if (user) {
             fetchData();
             fetchHealthData();
-            checkHealthPermissions();
+            // Defer HealthKit permission checks to after initial render
+            // This prevents blocking the main thread during mount and reduces crash risk
+            const timer = setTimeout(() => {
+                checkHealthPermissions();
+            }, 100);
+            return () => clearTimeout(timer);
         }
     }, [user]);
 
@@ -399,12 +405,13 @@ export default function Progress() {
     };
 
     return (
-        <ScreenWrapper>
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>Your Progress</Text>
-            </View>
+        <ErrorBoundary>
+            <ScreenWrapper>
+                <View style={styles.header}>
+                    <Text style={styles.headerTitle}>Your Progress</Text>
+                </View>
 
-            <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
                         <View style={styles.iconContainer}>
@@ -608,8 +615,9 @@ export default function Progress() {
                         )}
                     </>
                 )}
-            </ScrollView>
-        </ScreenWrapper>
+                </ScrollView>
+            </ScreenWrapper>
+        </ErrorBoundary>
     );
 }
 

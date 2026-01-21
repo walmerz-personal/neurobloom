@@ -50,7 +50,8 @@ export function HealthChart({ data, metricName, unit = '', minValue, maxValue })
     // Calculate Y-axis range
     const min = minValue !== undefined ? minValue : Math.min(...values) * 0.9;
     const max = maxValue !== undefined ? maxValue : Math.max(...values) * 1.1;
-    const range = max - min;
+    // Ensure range is never zero to prevent division by zero (can cause crashes on iOS)
+    const range = Math.max(max - min, 0.001);
 
     // Calculate X-axis step
     const xStep = data.length > 1 ? chartWidth / (data.length - 1) : 0;

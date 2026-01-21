@@ -15,6 +15,9 @@ let HealthKit = null;
 let HKQuantityTypeIdentifier = null;
 let HKCategoryTypeIdentifier = null;
 
+// Safe mode flag - enabled if HealthKit crashes to prevent further crashes
+let healthKitSafeMode = false;
+
 try {
     const healthKitModule = require('@kingstinct/react-native-healthkit');
     HealthKit = healthKitModule.default || healthKitModule;
@@ -25,6 +28,7 @@ try {
     // HealthKit module not available (e.g., in Expo Go)
     console.warn('⚠️ HealthKit module not available. HealthKit features will be disabled.');
     HealthKit = null;
+    healthKitSafeMode = true; // Enable safe mode if module fails to load
 }
 
 // HealthKit quantity type identifiers (using full Apple identifiers)
@@ -52,13 +56,14 @@ export const isHealthKitAvailable = () => {
 
 // Async check for actual HealthKit availability on device
 export async function checkHealthKitDataAvailable() {
-    if (!isHealthKitAvailable() || !HealthKit) {
+    if (healthKitSafeMode || !isHealthKitAvailable() || !HealthKit) {
         return false;
     }
     try {
         return await HealthKit.isHealthDataAvailable();
     } catch (error) {
         console.error('❌ Error checking HealthKit availability:', error);
+        healthKitSafeMode = true; // Enable safe mode on crash
         return false;
     }
 }
@@ -68,7 +73,7 @@ export async function checkHealthKitDataAvailable() {
  * @returns {Promise<{granted: boolean, error: Error|null}>}
  */
 export async function requestHealthKitPermissions() {
-    if (!isHealthKitAvailable() || !HealthKit) {
+    if (healthKitSafeMode || !isHealthKitAvailable() || !HealthKit) {
         return { granted: false, error: new Error('HealthKit is not available on this device') };
     }
 
@@ -99,6 +104,7 @@ export async function requestHealthKitPermissions() {
         }
     } catch (error) {
         console.error('❌ Error requesting HealthKit permissions:', error);
+        healthKitSafeMode = true; // Enable safe mode on crash
         return { granted: false, error };
     }
 }
@@ -138,8 +144,8 @@ export async function hasHealthPermissionsBeenGranted() {
  * @returns {Promise<{granted: boolean, error: Error|null}>}
  */
 export async function checkHealthKitPermissions() {
-    if (!isHealthKitAvailable() || !HealthKit) {
-        return { granted: false, error: new Error('HealthKit is not available on this device') };
+    if (healthKitSafeMode || !isHealthKitAvailable() || !HealthKit) {
+        return { granted: false, error: null };
     }
 
     try {
@@ -150,26 +156,35 @@ export async function checkHealthKitPermissions() {
         }
 
         // Fallback: Try to check authorization status (unreliable for READ permissions on iOS)
-        const permissions = [
-            QUANTITY_TYPES.WALKING_SPEED,
-            QUANTITY_TYPES.WALKING_STEP_LENGTH,
-            QUANTITY_TYPES.WALKING_ASYMMETRY,
-            QUANTITY_TYPES.WALKING_DOUBLE_SUPPORT,
-            QUANTITY_TYPES.SIX_MINUTE_WALK,
-            QUANTITY_TYPES.STEP_COUNT,
-            QUANTITY_TYPES.DISTANCE_WALKING_RUNNING,
-            CATEGORY_TYPES.WALKING_STEADINESS,
-        ];
+        // Wrap in try-catch to catch any native crashes
+        try {
+            const permissions = [
+                QUANTITY_TYPES.WALKING_SPEED,
+                QUANTITY_TYPES.WALKING_STEP_LENGTH,
+                QUANTITY_TYPES.WALKING_ASYMMETRY,
+                QUANTITY_TYPES.WALKING_DOUBLE_SUPPORT,
+                QUANTITY_TYPES.SIX_MINUTE_WALK,
+                QUANTITY_TYPES.STEP_COUNT,
+                QUANTITY_TYPES.DISTANCE_WALKING_RUNNING,
+                CATEGORY_TYPES.WALKING_STEADINESS,
+            ];
 
-        const authorizationStatus = await HealthKit.authorizationStatusFor(permissions[0]);
-        
-        // Check if at least one permission is granted (authorizationStatus returns a number: 0=notDetermined, 1=sharingDenied, 2=sharingAuthorized)
-        const granted = authorizationStatus === 2; // sharingAuthorized
-        
-        return { granted, error: null };
+            const authorizationStatus = await HealthKit.authorizationStatusFor(permissions[0]);
+            
+            // Check if at least one permission is granted (authorizationStatus returns a number: 0=notDetermined, 1=sharingDenied, 2=sharingAuthorized)
+            const granted = authorizationStatus === 2; // sharingAuthorized
+            
+            return { granted, error: null };
+        } catch (nativeError) {
+            // Native crash detected - enable safe mode and return gracefully
+            console.error('❌ HealthKit native crash detected in authorizationStatusFor:', nativeError);
+            healthKitSafeMode = true;
+            return { granted: false, error: null }; // Return null error to avoid propagating crash
+        }
     } catch (error) {
         console.error('❌ Error checking HealthKit permissions:', error);
-        return { granted: false, error };
+        healthKitSafeMode = true; // Enable safe mode on crash
+        return { granted: false, error: null }; // Return null error to avoid propagating crash
     }
 }
 
