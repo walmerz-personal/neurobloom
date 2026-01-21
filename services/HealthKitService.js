@@ -53,7 +53,7 @@ const CATEGORY_TYPES = {
 // Check if HealthKit is available (iOS only and module loaded)
 // Note: This is a synchronous check. For actual availability, use isHealthDataAvailable() async method
 export const isHealthKitAvailable = () => {
-    return Platform.OS === 'ios' && HealthKit !== null;
+    return Platform.OS === 'ios' && HealthKit !== null && !healthKitSafeMode && !nativeCrashDetected;
 };
 
 // Async check for actual HealthKit availability on device
@@ -159,7 +159,8 @@ export async function hasHealthPermissionsBeenGranted() {
  * @returns {Promise<{granted: boolean, error: Error|null}>}
  */
 export async function checkHealthKitPermissions() {
-    if (healthKitSafeMode || nativeCrashDetected || !isHealthKitAvailable() || !HealthKit) {
+    // Early return if HealthKit module is not available or safe mode is enabled
+    if (!HealthKit || healthKitSafeMode || nativeCrashDetected || !isHealthKitAvailable()) {
         return { granted: false, error: null };
     }
 

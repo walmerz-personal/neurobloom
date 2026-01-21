@@ -97,9 +97,29 @@ export const AuthProvider = ({ children }) => {
                 return;
             }
 
-            // Get session without aggressive timeout - auth listener handles state
+            // Add timeout to prevent hanging - 5 second timeout
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => {
+                    reject(new Error('Session check timeout'));
+                }, 5000);
+            });
+
+            // Get session with timeout protection
             // The auth state listener will handle session restoration even if this fails
-            const { session, error } = await SupabaseService.getSession();
+            let sessionResult;
+            try {
+                sessionResult = await Promise.race([
+                    SupabaseService.getSession(),
+                    timeoutPromise
+                ]);
+            } catch (timeoutError) {
+                console.warn('⚠️ Session check timed out (non-fatal):', timeoutError.message);
+                // Auth listener will handle valid sessions even if this times out
+                // Continue without blocking - user can still login if needed
+                return;
+            }
+
+            const { session, error } = sessionResult || { session: null, error: null };
             
             if (error) {
                 console.warn('⚠️ Session check error (non-fatal):', error.message);

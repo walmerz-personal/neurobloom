@@ -106,11 +106,15 @@ export default function Progress() {
     const fetchData = async (signal) => {
         // Guard clause: check user and signal
         if (!user?.id || signal?.aborted) {
-            if (!signal?.aborted) setLoading(false);
+            if (!signal?.aborted && isMountedRef.current) {
+                setLoading(false);
+            }
             return;
         }
 
-        setLoading(true);
+        if (isMountedRef.current) {
+            setLoading(true);
+        }
         try {
             // Fetch logs for mood chart
             const { logs, error } = await SupabaseService.getDailyLogs(user.id, 30); // Last 30 entries
@@ -212,6 +216,14 @@ export default function Progress() {
             return;
         }
 
+        // Check if HealthKit is available before attempting to check permissions
+        if (!HealthKitService.isHealthKitAvailable()) {
+            if (!signal?.aborted && isMountedRef.current) {
+                setHealthPermissionsGranted(false);
+            }
+            return;
+        }
+
         try {
             const { granted } = await HealthKitService.checkHealthKitPermissions();
             
@@ -220,24 +232,34 @@ export default function Progress() {
             setHealthPermissionsGranted(granted);
             
             // Auto-sync if permissions granted but no data exists
-            if (granted && user?.id && !signal?.aborted && isMountedRef.current) {
-                const endDate = new Date();
-                const startDate = new Date();
-                startDate.setDate(startDate.getDate() - 60);
-                
-                // Check if we have any data
-                const { data: existingMetrics } = await SupabaseService.getHealthMetrics(
-                    user.id,
-                    startDate,
-                    endDate
-                );
-                
-                if (signal?.aborted || !isMountedRef.current) return;
-                
-                // If no data exists, trigger sync
-                if (!existingMetrics || existingMetrics.length === 0) {
-                    console.log('No health data found, triggering auto-sync...');
-                    await handleSyncHealth();
+            // Only sync if HealthKit is available and component is still mounted
+            if (granted && user?.id && HealthKitService.isHealthKitAvailable() && !signal?.aborted && isMountedRef.current) {
+                try {
+                    const endDate = new Date();
+                    const startDate = new Date();
+                    startDate.setDate(startDate.getDate() - 60);
+                    
+                    // Check if we have any data
+                    const { data: existingMetrics } = await SupabaseService.getHealthMetrics(
+                        user.id,
+                        startDate,
+                        endDate
+                    );
+                    
+                    if (signal?.aborted || !isMountedRef.current) return;
+                    
+                    // If no data exists, trigger sync (only if HealthKit is still available)
+                    if ((!existingMetrics || existingMetrics.length === 0) && HealthKitService.isHealthKitAvailable()) {
+                        console.log('No health data found, triggering auto-sync...');
+                        await handleSyncHealth();
+                    }
+                } catch (syncError) {
+                    // Log error but don't crash - auto-sync is optional
+                    console.error('[Progress] Error during auto-sync check:', {
+                        error: syncError.message || syncError,
+                        userId: user?.id,
+                        timestamp: new Date().toISOString()
+                    });
                 }
             }
         } catch (error) {
@@ -262,7 +284,9 @@ export default function Progress() {
             return;
         }
         
-        setHealthLoading(true);
+        if (isMountedRef.current) {
+            setHealthLoading(true);
+        }
         try {
             // Get last 60 days of health metrics
             const endDate = new Date();
@@ -403,35 +427,73 @@ export default function Progress() {
     };
 
     const handleSyncHealth = async () => {
+        // Guard: Check user, mount status, and HealthKit availability
         if (!user?.id || !isMountedRef.current) return;
 
+        // Check if HealthKit is available before attempting sync
+        if (!HealthKitService.isHealthKitAvailable()) {
+            console.warn('[Progress] HealthKit not available, skipping sync');
+            if (isMountedRef.current) {
+                setHealthLoading(false);
+            }
+            return;
+        }
+
         try {
-            setHealthLoading(true);
+            if (isMountedRef.current) {
+                setHealthLoading(true);
+            }
+            
             const endDate = new Date();
             const startDate = new Date();
             startDate.setDate(startDate.getDate() - 60);
 
-            const { success, error } = await HealthMetricsService.syncAndSaveHealthData(
-                user.id,
-                startDate,
-                endDate
-            );
+            // Wrap sync call in additional error handling
+            let syncResult;
+            try {
+                syncResult = await HealthMetricsService.syncAndSaveHealthData(
+                    user.id,
+                    startDate,
+                    endDate
+                );
+            } catch (syncError) {
+                // Catch any errors from the sync service itself
+                console.error('[Progress] Exception in syncAndSaveHealthData:', {
+                    error: syncError.message || syncError,
+                    stack: syncError.stack,
+                    userId: user?.id,
+                    timestamp: new Date().toISOString()
+                });
+                syncResult = { success: false, error: syncError };
+            }
 
             if (!isMountedRef.current) return;
 
-            if (success) {
+            if (syncResult?.success) {
                 // Refresh health data with current abort controller
-                await fetchHealthData(abortControllerRef.current?.signal);
+                // Only refresh if component is still mounted and HealthKit is still available
+                if (isMountedRef.current && HealthKitService.isHealthKitAvailable()) {
+                    try {
+                        await fetchHealthData(abortControllerRef.current?.signal);
+                    } catch (fetchError) {
+                        console.error('[Progress] Error refreshing health data after sync:', {
+                            error: fetchError.message || fetchError,
+                            userId: user?.id,
+                            timestamp: new Date().toISOString()
+                        });
+                    }
+                }
             } else {
                 console.error('[Progress] Error syncing health data:', {
-                    error: error?.message || error,
+                    error: syncResult?.error?.message || syncResult?.error || 'Unknown error',
                     userId: user?.id,
                     timestamp: new Date().toISOString()
                 });
             }
         } catch (error) {
+            // Catch any unexpected errors
             if (isMountedRef.current) {
-                console.error('[Progress] Exception syncing health data:', {
+                console.error('[Progress] Unexpected exception syncing health data:', {
                     error: error.message || error,
                     stack: error.stack,
                     userId: user?.id,
@@ -439,6 +501,7 @@ export default function Progress() {
                 });
             }
         } finally {
+            // Always reset loading state if component is still mounted
             if (isMountedRef.current) {
                 setHealthLoading(false);
             }
