@@ -97,32 +97,21 @@ export const AuthProvider = ({ children }) => {
                 return;
             }
 
-            // Separate session check from user data loading for better reliability
-            // First, check for session with a shorter timeout
-            const sessionTimeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Session check timeout')), 10000)
-            );
-
-            let session = null;
-            try {
-                const sessionResult = await Promise.race([
-                    SupabaseService.getSession(),
-                    sessionTimeoutPromise
-                ]);
-                session = sessionResult.session;
-            } catch (error) {
-                console.error('❌ Error getting session:', error);
-                // Continue without session - user will need to login
-                setLoading(false);
-                return;
+            // Get session without aggressive timeout - auth listener handles state
+            // The auth state listener will handle session restoration even if this fails
+            const { session, error } = await SupabaseService.getSession();
+            
+            if (error) {
+                console.warn('⚠️ Session check error (non-fatal):', error.message);
+                // Auth listener will handle valid sessions even if this fails
+                // Continue without blocking - user can still login if needed
             }
 
-            // Update session state immediately
-            setSession(session);
-            setUser(session?.user ?? null);
+            // Update session state if we have one
+            if (session) {
+                setSession(session);
+                setUser(session.user ?? null);
 
-            // If we have a session, load user data with retry logic
-            if (session?.user) {
                 // Load user data with retry - don't block session restoration
                 loadUserDataWithRetry(session.user.id, session.user).catch(error => {
                     console.error('❌ Failed to load user data after retries:', error);
@@ -136,8 +125,8 @@ export const AuthProvider = ({ children }) => {
                 });
             }
         } catch (error) {
-            console.error('❌ Error checking session:', error);
-            // On any error, proceed without session (user will need to login)
+            console.warn('⚠️ Session check exception (non-fatal):', error.message);
+            // On any error, proceed without session - auth listener will handle valid sessions
         } finally {
             // Always set loading to false, even if there were errors
             setLoading(false);
