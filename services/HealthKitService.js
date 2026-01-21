@@ -17,6 +17,8 @@ let HKCategoryTypeIdentifier = null;
 
 // Safe mode flag - enabled if HealthKit crashes to prevent further crashes
 let healthKitSafeMode = false;
+// Native crash detection flag
+let nativeCrashDetected = false;
 
 try {
     const healthKitModule = require('@kingstinct/react-native-healthkit');
@@ -56,13 +58,24 @@ export const isHealthKitAvailable = () => {
 
 // Async check for actual HealthKit availability on device
 export async function checkHealthKitDataAvailable() {
-    if (healthKitSafeMode || !isHealthKitAvailable() || !HealthKit) {
+    if (healthKitSafeMode || nativeCrashDetected || !isHealthKitAvailable() || !HealthKit) {
         return false;
     }
     try {
-        return await HealthKit.isHealthDataAvailable();
+        // Use timeout to detect native crashes
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+                reject(new Error('HealthKit availability check timeout'));
+            }, 3000);
+        });
+        
+        return await Promise.race([
+            HealthKit.isHealthDataAvailable(),
+            timeoutPromise
+        ]);
     } catch (error) {
         console.error('❌ Error checking HealthKit availability:', error);
+        nativeCrashDetected = true;
         healthKitSafeMode = true; // Enable safe mode on crash
         return false;
     }
@@ -73,7 +86,7 @@ export async function checkHealthKitDataAvailable() {
  * @returns {Promise<{granted: boolean, error: Error|null}>}
  */
 export async function requestHealthKitPermissions() {
-    if (healthKitSafeMode || !isHealthKitAvailable() || !HealthKit) {
+    if (healthKitSafeMode || nativeCrashDetected || !isHealthKitAvailable() || !HealthKit) {
         return { granted: false, error: new Error('HealthKit is not available on this device') };
     }
 
@@ -104,6 +117,7 @@ export async function requestHealthKitPermissions() {
         }
     } catch (error) {
         console.error('❌ Error requesting HealthKit permissions:', error);
+        nativeCrashDetected = true;
         healthKitSafeMode = true; // Enable safe mode on crash
         return { granted: false, error };
     }
@@ -141,10 +155,11 @@ export async function hasHealthPermissionsBeenGranted() {
 /**
  * Check if HealthKit permissions are already granted
  * Uses AsyncStorage flag first (more reliable on iOS), then falls back to authorizationStatusFor
+ * Includes timeout mechanism to detect native crashes
  * @returns {Promise<{granted: boolean, error: Error|null}>}
  */
 export async function checkHealthKitPermissions() {
-    if (healthKitSafeMode || !isHealthKitAvailable() || !HealthKit) {
+    if (healthKitSafeMode || nativeCrashDetected || !isHealthKitAvailable() || !HealthKit) {
         return { granted: false, error: null };
     }
 
@@ -156,33 +171,46 @@ export async function checkHealthKitPermissions() {
         }
 
         // Fallback: Try to check authorization status (unreliable for READ permissions on iOS)
-        // Wrap in try-catch to catch any native crashes
-        try {
-            const permissions = [
-                QUANTITY_TYPES.WALKING_SPEED,
-                QUANTITY_TYPES.WALKING_STEP_LENGTH,
-                QUANTITY_TYPES.WALKING_ASYMMETRY,
-                QUANTITY_TYPES.WALKING_DOUBLE_SUPPORT,
-                QUANTITY_TYPES.SIX_MINUTE_WALK,
-                QUANTITY_TYPES.STEP_COUNT,
-                QUANTITY_TYPES.DISTANCE_WALKING_RUNNING,
-                CATEGORY_TYPES.WALKING_STEADINESS,
-            ];
+        // Use Promise.race with timeout to detect native crashes
+        const permissions = [
+            QUANTITY_TYPES.WALKING_SPEED,
+            QUANTITY_TYPES.WALKING_STEP_LENGTH,
+            QUANTITY_TYPES.WALKING_ASYMMETRY,
+            QUANTITY_TYPES.WALKING_DOUBLE_SUPPORT,
+            QUANTITY_TYPES.SIX_MINUTE_WALK,
+            QUANTITY_TYPES.STEP_COUNT,
+            QUANTITY_TYPES.DISTANCE_WALKING_RUNNING,
+            CATEGORY_TYPES.WALKING_STEADINESS,
+        ];
 
-            const authorizationStatus = await HealthKit.authorizationStatusFor(permissions[0]);
+        // Create timeout promise to detect native crashes (5 second timeout)
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+                reject(new Error('HealthKit timeout - possible native crash'));
+            }, 5000);
+        });
+
+        // Race between actual call and timeout
+        try {
+            const authorizationStatus = await Promise.race([
+                HealthKit.authorizationStatusFor(permissions[0]),
+                timeoutPromise
+            ]);
             
             // Check if at least one permission is granted (authorizationStatus returns a number: 0=notDetermined, 1=sharingDenied, 2=sharingAuthorized)
             const granted = authorizationStatus === 2; // sharingAuthorized
             
             return { granted, error: null };
         } catch (nativeError) {
-            // Native crash detected - enable safe mode and return gracefully
-            console.error('❌ HealthKit native crash detected in authorizationStatusFor:', nativeError);
+            // Native crash or timeout detected - enable safe mode and return gracefully
+            console.error('❌ HealthKit native crash/timeout detected in authorizationStatusFor:', nativeError);
+            nativeCrashDetected = true;
             healthKitSafeMode = true;
             return { granted: false, error: null }; // Return null error to avoid propagating crash
         }
     } catch (error) {
         console.error('❌ Error checking HealthKit permissions:', error);
+        nativeCrashDetected = true;
         healthKitSafeMode = true; // Enable safe mode on crash
         return { granted: false, error: null }; // Return null error to avoid propagating crash
     }

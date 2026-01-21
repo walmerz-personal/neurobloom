@@ -3,7 +3,7 @@ import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
 import { TrendingUp, Calendar, Award, Activity, Settings } from 'lucide-react-native';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { SupabaseService } from '../../services/SupabaseService';
 import { HealthMetricsCard } from '../../components/HealthMetricsCard';
@@ -13,6 +13,7 @@ import * as HealthMetricsService from '../../services/HealthMetricsService';
 import { useRouter } from 'expo-router';
 import Svg, { Path, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
+import { validateChartPoint, safeFormatDate, validateChartData, validateMoodLog } from '../../utils/dataValidation';
 
 const MOOD_MAP = {
     '😄': 5,
@@ -44,90 +45,182 @@ export default function Progress() {
     const [stepLengthChartData, setStepLengthChartData] = useState([]);
     const [healthPermissionsGranted, setHealthPermissionsGranted] = useState(false);
 
-    useEffect(() => {
-        if (user) {
-            fetchData();
-            fetchHealthData();
-            // Defer HealthKit permission checks to after initial render
-            // This prevents blocking the main thread during mount and reduces crash risk
-            const timer = setTimeout(() => {
-                checkHealthPermissions();
-            }, 100);
-            return () => clearTimeout(timer);
-        }
-    }, [user]);
+    // Use ref to track if component is mounted
+    const isMountedRef = useRef(true);
+    const abortControllerRef = useRef(null);
 
-    const fetchData = async () => {
+    useEffect(() => {
+        isMountedRef.current = true;
+        return () => {
+            isMountedRef.current = false;
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!user?.id) {
+            setLoading(false);
+            setHealthLoading(false);
+            return;
+        }
+
+        // Create new AbortController for this effect
+        abortControllerRef.current = new AbortController();
+        const signal = abortControllerRef.current.signal;
+
+        const loadData = async () => {
+            try {
+                // Load data in parallel but check abort signal
+                await Promise.all([
+                    fetchData(signal),
+                    fetchHealthData(signal),
+                ]);
+
+                // Defer HealthKit permission checks to after initial render
+                // This prevents blocking the main thread during mount and reduces crash risk
+                if (!signal.aborted && isMountedRef.current) {
+                    setTimeout(() => {
+                        if (!signal.aborted && isMountedRef.current) {
+                            checkHealthPermissions(signal);
+                        }
+                    }, 100);
+                }
+            } catch (error) {
+                if (!signal.aborted && isMountedRef.current) {
+                    console.error('Error loading progress data:', error);
+                }
+            }
+        };
+
+        loadData();
+
+        return () => {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+        };
+    }, [user?.id]);
+
+    const fetchData = async (signal) => {
+        // Guard clause: check user and signal
+        if (!user?.id || signal?.aborted) {
+            if (!signal?.aborted) setLoading(false);
+            return;
+        }
+
         setLoading(true);
         try {
             // Fetch logs for mood chart
             const { logs, error } = await SupabaseService.getDailyLogs(user.id, 30); // Last 30 entries
 
+            if (signal?.aborted || !isMountedRef.current) return;
+
             if (error) {
-                console.error('Error fetching logs:', error);
-            } else {
+                console.error('[Progress] Error fetching logs:', {
+                    error: error.message || error,
+                    userId: user?.id,
+                    timestamp: new Date().toISOString()
+                });
+            } else if (logs && Array.isArray(logs)) {
+                // Validate and filter logs
+                const validLogs = logs.filter(validateMoodLog);
+
                 // Process logs for chart
                 // Sort by date ascending
-                const sortedLogs = [...logs].sort((a, b) => new Date(a.log_date) - new Date(b.log_date));
+                const sortedLogs = [...validLogs].sort((a, b) => {
+                    const dateA = new Date(a.log_date);
+                    const dateB = new Date(b.log_date);
+                    if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
+                    return dateA - dateB;
+                });
 
-                // Take last 7 days for the chart for better visibility, or up to 14
-                // Let's use last 7 entries for a clean weekly view, or more if available but limited space
+                // Take last 7 days for the chart for better visibility
                 const recentLogs = sortedLogs.slice(-7);
 
-                const chartData = recentLogs.map(log => ({
-                    date: log.log_date,
-                    value: MOOD_MAP[log.mood] || 3, // Default to neutral if unknown
-                    mood: log.mood
-                }));
+                // Map to chart data with validation
+                const chartData = recentLogs
+                    .map(log => {
+                        const moodValue = MOOD_MAP[log.mood];
+                        if (moodValue === undefined) return null;
+                        return {
+                            date: log.log_date,
+                            value: moodValue,
+                            mood: log.mood
+                        };
+                    })
+                    .filter(point => point !== null && validateChartPoint(point));
 
-                setMoodData(chartData);
+                if (!signal?.aborted && isMountedRef.current) {
+                    setMoodData(chartData);
+                }
 
                 // Calculate streaks (simplified logic for now)
-                // In a real app, this would be more robust or calculated on backend
                 let current = 0;
                 let longest = 0;
-                let total = logs.length;
+                let total = validLogs.length;
 
                 // Calculate "This Week's Goal" (days with exercises in last 7 days)
                 const oneWeekAgo = new Date();
                 oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-                const exercisesThisWeek = logs.filter(log => {
-                    const logDate = new Date(log.log_date);
-                    return logDate >= oneWeekAgo &&
-                        log.exercises_completed &&
-                        log.exercises_completed.length > 0;
+                const exercisesThisWeek = validLogs.filter(log => {
+                    try {
+                        const logDate = new Date(log.log_date);
+                        if (isNaN(logDate.getTime())) return false;
+                        return logDate >= oneWeekAgo &&
+                            log.exercises_completed &&
+                            Array.isArray(log.exercises_completed) &&
+                            log.exercises_completed.length > 0;
+                    } catch {
+                        return false;
+                    }
                 }).length;
 
                 // Simple streak calc: consecutive days backwards from today
-                // This is a placeholder logic as real streak calc is complex with missing days
-                // For now, just using total logs as a proxy for engagement
-                setStreak({
-                    current: total > 0 ? 1 : 0, // Placeholder
-                    longest: total > 0 ? Math.max(3, total) : 0, // Placeholder
-                    total: total,
-                    thisWeek: exercisesThisWeek
-                });
+                if (!signal?.aborted && isMountedRef.current) {
+                    setStreak({
+                        current: total > 0 ? 1 : 0, // Placeholder
+                        longest: total > 0 ? Math.max(3, total) : 0, // Placeholder
+                        total: total,
+                        thisWeek: exercisesThisWeek
+                    });
+                }
             }
         } catch (e) {
-            console.error('Exception fetching data:', e);
+            if (!signal?.aborted && isMountedRef.current) {
+                console.error('[Progress] Exception fetching data:', {
+                    error: e.message || e,
+                    stack: e.stack,
+                    userId: user?.id,
+                    timestamp: new Date().toISOString()
+                });
+            }
         } finally {
-            setLoading(false);
+            if (!signal?.aborted && isMountedRef.current) {
+                setLoading(false);
+            }
         }
     };
 
-    const checkHealthPermissions = async () => {
-        if (Platform.OS !== 'ios') {
-            setHealthPermissionsGranted(false);
+    const checkHealthPermissions = async (signal) => {
+        if (Platform.OS !== 'ios' || signal?.aborted || !isMountedRef.current) {
+            if (!signal?.aborted && isMountedRef.current) {
+                setHealthPermissionsGranted(false);
+            }
             return;
         }
 
         try {
             const { granted } = await HealthKitService.checkHealthKitPermissions();
+            
+            if (signal?.aborted || !isMountedRef.current) return;
+            
             setHealthPermissionsGranted(granted);
             
             // Auto-sync if permissions granted but no data exists
-            if (granted && user) {
+            if (granted && user?.id && !signal?.aborted && isMountedRef.current) {
                 const endDate = new Date();
                 const startDate = new Date();
                 startDate.setDate(startDate.getDate() - 60);
@@ -139,6 +232,8 @@ export default function Progress() {
                     endDate
                 );
                 
+                if (signal?.aborted || !isMountedRef.current) return;
+                
                 // If no data exists, trigger sync
                 if (!existingMetrics || existingMetrics.length === 0) {
                     console.log('No health data found, triggering auto-sync...');
@@ -146,13 +241,26 @@ export default function Progress() {
                 }
             }
         } catch (error) {
-            console.error('Error checking health permissions:', error);
-            setHealthPermissionsGranted(false);
+            if (!signal?.aborted && isMountedRef.current) {
+                console.error('[Progress] Error checking health permissions:', {
+                    error: error.message || error,
+                    stack: error.stack,
+                    userId: user?.id,
+                    timestamp: new Date().toISOString()
+                });
+                setHealthPermissionsGranted(false);
+            }
         }
     };
 
-    const fetchHealthData = async () => {
-        if (!user) return;
+    const fetchHealthData = async (signal) => {
+        // Guard clause: check user and signal
+        if (!user?.id || signal?.aborted || !isMountedRef.current) {
+            if (!signal?.aborted && isMountedRef.current) {
+                setHealthLoading(false);
+            }
+            return;
+        }
         
         setHealthLoading(true);
         try {
@@ -167,72 +275,105 @@ export default function Progress() {
                 endDate
             );
 
+            if (signal?.aborted || !isMountedRef.current) return;
+
             if (error) {
-                console.error('Error fetching health metrics:', error);
-            } else if (metrics && metrics.length > 0) {
+                console.error('[Progress] Error fetching health metrics:', {
+                    error: error.message || error,
+                    userId: user?.id,
+                    timestamp: new Date().toISOString()
+                });
+            } else if (metrics && Array.isArray(metrics) && metrics.length > 0) {
                 // Get latest metrics for the card
                 const latest = metrics[0];
-                setHealthMetrics({
-                    walkingSteadiness: latest.walking_steadiness,
-                    walkingSpeedAvg: latest.walking_speed_avg,
-                    stepCount: latest.step_count,
-                    distanceWalked: latest.distance_walked,
-                    walkingStepLengthAvg: latest.walking_step_length_avg,
-                    walkingAsymmetryPercentage: latest.walking_asymmetry_percentage,
-                });
+                if (latest && !signal?.aborted && isMountedRef.current) {
+                    setHealthMetrics({
+                        walkingSteadiness: latest.walking_steadiness || null,
+                        walkingSpeedAvg: latest.walking_speed_avg || null,
+                        stepCount: latest.step_count || null,
+                        distanceWalked: latest.distance_walked || null,
+                        walkingStepLengthAvg: latest.walking_step_length_avg || null,
+                        walkingAsymmetryPercentage: latest.walking_asymmetry_percentage || null,
+                    });
+                }
 
-                // Prepare chart data for walking speed (last 14 days)
-                const chartData = metrics
-                    .slice(0, 14)
-                    .reverse()
-                    .map(m => ({
-                        date: m.metric_date,
-                        value: m.walking_speed_avg,
-                    }))
-                    .filter(d => d.value !== null && d.value !== undefined);
+                // Prepare chart data for walking speed (last 14 days) with validation
+                const chartData = validateChartData(
+                    metrics
+                        .slice(0, 14)
+                        .reverse()
+                        .map(m => ({
+                            date: m?.metric_date || '',
+                            value: m?.walking_speed_avg || 0,
+                        }))
+                        .filter(d => d.value !== null && d.value !== undefined && d.value > 0)
+                );
 
-                setHealthChartData(chartData);
+                if (!signal?.aborted && isMountedRef.current) {
+                    setHealthChartData(chartData);
+                }
 
-                // Prepare chart data for steps (last 14 days)
-                const stepsData = metrics
-                    .slice(0, 14)
-                    .reverse()
-                    .map(m => ({
-                        date: m.metric_date,
-                        value: m.step_count,
-                    }))
-                    .filter(d => d.value !== null && d.value !== undefined);
+                // Prepare chart data for steps (last 14 days) with validation
+                const stepsData = validateChartData(
+                    metrics
+                        .slice(0, 14)
+                        .reverse()
+                        .map(m => ({
+                            date: m?.metric_date || '',
+                            value: m?.step_count || 0,
+                        }))
+                        .filter(d => d.value !== null && d.value !== undefined && d.value > 0)
+                );
 
-                setStepsChartData(stepsData);
+                if (!signal?.aborted && isMountedRef.current) {
+                    setStepsChartData(stepsData);
+                }
 
-                // Prepare chart data for distance walked (last 14 days)
-                const distanceData = metrics
-                    .slice(0, 14)
-                    .reverse()
-                    .map(m => ({
-                        date: m.metric_date,
-                        value: m.distance_walked,
-                    }))
-                    .filter(d => d.value !== null && d.value !== undefined);
+                // Prepare chart data for distance walked (last 14 days) with validation
+                const distanceData = validateChartData(
+                    metrics
+                        .slice(0, 14)
+                        .reverse()
+                        .map(m => ({
+                            date: m?.metric_date || '',
+                            value: m?.distance_walked || 0,
+                        }))
+                        .filter(d => d.value !== null && d.value !== undefined && d.value > 0)
+                );
 
-                setDistanceChartData(distanceData);
+                if (!signal?.aborted && isMountedRef.current) {
+                    setDistanceChartData(distanceData);
+                }
 
-                // Prepare chart data for step length (last 14 days)
-                const stepLengthData = metrics
-                    .slice(0, 14)
-                    .reverse()
-                    .map(m => ({
-                        date: m.metric_date,
-                        value: m.walking_step_length_avg,
-                    }))
-                    .filter(d => d.value !== null && d.value !== undefined);
+                // Prepare chart data for step length (last 14 days) with validation
+                const stepLengthData = validateChartData(
+                    metrics
+                        .slice(0, 14)
+                        .reverse()
+                        .map(m => ({
+                            date: m?.metric_date || '',
+                            value: m?.walking_step_length_avg || 0,
+                        }))
+                        .filter(d => d.value !== null && d.value !== undefined && d.value > 0)
+                );
 
-                setStepLengthChartData(stepLengthData);
+                if (!signal?.aborted && isMountedRef.current) {
+                    setStepLengthChartData(stepLengthData);
+                }
             }
         } catch (error) {
-            console.error('Error fetching health data:', error);
+            if (!signal?.aborted && isMountedRef.current) {
+                console.error('[Progress] Error fetching health data:', {
+                    error: error.message || error,
+                    stack: error.stack,
+                    userId: user?.id,
+                    timestamp: new Date().toISOString()
+                });
+            }
         } finally {
-            setHealthLoading(false);
+            if (!signal?.aborted && isMountedRef.current) {
+                setHealthLoading(false);
+            }
         }
     };
 
@@ -262,7 +403,7 @@ export default function Progress() {
     };
 
     const handleSyncHealth = async () => {
-        if (!user) return;
+        if (!user?.id || !isMountedRef.current) return;
 
         try {
             setHealthLoading(true);
@@ -276,21 +417,39 @@ export default function Progress() {
                 endDate
             );
 
+            if (!isMountedRef.current) return;
+
             if (success) {
-                // Refresh health data
-                await fetchHealthData();
+                // Refresh health data with current abort controller
+                await fetchHealthData(abortControllerRef.current?.signal);
             } else {
-                console.error('Error syncing health data:', error);
+                console.error('[Progress] Error syncing health data:', {
+                    error: error?.message || error,
+                    userId: user?.id,
+                    timestamp: new Date().toISOString()
+                });
             }
         } catch (error) {
-            console.error('Error syncing health data:', error);
+            if (isMountedRef.current) {
+                console.error('[Progress] Exception syncing health data:', {
+                    error: error.message || error,
+                    stack: error.stack,
+                    userId: user?.id,
+                    timestamp: new Date().toISOString()
+                });
+            }
         } finally {
-            setHealthLoading(false);
+            if (isMountedRef.current) {
+                setHealthLoading(false);
+            }
         }
     };
 
     const Chart = ({ data }) => {
-        if (!data || data.length === 0) {
+        // Validate and filter data
+        const validData = validateChartData(data || []);
+        
+        if (!validData || validData.length === 0) {
             return (
                 <View style={styles.emptyChart}>
                     <Text style={styles.emptyChartText}>
@@ -310,25 +469,27 @@ export default function Progress() {
         const chartWidth = width - paddingLeft - paddingRight;
 
         // X scale
-        const xStep = data.length > 1 ? chartWidth / (data.length - 1) : 0;
+        const xStep = validData.length > 1 ? chartWidth / (validData.length - 1) : 0;
 
         // Y scale (1-5)
-        const yScale = (val) => chartHeight - ((val - 1) / 4) * chartHeight + paddingTop;
+        const yScale = (val) => {
+            if (typeof val !== 'number' || isNaN(val) || !isFinite(val)) return paddingTop;
+            const clampedVal = Math.max(1, Math.min(5, val));
+            return chartHeight - ((clampedVal - 1) / 4) * chartHeight + paddingTop;
+        };
+        
         const xScale = (index) => {
-            if (data.length === 1) return paddingLeft + chartWidth / 2; // Center if only 1 point
+            if (validData.length === 1) return paddingLeft + chartWidth / 2; // Center if only 1 point
             return index * xStep + paddingLeft;
         };
 
-        // Generate path
-        const pathData = data.length > 1 ? data.map((point, i) =>
-            `${i === 0 ? 'M' : 'L'} ${xScale(i)} ${yScale(point.value)}`
-        ).join(' ') : '';
-
-        // Format date for display (e.g., "12/7" for Dec 7)
-        const formatDate = (dateStr) => {
-            const date = new Date(dateStr + 'T00:00:00');
-            return `${date.getMonth() + 1}/${date.getDate()}`;
-        };
+        // Generate path with validation
+        const pathData = validData.length > 1 ? validData
+            .map((point, i) => {
+                const value = typeof point.value === 'number' && !isNaN(point.value) ? point.value : 3;
+                return `${i === 0 ? 'M' : 'L'} ${xScale(i)} ${yScale(value)}`;
+            })
+            .join(' ') : '';
 
         // Y-axis labels (mood levels)
         const yAxisLabels = [5, 4, 3, 2, 1];
@@ -344,7 +505,7 @@ export default function Progress() {
                         fontSize="14"
                         textAnchor="end"
                     >
-                        {REVERSE_MOOD_MAP[val]}
+                        {REVERSE_MOOD_MAP[val] || '😐'}
                     </SvgText>
                 ))}
 
@@ -364,7 +525,7 @@ export default function Progress() {
                 ))}
 
                 {/* Trend line (only if more than 1 point) */}
-                {data.length > 1 && (
+                {validData.length > 1 && pathData && (
                     <Path
                         d={pathData}
                         stroke={Colors.primary}
@@ -374,20 +535,23 @@ export default function Progress() {
                 )}
 
                 {/* Data points */}
-                {data.map((point, i) => (
-                    <Circle
-                        key={i}
-                        cx={xScale(i)}
-                        cy={yScale(point.value)}
-                        r="4"
-                        fill="white"
-                        stroke={Colors.primary}
-                        strokeWidth="2"
-                    />
-                ))}
+                {validData.map((point, i) => {
+                    const value = typeof point.value === 'number' && !isNaN(point.value) ? point.value : 3;
+                    return (
+                        <Circle
+                            key={`point-${i}`}
+                            cx={xScale(i)}
+                            cy={yScale(value)}
+                            r="4"
+                            fill="white"
+                            stroke={Colors.primary}
+                            strokeWidth="2"
+                        />
+                    );
+                })}
 
                 {/* X-axis labels (dates) */}
-                {data.map((point, i) => (
+                {validData.map((point, i) => (
                     <SvgText
                         key={`x-${i}`}
                         x={xScale(i)}
@@ -397,7 +561,7 @@ export default function Progress() {
                         textAnchor="middle"
                         fontFamily="Inter_500Medium"
                     >
-                        {formatDate(point.date)}
+                        {safeFormatDate(point.date)}
                     </SvgText>
                 ))}
             </Svg>
