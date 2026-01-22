@@ -17,7 +17,7 @@
     "@expo-google-fonts/dm-serif-display": "^0.4.2",
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo-google-fonts/source-sans-3": "^0.4.1",
-    "@kingstinct/react-native-healthkit": "1.0.0",
+    "@kingstinct/react-native-healthkit": "^12.1.1",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "^8.4.4",
     "@supabase/supabase-js": "^2.86.0",

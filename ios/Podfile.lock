@@ -4,11 +4,11 @@ PODS:
   - EXAV (16.0.8):
     - ExpoModulesCore
     - ReactCommon/turbomodule/core
-  - EXConstants (18.0.12):
+  - EXConstants (18.0.13):
     - ExpoModulesCore
-  - EXNotifications (0.32.15):
+  - EXNotifications (0.32.16):
     - ExpoModulesCore
-  - Expo (54.0.30):
+  - Expo (54.0.32):
     - ExpoModulesCore
     - hermes-engine
     - RCTRequired
@@ -41,11 +41,11 @@ PODS:
     - ExpoModulesCore
   - ExpoFileSystem (19.0.21):
     - ExpoModulesCore
-  - ExpoFont (14.0.10):
+  - ExpoFont (14.0.11):
     - ExpoModulesCore
   - ExpoHaptics (15.0.8):
     - ExpoModulesCore
-  - ExpoHead (6.0.21):
+  - ExpoHead (6.0.22):
     - ExpoModulesCore
     - RNScreens
   - ExpoKeepAwake (15.0.8):
@@ -81,10 +81,8 @@ PODS:
   - hermes-engine (0.81.5):
     - hermes-engine/Pre-built (= 0.81.5)
   - hermes-engine/Pre-built (0.81.5)
-  - kingstinct-react-native-healthkit (1.0.0):
-    - React
   - lottie-ios (4.5.0)
-  - lottie-react-native (7.3.4):
+  - lottie-react-native (7.3.5):
     - hermes-engine
     - lottie-ios (= 4.5.0)
     - RCTRequired
@@ -1828,10 +1826,34 @@ PODS:
     - React-utils (= 0.81.5)
     - ReactNativeDependencies
   - ReactNativeDependencies (0.81.5)
-  - rive-react-native (9.7.1):
+  - ReactNativeHealthkit (12.2.0):
+    - hermes-engine
+    - NitroModules
+    - RCTRequired
+    - RCTTypeSafety
+    - React-callinvoker
     - React-Core
-    - RiveRuntime (= 6.12.3)
-  - RiveRuntime (6.12.3)
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
+  - rive-react-native (9.8.0):
+    - React-Core
+    - RiveRuntime (= 6.13.0)
+  - RiveRuntime (6.13.0)
   - RNCAsyncStorage (2.2.0):
     - hermes-engine
     - RCTRequired
@@ -1854,7 +1876,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNDateTimePicker (8.4.4):
+  - RNDateTimePicker (8.6.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1989,7 +2011,6 @@ DEPENDENCIES:
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
-  - "kingstinct-react-native-healthkit (from `../node_modules/@kingstinct/react-native-healthkit`)"
   - lottie-react-native (from `../node_modules/lottie-react-native`)
   - NitroModules (from `../node_modules/react-native-nitro-modules`)
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
@@ -2058,6 +2079,7 @@ DEPENDENCIES:
   - ReactCodegen (from `build/generated/ios`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - ReactNativeDependencies (from `../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
+  - "ReactNativeHealthkit (from `../node_modules/@kingstinct/react-native-healthkit`)"
   - rive-react-native (from `../node_modules/rive-react-native`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - "RNDateTimePicker (from `../node_modules/@react-native-community/datetimepicker`)"
@@ -2108,8 +2130,6 @@ EXTERNAL SOURCES:
   hermes-engine:
     :podspec: "../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec"
     :tag: hermes-2025-07-07-RNv0.81.0-e0fc67142ec0763c6b6153ca2bf96df815539782
-  kingstinct-react-native-healthkit:
-    :path: "../node_modules/@kingstinct/react-native-healthkit"
   lottie-react-native:
     :path: "../node_modules/lottie-react-native"
   NitroModules:
@@ -2244,6 +2264,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   ReactNativeDependencies:
     :podspec: "../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec"
+  ReactNativeHealthkit:
+    :path: "../node_modules/@kingstinct/react-native-healthkit"
   rive-react-native:
     :path: "../node_modules/rive-react-native"
   RNCAsyncStorage:
@@ -2260,25 +2282,24 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   EXApplication: 1e98d4b1dccdf30627f92917f4b2c5a53c330e5f
   EXAV: b60fcf142fae6684d295bc28cd7cfcb3335570ea
-  EXConstants: 805f35b1b295c542ca6acce836f21a1f9ee104d5
-  EXNotifications: 983f04ad4ad879b181179e326bf220541e478386
-  Expo: 60c21ba34593688a2a6e8445c1f8b44abb0e3fae
+  EXConstants: fce59a631a06c4151602843667f7cfe35f81e271
+  EXNotifications: 9eec98712cc814ceff916d876cb53859003b0597
+  Expo: 4e503a041c59c4e34c8be262a135848ad5cd3710
   ExpoAsset: f867e55ceb428aab99e1e8c082b5aee7c159ea18
   ExpoAudio: e4cfe3a2f3317b8487460685385a9867a07fb4fb
   ExpoClipboard: b36b287d8356887844bb08ed5c84b5979bb4dd1e
   ExpoFileSystem: 858a44267a3e6e9057e0888ad7c7cfbf55d52063
-  ExpoFont: 35ac6191ed86bbf56b3ebd2d9154eda9fad5b509
+  ExpoFont: f543ce20a228dd702813668b1a07b46f51878d47
   ExpoHaptics: d3a6375d8dcc3a1083d003bc2298ff654fafb536
-  ExpoHead: 9719a74953454fac328e90f34eea55ebbb3bbbf9
+  ExpoHead: 4425246bc93411f0fe7f6945f95f698e91db8780
   ExpoKeepAwake: 55f75eca6499bb9e4231ebad6f3e9cb8f99c0296
   ExpoLinearGradient: 809102bdb979f590083af49f7fa4805cd931bd58
   ExpoLinking: 8f0aaf69aa56f832913030503b6263dc6f647f37
   ExpoModulesCore: f3da4f1ab5a8375d0beafab763739dbee8446583
   FBLazyVector: e95a291ad2dadb88e42b06e0c5fb8262de53ec12
   hermes-engine: 9f4dfe93326146a1c99eb535b1cb0b857a3cd172
-  kingstinct-react-native-healthkit: f4f7ce35b53748c60473a0205dda0d3dcda8e1f8
   lottie-ios: a881093fab623c467d3bce374367755c272bdd59
-  lottie-react-native: cbe3d931a7c24f7891a8e8032c2bb9b2373c4b9c
+  lottie-react-native: 8e5dd0e51847600666057d2c9b95815ac9fdb165
   NitroModules: 114b4f79e10be9b202723e721d6a54382fa4b599
   RCTDeprecation: 943572d4be82d480a48f4884f670135ae30bf990
   RCTRequired: 8f3cfc90cc25cf6e420ddb3e7caaaabc57df6043
@@ -2345,10 +2366,11 @@ SPEC CHECKSUMS:
   ReactCodegen: 7d4593f7591f002d137fe40cef3f6c11f13c88cc
   ReactCommon: 08810150b1206cc44aecf5f6ae19af32f29151a8
   ReactNativeDependencies: 71ce9c28beb282aa720ea7b46980fff9669f428a
-  rive-react-native: f118870fdc493aa9feeb73b4cab2440d521c8e8d
-  RiveRuntime: ecde073222c6279c6f7f439132ac7f0a461b344b
+  ReactNativeHealthkit: 22e11d2698185dee51a60a1b36e8dc7cb2a9a4df
+  rive-react-native: d0c2336f11b329dc0d304eda71df407f316ed7f6
+  RiveRuntime: 903690a5ba698b2a7e8d462e8aa7ceeba862614c
   RNCAsyncStorage: 3a4f5e2777dae1688b781a487923a08569e27fe4
-  RNDateTimePicker: be0e44bcb9ed0607c7c5f47dbedd88cf091f6791
+  RNDateTimePicker: 9c0a849bbe1c256f0854fea255734b715f5ea876
   RNScreens: d8d6f1792f6e7ac12b0190d33d8d390efc0c1845
   RNSVG: 31d6639663c249b7d5abc9728dde2041eb2a3c34
   Yoga: 5934998fbeaef7845dbf698f698518695ab4cd1a

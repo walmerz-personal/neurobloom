@@ -125,6 +125,47 @@ export async function checkHealthKitDataAvailable() {
 }
 
 /**
+ * Validate requestAuthorization parameters
+ * @param {Array<string>} readPermissions - Array of permission identifiers
+ * @throws {Error} If parameters are invalid
+ */
+function validateRequestAuthorizationParams(readPermissions) {
+    if (!Array.isArray(readPermissions)) {
+        throw new Error('readPermissions must be an array');
+    }
+    if (readPermissions.length === 0) {
+        throw new Error('readPermissions cannot be empty');
+    }
+    for (const permission of readPermissions) {
+        if (typeof permission !== 'string' || permission.length === 0) {
+            throw new Error(`Invalid permission identifier: ${permission}`);
+        }
+    }
+}
+
+/**
+ * Validate query options for HealthKit queries
+ * @param {Date} startDate - Start date for query
+ * @param {Date} endDate - End date for query
+ * @param {string} [unit] - Optional unit string
+ * @throws {Error} If parameters are invalid
+ */
+function validateQueryOptions(startDate, endDate, unit) {
+    if (!(startDate instanceof Date) || isNaN(startDate.getTime())) {
+        throw new Error('startDate must be a valid Date object');
+    }
+    if (!(endDate instanceof Date) || isNaN(endDate.getTime())) {
+        throw new Error('endDate must be a valid Date object');
+    }
+    if (startDate > endDate) {
+        throw new Error('startDate must be before or equal to endDate');
+    }
+    if (unit !== undefined && (typeof unit !== 'string' || unit.length === 0)) {
+        throw new Error('unit must be a non-empty string if provided');
+    }
+}
+
+/**
  * Request HealthKit permissions for all required metrics
  * @returns {Promise<{granted: boolean, error: Error|null}>}
  */
@@ -146,8 +187,11 @@ export async function requestHealthKitPermissions() {
             CATEGORY_TYPES.WALKING_STEADINESS,
         ];
 
-        // requestAuthorization expects (readArray, writeArray) - two array parameters
-        const result = await HealthKit.requestAuthorization(readPermissions, []);
+        // Validate parameters before calling native method
+        validateRequestAuthorizationParams(readPermissions);
+
+        // requestAuthorization v12+ expects an options object with toRead and toShare keys
+        const result = await HealthKit.requestAuthorization({ toRead: readPermissions });
         
         if (result === true) {
             console.log('✅ HealthKit permissions granted');
@@ -162,7 +206,9 @@ export async function requestHealthKitPermissions() {
         console.error('❌ Error requesting HealthKit permissions:', error);
         nativeCrashDetected = true;
         healthKitSafeMode = true; // Enable safe mode on crash
-        return { granted: false, error };
+        // Ensure error is always an Error object
+        const normalizedError = error instanceof Error ? error : new Error(String(error));
+        return { granted: false, error: normalizedError };
     }
 }
 
@@ -177,7 +223,7 @@ export async function saveHealthPermissionsGranted() {
         return { success: true, error: null };
     } catch (error) {
         console.error('❌ Error saving health permissions flag:', error);
-        return { success: false, error };
+        return { success: false, error: error instanceof Error ? error : new Error(String(error)) };
     }
 }
 
@@ -252,11 +298,28 @@ export async function checkHealthKitPermissions(userInitiated = false) {
         });
 
         // Race between actual call and timeout
+        // Note: authorizationStatusFor may be sync or async depending on library version
         try {
-            const authorizationStatus = await Promise.race([
-                HealthKit.authorizationStatusFor(permissions[0]),
-                timeoutPromise
-            ]);
+            const statusResult = HealthKit.authorizationStatusFor(permissions[0]);
+            
+            // Handle both sync (returns value directly) and async (returns Promise) cases
+            let authorizationStatus;
+            if (statusResult instanceof Promise) {
+                // Async version - use Promise.race with timeout
+                authorizationStatus = await Promise.race([
+                    statusResult,
+                    timeoutPromise
+                ]);
+            } else {
+                // Sync version - use value directly
+                authorizationStatus = statusResult;
+            }
+            
+            // Validate return value type
+            if (typeof authorizationStatus !== 'number') {
+                console.warn('⚠️ Unexpected authorizationStatusFor return type:', typeof authorizationStatus);
+                return { granted: false, error: null };
+            }
             
             // Check if at least one permission is granted (authorizationStatus returns a number: 0=notDetermined, 1=sharingDenied, 2=sharingAuthorized)
             const granted = authorizationStatus === 2; // sharingAuthorized
@@ -289,11 +352,14 @@ export async function getWalkingSpeed(startDate, endDate) {
     }
 
     try {
+        // Validate query parameters before calling native method
+        validateQueryOptions(startDate, endDate, 'm/s');
+
         const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.WALKING_SPEED,
             {
-                from: startDate,
-                to: endDate,
+                startDate: startDate,
+                endDate: endDate,
                 unit: 'm/s',
             }
         );
@@ -301,7 +367,7 @@ export async function getWalkingSpeed(startDate, endDate) {
         return { data: samples || [], error: null };
     } catch (error) {
         console.error('❌ Error getting walking speed:', error);
-        return { data: [], error };
+        return { data: [], error: error instanceof Error ? error : new Error(String(error)) };
     }
 }
 
@@ -317,11 +383,13 @@ export async function getWalkingStepLength(startDate, endDate) {
     }
 
     try {
+        validateQueryOptions(startDate, endDate, 'm');
+
         const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.WALKING_STEP_LENGTH,
             {
-                from: startDate,
-                to: endDate,
+                startDate: startDate,
+                endDate: endDate,
                 unit: 'm',
             }
         );
@@ -329,7 +397,7 @@ export async function getWalkingStepLength(startDate, endDate) {
         return { data: samples || [], error: null };
     } catch (error) {
         console.error('❌ Error getting walking step length:', error);
-        return { data: [], error };
+        return { data: [], error: error instanceof Error ? error : new Error(String(error)) };
     }
 }
 
@@ -345,11 +413,13 @@ export async function getWalkingAsymmetry(startDate, endDate) {
     }
 
     try {
+        validateQueryOptions(startDate, endDate, '%');
+
         const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.WALKING_ASYMMETRY,
             {
-                from: startDate,
-                to: endDate,
+                startDate: startDate,
+                endDate: endDate,
                 unit: '%',
             }
         );
@@ -357,7 +427,7 @@ export async function getWalkingAsymmetry(startDate, endDate) {
         return { data: samples || [], error: null };
     } catch (error) {
         console.error('❌ Error getting walking asymmetry:', error);
-        return { data: [], error };
+        return { data: [], error: error instanceof Error ? error : new Error(String(error)) };
     }
 }
 
@@ -373,11 +443,13 @@ export async function getWalkingDoubleSupport(startDate, endDate) {
     }
 
     try {
+        validateQueryOptions(startDate, endDate, '%');
+
         const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.WALKING_DOUBLE_SUPPORT,
             {
-                from: startDate,
-                to: endDate,
+                startDate: startDate,
+                endDate: endDate,
                 unit: '%',
             }
         );
@@ -385,7 +457,7 @@ export async function getWalkingDoubleSupport(startDate, endDate) {
         return { data: samples || [], error: null };
     } catch (error) {
         console.error('❌ Error getting walking double support:', error);
-        return { data: [], error };
+        return { data: [], error: error instanceof Error ? error : new Error(String(error)) };
     }
 }
 
@@ -401,18 +473,20 @@ export async function getWalkingSteadiness(startDate, endDate) {
     }
 
     try {
+        validateQueryOptions(startDate, endDate);
+
         const samples = await HealthKit.queryCategorySamples(
             CATEGORY_TYPES.WALKING_STEADINESS,
             {
-                from: startDate,
-                to: endDate,
+                startDate: startDate,
+                endDate: endDate,
             }
         );
 
         return { data: samples || [], error: null };
     } catch (error) {
         console.error('❌ Error getting walking steadiness:', error);
-        return { data: [], error };
+        return { data: [], error: error instanceof Error ? error : new Error(String(error)) };
     }
 }
 
@@ -428,11 +502,13 @@ export async function getSixMinuteWalkDistance(startDate, endDate) {
     }
 
     try {
+        validateQueryOptions(startDate, endDate, 'm');
+
         const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.SIX_MINUTE_WALK,
             {
-                from: startDate,
-                to: endDate,
+                startDate: startDate,
+                endDate: endDate,
                 unit: 'm',
             }
         );
@@ -440,7 +516,7 @@ export async function getSixMinuteWalkDistance(startDate, endDate) {
         return { data: samples || [], error: null };
     } catch (error) {
         console.error('❌ Error getting six-minute walk distance:', error);
-        return { data: [], error };
+        return { data: [], error: error instanceof Error ? error : new Error(String(error)) };
     }
 }
 
@@ -456,11 +532,13 @@ export async function getStepCount(startDate, endDate) {
     }
 
     try {
+        validateQueryOptions(startDate, endDate, 'count');
+
         const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.STEP_COUNT,
             {
-                from: startDate,
-                to: endDate,
+                startDate: startDate,
+                endDate: endDate,
                 unit: 'count',
             }
         );
@@ -468,7 +546,7 @@ export async function getStepCount(startDate, endDate) {
         return { data: samples || [], error: null };
     } catch (error) {
         console.error('❌ Error getting step count:', error);
-        return { data: [], error };
+        return { data: [], error: error instanceof Error ? error : new Error(String(error)) };
     }
 }
 
@@ -484,11 +562,13 @@ export async function getDistanceWalked(startDate, endDate) {
     }
 
     try {
+        validateQueryOptions(startDate, endDate, 'm');
+
         const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.DISTANCE_WALKING_RUNNING,
             {
-                from: startDate,
-                to: endDate,
+                startDate: startDate,
+                endDate: endDate,
                 unit: 'm',
             }
         );
@@ -496,7 +576,7 @@ export async function getDistanceWalked(startDate, endDate) {
         return { data: samples || [], error: null };
     } catch (error) {
         console.error('❌ Error getting distance walked:', error);
-        return { data: [], error };
+        return { data: [], error: error instanceof Error ? error : new Error(String(error)) };
     }
 }
 
@@ -520,7 +600,7 @@ export async function setupBackgroundObserver(callback) {
         return { success: true, error: null };
     } catch (error) {
         console.error('❌ Error setting up background observers:', error);
-        return { success: false, error };
+        return { success: false, error: error instanceof Error ? error : new Error(String(error)) };
     }
 }
 
@@ -536,6 +616,9 @@ export async function syncHealthData(startDate, endDate) {
     }
 
     try {
+        // Validate query parameters before making multiple calls
+        validateQueryOptions(startDate, endDate);
+
         const [
             walkingSpeed,
             walkingStepLength,
@@ -556,6 +639,23 @@ export async function syncHealthData(startDate, endDate) {
             getDistanceWalked(startDate, endDate),
         ]);
 
+        // Check for errors in individual query results
+        const errors = [
+            walkingSpeed.error,
+            walkingStepLength.error,
+            walkingAsymmetry.error,
+            walkingDoubleSupport.error,
+            walkingSteadiness.error,
+            sixMinuteWalk.error,
+            stepCount.error,
+            distanceWalked.error,
+        ].filter(error => error !== null);
+
+        // If any queries failed, aggregate the errors
+        const aggregatedError = errors.length > 0
+            ? new Error(`Failed to sync ${errors.length} health data type(s): ${errors.map(e => e.message).join('; ')}`)
+            : null;
+
         return {
             data: {
                 walkingSpeed: walkingSpeed.data,
@@ -567,11 +667,11 @@ export async function syncHealthData(startDate, endDate) {
                 stepCount: stepCount.data,
                 distanceWalked: distanceWalked.data,
             },
-            error: null,
+            error: aggregatedError,
         };
     } catch (error) {
         console.error('❌ Error syncing health data:', error);
-        return { data: null, error };
+        return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
     }
 }
 

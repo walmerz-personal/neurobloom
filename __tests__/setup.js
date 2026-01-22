@@ -196,6 +196,34 @@ global.console = {
 // Setup fetch mock for integration tests
 global.fetch = jest.fn();
 
+// Mock @kingstinct/react-native-healthkit
+jest.mock('@kingstinct/react-native-healthkit', () => {
+    const mockHealthKit = {
+        isHealthDataAvailable: jest.fn(() => Promise.resolve(true)),
+        requestAuthorization: jest.fn(() => Promise.resolve(true)),
+        authorizationStatusFor: jest.fn(() => Promise.resolve(2)), // sharingAuthorized = 2
+        queryQuantitySamples: jest.fn(() => Promise.resolve([])),
+        queryCategorySamples: jest.fn(() => Promise.resolve([])),
+        queryStatisticsForQuantity: jest.fn(() => Promise.resolve(null)),
+        getBiologicalSex: jest.fn(() => Promise.resolve(null)),
+        getBloodType: jest.fn(() => Promise.resolve(null)),
+        getDateOfBirth: jest.fn(() => Promise.resolve(null)),
+        HKQuantityTypeIdentifier: {
+            stepCount: 'HKQuantityTypeIdentifierStepCount',
+            distanceWalkingRunning: 'HKQuantityTypeIdentifierDistanceWalkingRunning',
+            walkingSpeed: 'HKQuantityTypeIdentifierWalkingSpeed',
+        },
+        HKCategoryTypeIdentifier: {
+            appleWalkingSteadinessEvent: 'HKCategoryTypeIdentifierAppleWalkingSteadinessEvent',
+        },
+    };
+    return {
+        __esModule: true,
+        default: mockHealthKit,
+        ...mockHealthKit,
+    };
+}, { virtual: true });
+
 // Reset mocks before each test
 beforeEach(() => {
     jest.clearAllMocks();

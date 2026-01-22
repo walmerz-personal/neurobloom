@@ -97,11 +97,12 @@ export const AuthProvider = ({ children }) => {
                 return;
             }
 
-            // Add timeout to prevent hanging - 5 second timeout
+            // Add timeout to prevent hanging (8s for simulator/slow networks)
+            const timeoutMs = 8000;
             const timeoutPromise = new Promise((_, reject) => {
                 setTimeout(() => {
                     reject(new Error('Session check timeout'));
-                }, 5000);
+                }, timeoutMs);
             });
 
             // Get session with timeout protection
@@ -113,7 +114,8 @@ export const AuthProvider = ({ children }) => {
                     timeoutPromise
                 ]);
             } catch (timeoutError) {
-                console.warn('⚠️ Session check timed out (non-fatal):', timeoutError.message);
+                // Use console.log so LogBox doesn't show a warning; auth listener handles recovery
+                console.log('ℹ️ Session check timed out (non-fatal):', timeoutError.message);
                 // Auth listener will handle valid sessions even if this times out
                 // Continue without blocking - user can still login if needed
                 return;

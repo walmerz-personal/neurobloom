@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 
 // Helper to safely get config values with detailed logging
-function getConfigValue(name, envKey, extraKey) {
+function getConfigValue(name, envKey, extraKey, optional = false) {
     // In production builds, process.env.EXPO_PUBLIC_* is undefined at runtime
     // because Metro only inlines them from .env files (not from EAS Secrets)
     // So we prioritize Constants.expoConfig.extra which is set by app.config.js
@@ -11,7 +11,11 @@ function getConfigValue(name, envKey, extraKey) {
     const value = fromExtra || fromEnv || '';
     const source = fromExtra ? 'Constants.expoConfig.extra' : (fromEnv ? 'process.env' : 'missing');
 
-    console.log(`📋 Config.${name}: ${value ? `✅ Loaded from ${source} (${value.length} chars)` : `❌ Not found`}`);
+    if (value) {
+        console.log(`📋 Config.${name}: ✅ Loaded from ${source} (${value.length} chars)`);
+    } else {
+        console.log(`📋 Config.${name}: ${optional ? '⚠️ Optional, not set' : '❌ Not found'}`);
+    }
 
     return value;
 }
@@ -23,8 +27,8 @@ export const Config = {
     SUPABASE_URL: getConfigValue('SUPABASE_URL', 'EXPO_PUBLIC_SUPABASE_URL', 'supabaseUrl'),
     SUPABASE_ANON_KEY: getConfigValue('SUPABASE_ANON_KEY', 'EXPO_PUBLIC_SUPABASE_ANON_KEY', 'supabaseAnonKey'),
 
-    // OpenAI Configuration
-    OPENAI_API_KEY: getConfigValue('OPENAI_API_KEY', 'EXPO_PUBLIC_OPENAI_API_KEY', 'openaiApiKey'),
+    // OpenAI Configuration (optional; used by Supabase Edge Functions, not app client)
+    OPENAI_API_KEY: getConfigValue('OPENAI_API_KEY', 'EXPO_PUBLIC_OPENAI_API_KEY', 'openaiApiKey', true),
     API_URL: 'https://api.openai.com/v1/chat/completions',
     MODEL: 'gpt-4o-mini',
 };
