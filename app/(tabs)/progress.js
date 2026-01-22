@@ -73,19 +73,24 @@ export default function Progress() {
         const loadData = async () => {
             try {
                 // Load data in parallel but check abort signal
+                // NOTE: HealthKit permission checks are now user-initiated only to prevent crashes
                 await Promise.all([
                     fetchData(signal),
                     fetchHealthData(signal),
                 ]);
 
-                // Defer HealthKit permission checks to after initial render
-                // This prevents blocking the main thread during mount and reduces crash risk
-                if (!signal.aborted && isMountedRef.current) {
-                    setTimeout(() => {
+                // Check AsyncStorage for existing permission status (safe, no native calls)
+                // This allows us to show the correct UI state without triggering native calls
+                if (!signal.aborted && isMountedRef.current && Platform.OS === 'ios') {
+                    try {
+                        const hasBeenGranted = await HealthKitService.hasHealthPermissionsBeenGranted();
                         if (!signal.aborted && isMountedRef.current) {
-                            checkHealthPermissions(signal);
+                            setHealthPermissionsGranted(hasBeenGranted);
                         }
-                    }, 100);
+                    } catch (error) {
+                        // Silently fail - this is just for UI state, not critical
+                        console.log('[Progress] Could not check stored permission status:', error.message);
+                    }
                 }
             } catch (error) {
                 if (!signal.aborted && isMountedRef.current) {
@@ -208,7 +213,7 @@ export default function Progress() {
         }
     };
 
-    const checkHealthPermissions = async (signal) => {
+    const checkHealthPermissions = async (signal, userInitiated = false) => {
         if (Platform.OS !== 'ios' || signal?.aborted || !isMountedRef.current) {
             if (!signal?.aborted && isMountedRef.current) {
                 setHealthPermissionsGranted(false);
@@ -224,10 +229,48 @@ export default function Progress() {
             return;
         }
 
+        // For user-initiated checks, test TurboModule compatibility first
+        if (userInitiated) {
+            try {
+                const compatible = await HealthKitService.testHealthKitCompatibility();
+                if (!compatible) {
+                    if (!signal?.aborted && isMountedRef.current) {
+                        Alert.alert(
+                            'HealthKit Unavailable',
+                            'Apple Health integration is temporarily unavailable. Your other progress data is still being tracked.',
+                            [{ text: 'OK', style: 'default' }]
+                        );
+                        setHealthPermissionsGranted(false);
+                    }
+                    return;
+                }
+            } catch (compatError) {
+                console.error('[Progress] HealthKit compatibility check failed:', compatError);
+                if (!signal?.aborted && isMountedRef.current) {
+                    Alert.alert(
+                        'HealthKit Unavailable',
+                        'Apple Health integration is temporarily unavailable. Your other progress data is still being tracked.',
+                        [{ text: 'OK', style: 'default' }]
+                    );
+                    setHealthPermissionsGranted(false);
+                }
+                return;
+            }
+        }
+
         try {
-            const { granted } = await HealthKitService.checkHealthKitPermissions();
+            const { granted, error } = await HealthKitService.checkHealthKitPermissions(userInitiated);
             
             if (signal?.aborted || !isMountedRef.current) return;
+            
+            if (error && userInitiated) {
+                // Show error to user if this was user-initiated
+                Alert.alert(
+                    'HealthKit Error',
+                    'Unable to check Apple Health permissions. Please try again later.',
+                    [{ text: 'OK', style: 'default' }]
+                );
+            }
             
             setHealthPermissionsGranted(granted);
             
@@ -270,6 +313,15 @@ export default function Progress() {
                     userId: user?.id,
                     timestamp: new Date().toISOString()
                 });
+                
+                if (userInitiated) {
+                    Alert.alert(
+                        'HealthKit Error',
+                        'Unable to check Apple Health permissions. Please try again later.',
+                        [{ text: 'OK', style: 'default' }]
+                    );
+                }
+                
                 setHealthPermissionsGranted(false);
             }
         }
@@ -401,28 +453,48 @@ export default function Progress() {
         }
     };
 
-    const handleConnectHealth = () => {
-        console.log('handleConnectHealth: Button clicked, attempting navigation to /onboarding/health-permissions');
+    const handleConnectHealth = async () => {
+        console.log('handleConnectHealth: Button clicked, checking HealthKit compatibility first');
         
+        // First, test compatibility before attempting any HealthKit operations
         try {
-            // Use router.push for navigation (synchronous in Expo Router)
-            router.push('/onboarding/health-permissions');
-            console.log('handleConnectHealth: Navigation command executed');
-        } catch (error) {
-            console.error('handleConnectHealth: Navigation failed with error:', error);
-            console.error('Error details:', JSON.stringify(error, null, 2));
-            
-            // Show user-friendly error message
+            const compatible = await HealthKitService.testHealthKitCompatibility();
+            if (!compatible) {
+                Alert.alert(
+                    'HealthKit Unavailable',
+                    'Apple Health integration is temporarily unavailable. Your other progress data is still being tracked.',
+                    [{ text: 'OK', style: 'default' }]
+                );
+                return;
+            }
+        } catch (compatError) {
+            console.error('[Progress] HealthKit compatibility check failed:', compatError);
             Alert.alert(
-                'Navigation Error',
-                'Unable to open the Health permissions screen. Please try again or restart the app.',
-                [
-                    {
-                        text: 'OK',
-                        style: 'default',
-                    },
-                ]
+                'HealthKit Unavailable',
+                'Apple Health integration is temporarily unavailable. Your other progress data is still being tracked.',
+                [{ text: 'OK', style: 'default' }]
             );
+            return;
+        }
+
+        // If compatible, check permissions (user-initiated)
+        const signal = abortControllerRef.current?.signal;
+        await checkHealthPermissions(signal, true);
+        
+        // If permissions are now granted, navigate to health-permissions screen
+        // Otherwise, the checkHealthPermissions function will have shown an alert
+        if (healthPermissionsGranted) {
+            try {
+                router.push('/onboarding/health-permissions');
+                console.log('handleConnectHealth: Navigation command executed');
+            } catch (error) {
+                console.error('handleConnectHealth: Navigation failed with error:', error);
+                Alert.alert(
+                    'Navigation Error',
+                    'Unable to open the Health permissions screen. Please try again or restart the app.',
+                    [{ text: 'OK', style: 'default' }]
+                );
+            }
         }
     };
 
@@ -436,6 +508,38 @@ export default function Progress() {
             if (isMountedRef.current) {
                 setHealthLoading(false);
             }
+            Alert.alert(
+                'HealthKit Unavailable',
+                'Apple Health integration is temporarily unavailable. Your other progress data is still being tracked.',
+                [{ text: 'OK', style: 'default' }]
+            );
+            return;
+        }
+
+        // Test compatibility before sync (user-initiated action)
+        try {
+            const compatible = await HealthKitService.testHealthKitCompatibility();
+            if (!compatible) {
+                if (isMountedRef.current) {
+                    setHealthLoading(false);
+                }
+                Alert.alert(
+                    'HealthKit Unavailable',
+                    'Apple Health integration is temporarily unavailable. Your other progress data is still being tracked.',
+                    [{ text: 'OK', style: 'default' }]
+                );
+                return;
+            }
+        } catch (compatError) {
+            console.error('[Progress] HealthKit compatibility check failed during sync:', compatError);
+            if (isMountedRef.current) {
+                setHealthLoading(false);
+            }
+            Alert.alert(
+                'HealthKit Unavailable',
+                'Apple Health integration is temporarily unavailable. Your other progress data is still being tracked.',
+                [{ text: 'OK', style: 'default' }]
+            );
             return;
         }
 

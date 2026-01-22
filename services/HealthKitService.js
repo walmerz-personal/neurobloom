@@ -19,6 +19,8 @@ let HKCategoryTypeIdentifier = null;
 let healthKitSafeMode = false;
 // Native crash detection flag
 let nativeCrashDetected = false;
+// TurboModule compatibility flag - null = unknown, true/false = tested
+let turboModuleCompatible = null;
 
 try {
     const healthKitModule = require('@kingstinct/react-native-healthkit');
@@ -55,6 +57,47 @@ const CATEGORY_TYPES = {
 export const isHealthKitAvailable = () => {
     return Platform.OS === 'ios' && HealthKit !== null && !healthKitSafeMode && !nativeCrashDetected;
 };
+
+/**
+ * Test HealthKit TurboModule compatibility
+ * This function safely tests if HealthKit can be called without crashing
+ * in the New Architecture (TurboModules) environment
+ * @returns {Promise<boolean>} true if compatible, false otherwise
+ */
+export async function testHealthKitCompatibility() {
+    // Return cached result if already tested
+    if (turboModuleCompatible !== null) {
+        return turboModuleCompatible;
+    }
+    
+    // Don't test if already in safe mode or module not loaded
+    if (healthKitSafeMode || !HealthKit || !isHealthKitAvailable()) {
+        turboModuleCompatible = false;
+        return false;
+    }
+    
+    try {
+        // Use a simple, fast test with strict timeout to detect crashes
+        // isHealthDataAvailable() is the safest method to test compatibility
+        const result = await Promise.race([
+            HealthKit.isHealthDataAvailable(),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('HealthKit compatibility test timeout')), 1000)
+            )
+        ]);
+        
+        // If we got here without crashing, it's compatible
+        turboModuleCompatible = true;
+        return true;
+    } catch (error) {
+        // Any error (timeout, crash, etc.) means incompatible
+        console.warn('⚠️ HealthKit TurboModule compatibility check failed:', error.message || error);
+        turboModuleCompatible = false;
+        healthKitSafeMode = true;
+        nativeCrashDetected = true;
+        return false;
+    }
+}
 
 // Async check for actual HealthKit availability on device
 export async function checkHealthKitDataAvailable() {
@@ -156,12 +199,29 @@ export async function hasHealthPermissionsBeenGranted() {
  * Check if HealthKit permissions are already granted
  * Uses AsyncStorage flag first (more reliable on iOS), then falls back to authorizationStatusFor
  * Includes timeout mechanism to detect native crashes
+ * @param {boolean} userInitiated - If true, will test compatibility before checking. If false, only checks AsyncStorage.
  * @returns {Promise<{granted: boolean, error: Error|null}>}
  */
-export async function checkHealthKitPermissions() {
+export async function checkHealthKitPermissions(userInitiated = false) {
     // Early return if HealthKit module is not available or safe mode is enabled
     if (!HealthKit || healthKitSafeMode || nativeCrashDetected || !isHealthKitAvailable()) {
         return { granted: false, error: null };
+    }
+
+    // If not user-initiated, only check AsyncStorage (safe, no native calls)
+    if (!userInitiated) {
+        try {
+            const hasBeenGranted = await hasHealthPermissionsBeenGranted();
+            return { granted: hasBeenGranted, error: null };
+        } catch (error) {
+            return { granted: false, error: null };
+        }
+    }
+
+    // For user-initiated checks, test compatibility first
+    const compatible = await testHealthKitCompatibility();
+    if (!compatible) {
+        return { granted: false, error: new Error('HealthKit is not compatible with the current architecture') };
     }
 
     try {
@@ -532,4 +592,5 @@ export default {
     syncHealthData,
     isHealthKitAvailable,
     checkHealthKitDataAvailable,
+    testHealthKitCompatibility,
 };
