@@ -10,7 +10,11 @@
         "preview": {
             "distribution": "internal"
         },
-        "production": {}
+        "production": {
+            "env": {
+                "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+            }
+        }
     },
     "submit": {
         "production": {
