@@ -15,10 +15,8 @@ export const AuthProvider = ({ children }) => {
     const kudosChannelRef = useRef(null); // Store Realtime channel reference
 
     useEffect(() => {
-        // Check for existing session on mount
-        checkSession();
-
-        // Set up auth listener - retry if Supabase isn't ready yet
+        // Set up auth listener FIRST - this ensures it's ready to handle session restoration
+        // retry if Supabase isn't ready yet
         let authListener = null;
         let retryCount = 0;
         const maxRetries = 5;
@@ -33,6 +31,7 @@ export const AuthProvider = ({ children }) => {
                     return;
                 } else {
                     console.error('❌ Failed to set up auth state listener: Supabase not initialized after retries');
+                    setLoading(false);
                     return;
                 }
             }
@@ -40,7 +39,7 @@ export const AuthProvider = ({ children }) => {
             // Listen for auth changes
             const listenerResult = SupabaseService.onAuthStateChange(
                 async (event, session) => {
-                    console.log('🔐 Auth event:', event);
+                    console.log('🔐 Auth event:', event, session?.user?.id);
                     setSession(session);
                     setUser(session?.user ?? null);
 
@@ -49,10 +48,20 @@ export const AuthProvider = ({ children }) => {
                         // Ensure userData is loaded before allowing UI to proceed
                         try {
                             await loadUserDataWithRetry(session.user.id, session.user);
+                            // After successful load, set loading to false if it's still true
+                            // This handles the case where checkSession timed out
+                            setLoading(prevLoading => {
+                                if (prevLoading) {
+                                    console.log('✅ Auth listener loaded userData, setting loading=false');
+                                }
+                                return false;
+                            });
                         } catch (error) {
                             console.error('❌ Failed to load user data after retries in auth listener:', error);
                             // Ensure fallback data is set even if retry fails
                             setFallbackUserData(session.user.id, session.user);
+                            // Set loading to false even on error
+                            setLoading(false);
                         }
                         // Track app launch activity
                         trackActivityAndCheckInactivity(session.user.id).catch(error => {
@@ -62,11 +71,17 @@ export const AuthProvider = ({ children }) => {
                         // No session - clear user data and cleanup
                         setUserData(null);
                         cleanupKudosSubscription();
+                        // Set loading to false when no session
+                        setLoading(false);
                     }
                 }
             );
 
             authListener = listenerResult?.data || listenerResult;
+            
+            // After setting up listener, check for existing session
+            // This ensures the listener is ready before we check the session
+            checkSession();
         };
 
         setupAuthListener();
@@ -113,6 +128,7 @@ export const AuthProvider = ({ children }) => {
             // Get session with timeout protection
             // The auth state listener will handle session restoration even if this fails
             let sessionResult;
+            let sessionTimedOut = false;
             try {
                 sessionResult = await Promise.race([
                     SupabaseService.getSession(),
@@ -121,23 +137,35 @@ export const AuthProvider = ({ children }) => {
             } catch (timeoutError) {
                 // Use console.log so LogBox doesn't show a warning; auth listener handles recovery
                 console.log('ℹ️ Session check timed out (non-fatal):', timeoutError.message);
-                // Auth listener will handle valid sessions even if this times out
-                // Continue without blocking - user can still login if needed
-                return;
+                sessionTimedOut = true;
+                // Try to get session without timeout as a fallback (quick check)
+                try {
+                    const quickSession = await Promise.race([
+                        SupabaseService.getSession(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Quick check timeout')), 2000))
+                    ]);
+                    if (quickSession?.session) {
+                        sessionResult = quickSession;
+                        sessionTimedOut = false;
+                    }
+                } catch (quickError) {
+                    // If quick check also fails, auth listener will handle it
+                    console.log('ℹ️ Quick session check also timed out, relying on auth listener');
+                }
             }
 
             const { session, error } = sessionResult || { session: null, error: null };
             
-            if (error) {
+            if (error && !sessionTimedOut) {
                 console.warn('⚠️ Session check error (non-fatal):', error.message);
                 // Auth listener will handle valid sessions even if this fails
                 // Continue without blocking - user can still login if needed
             }
 
             // Update session state if we have one
-            if (session) {
+            if (session?.user) {
                 setSession(session);
-                setUser(session.user ?? null);
+                setUser(session.user);
 
                 // Load user data with retry - MUST complete before setting loading=false
                 // This ensures userData is available before navigation
@@ -155,6 +183,15 @@ export const AuthProvider = ({ children }) => {
                     console.error('❌ Failed to track activity:', error);
                     // Non-critical error - don't block app
                 });
+            } else if (sessionTimedOut) {
+                // If session check timed out, wait a bit for auth listener to fire
+                // This gives the auth state listener a chance to load user data
+                console.log('ℹ️ Waiting for auth listener to load session...');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Check if auth listener already set userData
+                // If not, we'll proceed with loading=false and let auth listener handle it
+                // The index.js will wait for userData before navigating
             }
         } catch (error) {
             console.warn('⚠️ Session check exception (non-fatal):', error.message);
@@ -162,6 +199,7 @@ export const AuthProvider = ({ children }) => {
         } finally {
             // Set loading to false after userData loading completes
             // loadUserDataWithRetry (or setFallbackUserData) should have set userData by now
+            // If session timed out, auth listener will set userData shortly
             setLoading(false);
         }
     };
@@ -191,9 +229,31 @@ export const AuthProvider = ({ children }) => {
     };
 
     const loadUserData = async (userId, authUser = null) => {
+        if (!userId) {
+            console.error('❌ loadUserData called without userId');
+            if (authUser) {
+                setFallbackUserData(userId, authUser);
+            }
+            return;
+        }
+
         try {
-            // Try to load from database first
-            const { user: dbUser, error } = await SupabaseService.getUserData(userId);
+            // Try to load from database first with a shorter timeout
+            const dbQueryPromise = SupabaseService.getUserData(userId);
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Database query timeout')), 5000);
+            });
+
+            let dbUser, error;
+            try {
+                const result = await Promise.race([dbQueryPromise, timeoutPromise]);
+                dbUser = result.user;
+                error = result.error;
+            } catch (timeoutError) {
+                console.warn('⚠️ Database query timed out, using fallback data');
+                error = timeoutError;
+            }
+
             if (!error && dbUser) {
                 setUserData(dbUser);
                 console.log('✅ User data loaded:', dbUser.name);

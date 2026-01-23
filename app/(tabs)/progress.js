@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import Svg, { Path, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { validateChartPoint, safeFormatDate, validateChartData, validateMoodLog } from '../../utils/dataValidation';
+import { getHealthKitAvailabilityMessage } from '../../utils/deviceUtils';
 
 const MOOD_MAP = {
     '😄': 5,
@@ -552,9 +553,11 @@ export default function Progress() {
             if (isMountedRef.current) {
                 setHealthLoading(false);
             }
+            
+            const message = getHealthKitAvailabilityMessage();
             Alert.alert(
                 'HealthKit Unavailable',
-                'Apple Health integration is temporarily unavailable.',
+                message + '\n\nTo test on a real device:\n1. Connect your iPhone via USB\n2. Enable Developer Mode (Settings → Privacy & Security → Developer Mode)\n3. Run: npm run ios:device\n\nThis will install the app directly on your device without using TestFlight.\n\n📖 See docs/DEVICE_SETUP.md for detailed setup instructions.',
                 [
                     { text: 'OK', style: 'cancel' },
                     {
@@ -576,9 +579,10 @@ export default function Progress() {
                 if (isMountedRef.current) {
                     setHealthLoading(false);
                 }
+                const message = getHealthKitAvailabilityMessage();
                 Alert.alert(
                     'HealthKit Unavailable',
-                    'Apple Health integration is temporarily unavailable. Your other progress data is still being tracked.',
+                    message + '\n\nYour other progress data is still being tracked.\n\nTo test on a real device:\n1. Connect your iPhone via USB\n2. Enable Developer Mode (Settings → Privacy & Security → Developer Mode)\n3. Run: npm run ios:device\n\n📖 See docs/DEVICE_SETUP.md for detailed setup instructions.',
                     [{ text: 'OK', style: 'default' }]
                 );
                 return;
@@ -588,9 +592,10 @@ export default function Progress() {
             if (isMountedRef.current) {
                 setHealthLoading(false);
             }
+            const message = getHealthKitAvailabilityMessage();
             Alert.alert(
                 'HealthKit Unavailable',
-                'Apple Health integration is temporarily unavailable. Your other progress data is still being tracked.',
+                message + '\n\nYour other progress data is still being tracked.\n\nTo test on a real device:\n1. Connect your iPhone via USB\n2. Enable Developer Mode (Settings → Privacy & Security → Developer Mode)\n3. Run: npm run ios:device\n\n📖 See docs/DEVICE_SETUP.md for detailed setup instructions.',
                 [{ text: 'OK', style: 'default' }]
             );
             return;
