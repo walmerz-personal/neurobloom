@@ -6,19 +6,24 @@ import { Colors } from '../constants/Colors';
 
 export default function Index() {
     const router = useRouter();
-    const { user, loading } = useAuth();
+    const { user, userData, loading } = useAuth();
 
     useEffect(() => {
         if (!loading) {
             if (user) {
-                // User is logged in, go to home
-                router.replace('/(tabs)/home');
+                // User is logged in - wait for userData before navigating to home
+                // This ensures the home screen has the user's profile data
+                if (userData) {
+                    router.replace('/(tabs)/home');
+                }
+                // If user exists but userData is null, stay on loading screen
+                // The AuthContext should be loading userData, and home screen has a guard too
             } else {
                 // Not logged in, go to login
                 router.replace('/auth/login');
             }
         }
-    }, [user, loading]);
+    }, [user, userData, loading]);
 
     // Show loading while checking auth state
     return (

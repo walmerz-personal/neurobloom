@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
@@ -89,6 +89,18 @@ export default function Home() {
     // Kudos state
     const [unreadKudos, setUnreadKudos] = useState([]);
     const [showKudosModal, setShowKudosModal] = useState(false);
+
+    // Show loading spinner if user exists but userData is not yet loaded
+    // This prevents showing "Friend" and default progress while data is loading
+    if (user && !userData) {
+        return (
+            <ScreenWrapper>
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={Colors.primary} />
+                </View>
+            </ScreenWrapper>
+        );
+    }
 
     useEffect(() => {
         if (!userData) return;
@@ -406,6 +418,12 @@ function QuickActionRow({ icon, title, subtitle, onPress }) {
 }
 
 const styles = StyleSheet.create({
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: Colors.background,
+    },
     header: {
         paddingHorizontal: 24,
         paddingVertical: 20,

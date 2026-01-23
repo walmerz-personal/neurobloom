@@ -46,9 +46,14 @@ export const AuthProvider = ({ children }) => {
 
                     if (session?.user) {
                         // Load user data from users table with retry
-                        await loadUserDataWithRetry(session.user.id, session.user).catch(error => {
+                        // Ensure userData is loaded before allowing UI to proceed
+                        try {
+                            await loadUserDataWithRetry(session.user.id, session.user);
+                        } catch (error) {
                             console.error('❌ Failed to load user data after retries in auth listener:', error);
-                        });
+                            // Ensure fallback data is set even if retry fails
+                            setFallbackUserData(session.user.id, session.user);
+                        }
                         // Track app launch activity
                         trackActivityAndCheckInactivity(session.user.id).catch(error => {
                             console.error('❌ Failed to track activity:', error);
@@ -134,11 +139,16 @@ export const AuthProvider = ({ children }) => {
                 setSession(session);
                 setUser(session.user ?? null);
 
-                // Load user data with retry - don't block session restoration
-                loadUserDataWithRetry(session.user.id, session.user).catch(error => {
+                // Load user data with retry - MUST complete before setting loading=false
+                // This ensures userData is available before navigation
+                try {
+                    await loadUserDataWithRetry(session.user.id, session.user);
+                } catch (error) {
                     console.error('❌ Failed to load user data after retries:', error);
-                    // Even if userData fails, we have a session, so continue
-                });
+                    // Ensure we have at least fallback data - loadUserData should have called
+                    // setFallbackUserData, but if it didn't, call it now as a safety net
+                    setFallbackUserData(session.user.id, session.user);
+                }
 
                 // Track activity in background - don't block session check
                 trackActivityAndCheckInactivity(session.user.id).catch(error => {
@@ -150,7 +160,8 @@ export const AuthProvider = ({ children }) => {
             console.warn('⚠️ Session check exception (non-fatal):', error.message);
             // On any error, proceed without session - auth listener will handle valid sessions
         } finally {
-            // Always set loading to false, even if there were errors
+            // Set loading to false after userData loading completes
+            // loadUserDataWithRetry (or setFallbackUserData) should have set userData by now
             setLoading(false);
         }
     };
