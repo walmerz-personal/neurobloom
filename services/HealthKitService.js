@@ -269,6 +269,38 @@ function validateQueryOptions(startDate, endDate, unit) {
 }
 
 /**
+ * Build query options object for HealthKit Nitro API v12+
+ * The Nitro API requires dates in filter.date and a required limit parameter
+ * @param {Date} startDate - Start date for query
+ * @param {Date} endDate - End date for query
+ * @param {string} [unit] - Optional unit string
+ * @param {number} [limit=0] - Limit for query (0 or negative means fetch all)
+ * @param {boolean} [ascending=false] - Sort order
+ * @returns {Object} Query options object in Nitro API format
+ */
+function buildQueryOptions(startDate, endDate, unit = undefined, limit = 0, ascending = false) {
+    validateQueryOptions(startDate, endDate, unit);
+    
+    const options = {
+        filter: {
+            date: {
+                startDate: startDate,
+                endDate: endDate,
+            },
+        },
+        limit: limit,
+        ascending: ascending,
+    };
+    
+    // Only add unit if provided (required for quantity samples, not for category samples)
+    if (unit !== undefined) {
+        options.unit = unit;
+    }
+    
+    return options;
+}
+
+/**
  * Request HealthKit permissions for all required metrics
  * @returns {Promise<{granted: boolean, error: Error|null}>}
  */
@@ -379,13 +411,10 @@ export async function detectPermissionRevocation() {
             }, 3000);
         });
 
+        const options = buildQueryOptions(startOfDay, endOfDay, 'count');
         const queryPromise = HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.STEP_COUNT,
-            {
-                startDate: startOfDay,
-                endDate: endOfDay,
-                unit: 'count',
-            }
+            options
         );
 
         // Race between query and timeout
@@ -444,13 +473,10 @@ async function verifyPermissionsByQuery() {
             }, 3000);
         });
 
+        const options = buildQueryOptions(startOfDay, endOfDay, 'count');
         const queryPromise = HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.STEP_COUNT,
-            {
-                startDate: startOfDay,
-                endDate: endOfDay,
-                unit: 'count',
-            }
+            options
         );
 
         // Race between query and timeout
@@ -639,16 +665,10 @@ export async function getWalkingSpeed(startDate, endDate) {
     }
 
     try {
-        // Validate query parameters before calling native method
-        validateQueryOptions(startDate, endDate, 'm/s');
-
+        const options = buildQueryOptions(startDate, endDate, 'm/s');
         const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.WALKING_SPEED,
-            {
-                startDate: startDate,
-                endDate: endDate,
-                unit: 'm/s',
-            }
+            options
         );
 
         return { data: samples || [], error: null };
@@ -671,15 +691,10 @@ export async function getWalkingStepLength(startDate, endDate) {
     }
 
     try {
-        validateQueryOptions(startDate, endDate, 'm');
-
+        const options = buildQueryOptions(startDate, endDate, 'm');
         const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.WALKING_STEP_LENGTH,
-            {
-                startDate: startDate,
-                endDate: endDate,
-                unit: 'm',
-            }
+            options
         );
 
         return { data: samples || [], error: null };
@@ -702,15 +717,10 @@ export async function getWalkingAsymmetry(startDate, endDate) {
     }
 
     try {
-        validateQueryOptions(startDate, endDate, '%');
-
+        const options = buildQueryOptions(startDate, endDate, '%');
         const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.WALKING_ASYMMETRY,
-            {
-                startDate: startDate,
-                endDate: endDate,
-                unit: '%',
-            }
+            options
         );
 
         return { data: samples || [], error: null };
@@ -733,15 +743,10 @@ export async function getWalkingDoubleSupport(startDate, endDate) {
     }
 
     try {
-        validateQueryOptions(startDate, endDate, '%');
-
+        const options = buildQueryOptions(startDate, endDate, '%');
         const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.WALKING_DOUBLE_SUPPORT,
-            {
-                startDate: startDate,
-                endDate: endDate,
-                unit: '%',
-            }
+            options
         );
 
         return { data: samples || [], error: null };
@@ -764,14 +769,11 @@ export async function getWalkingSteadiness(startDate, endDate) {
     }
 
     try {
-        validateQueryOptions(startDate, endDate);
-
+        // Category samples don't need unit parameter
+        const options = buildQueryOptions(startDate, endDate);
         const samples = await HealthKit.queryCategorySamples(
             CATEGORY_TYPES.WALKING_STEADINESS,
-            {
-                startDate: startDate,
-                endDate: endDate,
-            }
+            options
         );
 
         return { data: samples || [], error: null };
@@ -794,15 +796,10 @@ export async function getSixMinuteWalkDistance(startDate, endDate) {
     }
 
     try {
-        validateQueryOptions(startDate, endDate, 'm');
-
+        const options = buildQueryOptions(startDate, endDate, 'm');
         const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.SIX_MINUTE_WALK,
-            {
-                startDate: startDate,
-                endDate: endDate,
-                unit: 'm',
-            }
+            options
         );
 
         return { data: samples || [], error: null };
@@ -825,15 +822,10 @@ export async function getStepCount(startDate, endDate) {
     }
 
     try {
-        validateQueryOptions(startDate, endDate, 'count');
-
+        const options = buildQueryOptions(startDate, endDate, 'count');
         const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.STEP_COUNT,
-            {
-                startDate: startDate,
-                endDate: endDate,
-                unit: 'count',
-            }
+            options
         );
 
         return { data: samples || [], error: null };
@@ -856,15 +848,10 @@ export async function getDistanceWalked(startDate, endDate) {
     }
 
     try {
-        validateQueryOptions(startDate, endDate, 'm');
-
+        const options = buildQueryOptions(startDate, endDate, 'm');
         const samples = await HealthKit.queryQuantitySamples(
             QUANTITY_TYPES.DISTANCE_WALKING_RUNNING,
-            {
-                startDate: startDate,
-                endDate: endDate,
-                unit: 'm',
-            }
+            options
         );
 
         return { data: samples || [], error: null };

@@ -311,8 +311,14 @@ describe('HealthKitService', () => {
                     expect(mockHealthKit.queryQuantitySamples).toHaveBeenCalledWith(
                         'HKQuantityTypeIdentifierWalkingSpeed',
                         expect.objectContaining({
-                            startDate: startDate,
-                            endDate: endDate,
+                            filter: expect.objectContaining({
+                                date: expect.objectContaining({
+                                    startDate: startDate,
+                                    endDate: endDate,
+                                }),
+                            }),
+                            limit: 0,
+                            ascending: false,
                             unit: 'm/s',
                         })
                     );
@@ -344,16 +350,19 @@ describe('HealthKitService', () => {
         });
 
         describe('getWalkingStepLength', () => {
-            it('should call queryQuantitySamples with startDate/endDate (not from/to)', async () => {
+            it('should call queryQuantitySamples with filter.date format (Nitro API)', async () => {
                 await new Promise(resolve => setTimeout(resolve, 10));
                 mockHealthKit.queryQuantitySamples.mockResolvedValueOnce([]);
                 await getWalkingStepLength(startDate, endDate);
 
-                // Check format if called
+                // Check format if called - Nitro API uses filter.date structure
                 if (mockHealthKit.queryQuantitySamples.mock.calls.length > 0) {
                     const callArgs = mockHealthKit.queryQuantitySamples.mock.calls[0];
-                    expect(callArgs[1]).toHaveProperty('startDate');
-                    expect(callArgs[1]).toHaveProperty('endDate');
+                    expect(callArgs[1]).toHaveProperty('filter');
+                    expect(callArgs[1].filter).toHaveProperty('date');
+                    expect(callArgs[1].filter.date).toHaveProperty('startDate');
+                    expect(callArgs[1].filter.date).toHaveProperty('endDate');
+                    expect(callArgs[1]).toHaveProperty('limit');
                     expect(callArgs[1]).not.toHaveProperty('from');
                     expect(callArgs[1]).not.toHaveProperty('to');
                 }
@@ -366,13 +375,19 @@ describe('HealthKitService', () => {
                 mockHealthKit.queryCategorySamples.mockResolvedValueOnce([]);
                 const result = await getWalkingSteadiness(startDate, endDate);
 
-                // Check format if called
+                // Check format if called - Nitro API uses filter.date structure
                 if (mockHealthKit.queryCategorySamples.mock.calls.length > 0) {
                     expect(mockHealthKit.queryCategorySamples).toHaveBeenCalledWith(
                         'HKCategoryTypeIdentifierAppleWalkingSteadinessEvent',
                         expect.objectContaining({
-                            startDate: startDate,
-                            endDate: endDate,
+                            filter: expect.objectContaining({
+                                date: expect.objectContaining({
+                                    startDate: startDate,
+                                    endDate: endDate,
+                                }),
+                            }),
+                            limit: 0,
+                            ascending: false,
                         })
                     );
                 }
@@ -386,11 +401,15 @@ describe('HealthKitService', () => {
                 mockHealthKit.queryQuantitySamples.mockResolvedValueOnce([]);
                 await getStepCount(startDate, endDate);
 
-                // Check format if called
+                // Check format if called - Nitro API format
                 if (mockHealthKit.queryQuantitySamples.mock.calls.length > 0) {
                     expect(mockHealthKit.queryQuantitySamples).toHaveBeenCalledWith(
                         expect.any(String),
                         expect.objectContaining({
+                            filter: expect.objectContaining({
+                                date: expect.any(Object),
+                            }),
+                            limit: 0,
                             unit: 'count',
                         })
                     );
@@ -404,11 +423,15 @@ describe('HealthKitService', () => {
                 mockHealthKit.queryQuantitySamples.mockResolvedValueOnce([]);
                 await getDistanceWalked(startDate, endDate);
 
-                // Check format if called
+                // Check format if called - Nitro API format
                 if (mockHealthKit.queryQuantitySamples.mock.calls.length > 0) {
                     expect(mockHealthKit.queryQuantitySamples).toHaveBeenCalledWith(
                         expect.any(String),
                         expect.objectContaining({
+                            filter: expect.objectContaining({
+                                date: expect.any(Object),
+                            }),
+                            limit: 0,
                             unit: 'm',
                         })
                     );
@@ -465,7 +488,7 @@ describe('HealthKitService', () => {
             }
         });
 
-        it('should use startDate/endDate in query methods (not from/to)', async () => {
+        it('should use Nitro API format with filter.date and limit', async () => {
             await new Promise(resolve => setTimeout(resolve, 10));
             const startDate = new Date();
             const endDate = new Date();
@@ -473,11 +496,15 @@ describe('HealthKitService', () => {
 
             await getWalkingSpeed(startDate, endDate);
 
-            // Check format if called
+            // Check format if called - Nitro API v12+ format
             if (mockHealthKit.queryQuantitySamples.mock.calls.length > 0) {
                 const options = mockHealthKit.queryQuantitySamples.mock.calls[0][1];
-                expect(options).toHaveProperty('startDate');
-                expect(options).toHaveProperty('endDate');
+                expect(options).toHaveProperty('filter');
+                expect(options.filter).toHaveProperty('date');
+                expect(options.filter.date).toHaveProperty('startDate');
+                expect(options.filter.date).toHaveProperty('endDate');
+                expect(options).toHaveProperty('limit');
+                expect(options.limit).toBe(0);
                 expect(options).not.toHaveProperty('from');
                 expect(options).not.toHaveProperty('to');
             }
