@@ -174,19 +174,21 @@ export default function Home() {
                         text: 'Log Out',
                         style: 'destructive',
                         onPress: async () => {
-                            // Sign out - this clears local state immediately
-                            const { error } = await signOut();
-                            
-                            if (error) {
-                                Alert.alert('Logout Failed', 'Please try again');
-                                return;
-                            }
-                            
-                            // Wait a brief moment for auth state to update
-                            // Then navigate to index which will redirect to login
-                            setTimeout(() => {
+                            try {
+                                // Sign out - this clears local state immediately
+                                const { error } = await signOut();
+
+                                if (error) {
+                                    Alert.alert('Logout Failed', 'Please try again');
+                                    return;
+                                }
+
+                                // Navigate to index which will redirect to login
                                 router.replace('/');
-                            }, 100);
+                            } catch (err) {
+                                console.error('❌ Logout onPress error:', err);
+                                Alert.alert('Logout Failed', 'An error occurred. Please try again.');
+                            }
                         },
                     },
                 ],
