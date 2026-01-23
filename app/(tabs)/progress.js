@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Linking, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Linking, Platform, Alert, AppState } from 'react-native';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
@@ -105,6 +105,42 @@ export default function Progress() {
             if (abortControllerRef.current) {
                 abortControllerRef.current.abort();
             }
+        };
+    }, [user?.id]);
+
+    // Listen for app state changes to detect permission revocation
+    useEffect(() => {
+        if (!user?.id || Platform.OS !== 'ios') {
+            return;
+        }
+
+        const handleAppStateChange = async (nextAppState) => {
+            if (nextAppState === 'active' && isMountedRef.current) {
+                // App became active - check if permissions were revoked
+                try {
+                    const { revoked } = await HealthKitService.detectPermissionRevocation();
+                    if (revoked && isMountedRef.current) {
+                        // Permissions were revoked - update UI state
+                        console.log('[Progress] Permissions revoked - updating UI');
+                        setHealthPermissionsGranted(false);
+                    } else if (!revoked && isMountedRef.current) {
+                        // Permissions still granted - verify UI state matches
+                        const hasBeenGranted = await HealthKitService.hasHealthPermissionsBeenGranted();
+                        if (isMountedRef.current) {
+                            setHealthPermissionsGranted(hasBeenGranted);
+                        }
+                    }
+                } catch (error) {
+                    // Silently fail - permission check on app active is non-critical
+                    console.log('[Progress] Could not check permission revocation:', error.message);
+                }
+            }
+        };
+
+        const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+        return () => {
+            subscription?.remove();
         };
     }, [user?.id]);
 
@@ -620,13 +656,69 @@ export default function Progress() {
                     userId: user?.id,
                     timestamp: new Date().toISOString()
                 });
-                // Show failure feedback
+                
+                // Parse error message to show specific feedback
+                const errorMessage = syncResult?.error?.message || String(syncResult?.error || 'Unknown error');
+                const isPermissionError = errorMessage.includes('PERMISSION_DENIED') || 
+                                         errorMessage.toLowerCase().includes('permission') ||
+                                         errorMessage.toLowerCase().includes('authorization');
+                const isNoDataError = errorMessage.includes('NO_DATA') ||
+                                    errorMessage.toLowerCase().includes('no health data') ||
+                                    errorMessage.toLowerCase().includes('no data found');
+                
                 if (isMountedRef.current) {
-                    Alert.alert(
-                        'Sync Failed',
-                        'Unable to sync health data. Please check your Apple Health permissions.',
-                        [{ text: 'OK' }]
-                    );
+                    if (isPermissionError) {
+                        // Permission error - offer to re-request permissions
+                        Alert.alert(
+                            'Permissions Required',
+                            'Apple Health permissions are required to sync your mobility data. Please grant permissions in Settings > Health > Data Access & Devices > NeuroBloom, or tap "Re-request Permissions" to open the permission screen.',
+                            [
+                                { text: 'OK', style: 'cancel' },
+                                {
+                                    text: 'Re-request Permissions',
+                                    onPress: async () => {
+                                        try {
+                                            // Reset safe mode in case it was triggered
+                                            HealthKitService.resetHealthKitSafeMode();
+                                            
+                                            // Navigate to health permissions screen
+                                            router.push('/onboarding/health-permissions');
+                                        } catch (navError) {
+                                            console.error('[Progress] Error navigating to permissions screen:', navError);
+                                            Alert.alert(
+                                                'Navigation Error',
+                                                'Unable to open the Health permissions screen. Please try again or restart the app.',
+                                                [{ text: 'OK' }]
+                                            );
+                                        }
+                                    }
+                                }
+                            ]
+                        );
+                    } else if (isNoDataError) {
+                        // No data available
+                        Alert.alert(
+                            'No Health Data',
+                            'No health data found for the selected date range. Make sure you have walking data in Apple Health and try again.',
+                            [{ text: 'OK' }]
+                        );
+                    } else {
+                        // Other error - show generic message with option to retry
+                        Alert.alert(
+                            'Sync Failed',
+                            `Unable to sync health data: ${errorMessage}`,
+                            [
+                                { text: 'OK', style: 'cancel' },
+                                {
+                                    text: 'Retry',
+                                    onPress: () => {
+                                        HealthKitService.resetHealthKitSafeMode();
+                                        handleSyncHealth();
+                                    }
+                                }
+                            ]
+                        );
+                    }
                 }
             }
         } catch (error) {

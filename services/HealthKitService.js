@@ -10,6 +10,98 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const HEALTH_PERMISSIONS_KEY = '@neurobloom_healthkit_permissions_granted';
 
+// HealthKit error code mappings (common Cocoa/HealthKit errors)
+const HEALTHKIT_ERROR_CODES = {
+    // Permission/Authorization errors
+    NOT_AUTHORIZED: 'HKErrorAuthorizationNotDetermined',
+    DENIED: 'HKErrorAuthorizationDenied',
+    // Data errors
+    NO_DATA: 'HKErrorNoData',
+    // System errors
+    DATABASE_ERROR: 'HKErrorDatabaseInaccessible',
+    CONNECTION_ERROR: 4097, // Cocoa error code for connection to healthd.server
+    TIMEOUT: 'HKErrorTimeout',
+};
+
+/**
+ * Map HealthKit errors to user-friendly messages
+ * @param {Error|string|number} error - Error object, message, or error code
+ * @returns {string} User-friendly error message
+ */
+function mapHealthKitError(error) {
+    if (!error) {
+        return 'An unknown error occurred while accessing health data.';
+    }
+
+    const errorMessage = error?.message || String(error);
+    const errorCode = error?.code || error;
+    const lowerMessage = errorMessage.toLowerCase();
+
+    // Check for permission errors
+    if (
+        lowerMessage.includes('permission') ||
+        lowerMessage.includes('authorization') ||
+        lowerMessage.includes('denied') ||
+        lowerMessage.includes('not authorized') ||
+        errorCode === HEALTHKIT_ERROR_CODES.NOT_AUTHORIZED ||
+        errorCode === HEALTHKIT_ERROR_CODES.DENIED
+    ) {
+        return 'Apple Health permissions are required. Please grant permissions in Settings > Health > Data Access & Devices > NeuroBloom.';
+    }
+
+    // Check for connection errors
+    if (
+        lowerMessage.includes('connection') ||
+        lowerMessage.includes('healthd') ||
+        errorCode === HEALTHKIT_ERROR_CODES.CONNECTION_ERROR ||
+        errorCode === 4097
+    ) {
+        return 'Unable to connect to Apple Health. Please ensure HealthKit is available on your device and try again.';
+    }
+
+    // Check for database errors
+    if (
+        lowerMessage.includes('database') ||
+        lowerMessage.includes('inaccessible') ||
+        errorCode === HEALTHKIT_ERROR_CODES.DATABASE_ERROR
+    ) {
+        return 'Apple Health database is temporarily unavailable. Please try again later.';
+    }
+
+    // Check for timeout errors
+    if (
+        lowerMessage.includes('timeout') ||
+        errorCode === HEALTHKIT_ERROR_CODES.TIMEOUT
+    ) {
+        return 'The request to Apple Health timed out. Please try again.';
+    }
+
+    // Check for no data errors
+    if (
+        lowerMessage.includes('no data') ||
+        lowerMessage.includes('no samples') ||
+        errorCode === HEALTHKIT_ERROR_CODES.NO_DATA
+    ) {
+        return 'No health data found. Make sure you have walking data in Apple Health.';
+    }
+
+    // Check for compatibility/availability errors
+    if (
+        lowerMessage.includes('not available') ||
+        lowerMessage.includes('not supported') ||
+        lowerMessage.includes('compatible')
+    ) {
+        return 'Apple Health is not available on this device. HealthKit requires an iPhone or Apple Watch.';
+    }
+
+    // Generic error - return original message if it's informative, otherwise generic message
+    if (errorMessage.length > 0 && errorMessage.length < 200) {
+        return `Unable to access health data: ${errorMessage}`;
+    }
+
+    return 'An error occurred while accessing health data. Please try again.';
+}
+
 // Try to import HealthKit module - will be null in Expo Go
 let HealthKit = null;
 let HKQuantityTypeIdentifier = null;
@@ -202,7 +294,11 @@ export async function requestHealthKitPermissions() {
         validateRequestAuthorizationParams(readPermissions);
 
         // requestAuthorization v12+ expects an options object with toRead and toShare keys
-        const result = await HealthKit.requestAuthorization({ toRead: readPermissions });
+        // Best practice: explicitly include both keys even if toShare is empty (we only read data)
+        const result = await HealthKit.requestAuthorization({ 
+            toRead: readPermissions,
+            toShare: [] // Explicitly empty since we don't write data to HealthKit
+        });
         
         if (result === true) {
             console.log('✅ HealthKit permissions granted');
@@ -253,8 +349,141 @@ export async function hasHealthPermissionsBeenGranted() {
 }
 
 /**
+ * Detect if permissions were revoked by attempting a test query
+ * Clears AsyncStorage flag if permissions are revoked
+ * @returns {Promise<{revoked: boolean, error: Error|null}>}
+ */
+export async function detectPermissionRevocation() {
+    if (!isHealthKitAvailable() || !HealthKit) {
+        return { revoked: false, error: null };
+    }
+
+    try {
+        // Check if we have the flag set first
+        const hasBeenGranted = await hasHealthPermissionsBeenGranted();
+        if (!hasBeenGranted) {
+            // No flag set, so nothing to revoke
+            return { revoked: false, error: null };
+        }
+
+        // Attempt a lightweight query to verify permissions are still granted
+        const today = new Date();
+        const startOfDay = new Date(today);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(today);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+                reject(new Error('Permission revocation check timeout'));
+            }, 3000);
+        });
+
+        const queryPromise = HealthKit.queryQuantitySamples(
+            QUANTITY_TYPES.STEP_COUNT,
+            {
+                startDate: startOfDay,
+                endDate: endOfDay,
+                unit: 'count',
+            }
+        );
+
+        // Race between query and timeout
+        await Promise.race([queryPromise, timeoutPromise]);
+
+        // If we got here without error, permissions are still granted
+        return { revoked: false, error: null };
+    } catch (error) {
+        // Check if error is permission-related
+        const errorMessage = error?.message || String(error);
+        const isPermissionError = 
+            errorMessage.toLowerCase().includes('permission') ||
+            errorMessage.toLowerCase().includes('authorization') ||
+            errorMessage.toLowerCase().includes('denied') ||
+            errorMessage.toLowerCase().includes('not authorized');
+
+        if (isPermissionError) {
+            // Permissions were revoked - clear the flag
+            console.log('⚠️ Permissions revoked - clearing AsyncStorage flag');
+            try {
+                await AsyncStorage.removeItem(HEALTH_PERMISSIONS_KEY);
+            } catch (storageError) {
+                console.error('❌ Error clearing permission flag:', storageError);
+            }
+            return { revoked: true, error: null };
+        }
+
+        // Other errors (timeout, crash, etc.) - don't assume revocation
+        console.warn('⚠️ Permission revocation check failed with non-permission error:', errorMessage);
+        return { revoked: false, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+}
+
+/**
+ * Verify permissions by attempting a lightweight HealthKit query
+ * This is the most reliable way to check if READ permissions are actually granted
+ * @returns {Promise<{granted: boolean, error: Error|null}>}
+ */
+async function verifyPermissionsByQuery() {
+    if (!isHealthKitAvailable() || !HealthKit) {
+        return { granted: false, error: new Error('HealthKit is not available') };
+    }
+
+    try {
+        // Attempt to query step count for today (lightweight, commonly available metric)
+        const today = new Date();
+        const startOfDay = new Date(today);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(today);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // Use a timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+                reject(new Error('Permission verification query timeout'));
+            }, 3000);
+        });
+
+        const queryPromise = HealthKit.queryQuantitySamples(
+            QUANTITY_TYPES.STEP_COUNT,
+            {
+                startDate: startOfDay,
+                endDate: endOfDay,
+                unit: 'count',
+            }
+        );
+
+        // Race between query and timeout
+        await Promise.race([queryPromise, timeoutPromise]);
+
+        // If we got here without error, permissions are granted
+        // Note: Empty array is OK - it means permissions are granted but no data exists
+        console.log('✅ Permissions verified by successful HealthKit query');
+        return { granted: true, error: null };
+    } catch (error) {
+        // Check if error is permission-related
+        const errorMessage = error?.message || String(error);
+        const isPermissionError = 
+            errorMessage.toLowerCase().includes('permission') ||
+            errorMessage.toLowerCase().includes('authorization') ||
+            errorMessage.toLowerCase().includes('denied') ||
+            errorMessage.toLowerCase().includes('not authorized');
+
+        if (isPermissionError) {
+            console.log('❌ Permission verification failed - permissions not granted');
+            return { granted: false, error: new Error('HealthKit permissions not granted') };
+        }
+
+        // Other errors (timeout, crash, etc.) - don't assume permissions are denied
+        console.warn('⚠️ Permission verification query failed with non-permission error:', errorMessage);
+        return { granted: false, error: error instanceof Error ? error : new Error(String(error)) };
+    }
+}
+
+/**
  * Check if HealthKit permissions are already granted
  * Uses AsyncStorage flag first (more reliable on iOS), then falls back to authorizationStatusFor
+ * Finally attempts query-based verification as the most reliable method
  * Includes timeout mechanism to detect native crashes
  * @param {boolean} userInitiated - If true, will test compatibility before checking. If false, only checks AsyncStorage.
  * @returns {Promise<{granted: boolean, error: Error|null}>}
@@ -335,16 +564,63 @@ export async function checkHealthKitPermissions(userInitiated = false) {
             // Check if at least one permission is granted (authorizationStatus returns a number: 0=notDetermined, 1=sharingDenied, 2=sharingAuthorized)
             const granted = authorizationStatus === 2; // sharingAuthorized
             
-            return { granted, error: null };
+            if (granted) {
+                // Save flag when authorizationStatusFor confirms permissions
+                await saveHealthPermissionsGranted();
+                return { granted: true, error: null };
+            }
+            
+            // If authorizationStatusFor says not granted, try query-based verification as final fallback
+            // This is the most reliable method for READ permissions
+            console.log('⚠️ authorizationStatusFor returned not granted, attempting query-based verification...');
+            const queryResult = await verifyPermissionsByQuery();
+            
+            if (queryResult.granted) {
+                // Permissions are actually granted - save flag and return
+                await saveHealthPermissionsGranted();
+                return { granted: true, error: null };
+            }
+            
+            return { granted: false, error: queryResult.error };
         } catch (nativeError) {
-            // Native crash or timeout detected - enable safe mode and return gracefully
-            console.error('❌ HealthKit native crash/timeout detected in authorizationStatusFor:', nativeError);
-            nativeCrashDetected = true;
-            healthKitSafeMode = true;
-            return { granted: false, error: null }; // Return null error to avoid propagating crash
+            // Native crash or timeout detected - try query-based verification as fallback
+            console.warn('⚠️ HealthKit native crash/timeout detected in authorizationStatusFor, trying query-based verification...');
+            
+            try {
+                const queryResult = await verifyPermissionsByQuery();
+                if (queryResult.granted) {
+                    // Permissions are actually granted - save flag and return
+                    await saveHealthPermissionsGranted();
+                    return { granted: true, error: null };
+                }
+                // If query also fails, enable safe mode
+                nativeCrashDetected = true;
+                healthKitSafeMode = true;
+                return { granted: false, error: queryResult.error };
+            } catch (queryError) {
+                // Both methods failed - enable safe mode
+                console.error('❌ Both authorizationStatusFor and query verification failed');
+                nativeCrashDetected = true;
+                healthKitSafeMode = true;
+                return { granted: false, error: null }; // Return null error to avoid propagating crash
+            }
         }
     } catch (error) {
         console.error('❌ Error checking HealthKit permissions:', error);
+        
+        // Try query-based verification as final fallback
+        try {
+            const queryResult = await verifyPermissionsByQuery();
+            if (queryResult.granted) {
+                // Permissions are actually granted - save flag and return
+                await saveHealthPermissionsGranted();
+                return { granted: true, error: null };
+            }
+        } catch (queryError) {
+            // Query verification also failed
+            console.error('❌ Query-based verification also failed:', queryError);
+        }
+        
         nativeCrashDetected = true;
         healthKitSafeMode = true; // Enable safe mode on crash
         return { granted: false, error: null }; // Return null error to avoid propagating crash
@@ -378,7 +654,8 @@ export async function getWalkingSpeed(startDate, endDate) {
         return { data: samples || [], error: null };
     } catch (error) {
         console.error('❌ Error getting walking speed:', error);
-        return { data: [], error: error instanceof Error ? error : new Error(String(error)) };
+        const friendlyMessage = mapHealthKitError(error);
+        return { data: [], error: new Error(friendlyMessage) };
     }
 }
 
@@ -408,7 +685,8 @@ export async function getWalkingStepLength(startDate, endDate) {
         return { data: samples || [], error: null };
     } catch (error) {
         console.error('❌ Error getting walking step length:', error);
-        return { data: [], error: error instanceof Error ? error : new Error(String(error)) };
+        const friendlyMessage = mapHealthKitError(error);
+        return { data: [], error: new Error(friendlyMessage) };
     }
 }
 
@@ -438,7 +716,8 @@ export async function getWalkingAsymmetry(startDate, endDate) {
         return { data: samples || [], error: null };
     } catch (error) {
         console.error('❌ Error getting walking asymmetry:', error);
-        return { data: [], error: error instanceof Error ? error : new Error(String(error)) };
+        const friendlyMessage = mapHealthKitError(error);
+        return { data: [], error: new Error(friendlyMessage) };
     }
 }
 
@@ -468,7 +747,8 @@ export async function getWalkingDoubleSupport(startDate, endDate) {
         return { data: samples || [], error: null };
     } catch (error) {
         console.error('❌ Error getting walking double support:', error);
-        return { data: [], error: error instanceof Error ? error : new Error(String(error)) };
+        const friendlyMessage = mapHealthKitError(error);
+        return { data: [], error: new Error(friendlyMessage) };
     }
 }
 
@@ -497,7 +777,8 @@ export async function getWalkingSteadiness(startDate, endDate) {
         return { data: samples || [], error: null };
     } catch (error) {
         console.error('❌ Error getting walking steadiness:', error);
-        return { data: [], error: error instanceof Error ? error : new Error(String(error)) };
+        const friendlyMessage = mapHealthKitError(error);
+        return { data: [], error: new Error(friendlyMessage) };
     }
 }
 
@@ -527,7 +808,8 @@ export async function getSixMinuteWalkDistance(startDate, endDate) {
         return { data: samples || [], error: null };
     } catch (error) {
         console.error('❌ Error getting six-minute walk distance:', error);
-        return { data: [], error: error instanceof Error ? error : new Error(String(error)) };
+        const friendlyMessage = mapHealthKitError(error);
+        return { data: [], error: new Error(friendlyMessage) };
     }
 }
 
@@ -557,7 +839,8 @@ export async function getStepCount(startDate, endDate) {
         return { data: samples || [], error: null };
     } catch (error) {
         console.error('❌ Error getting step count:', error);
-        return { data: [], error: error instanceof Error ? error : new Error(String(error)) };
+        const friendlyMessage = mapHealthKitError(error);
+        return { data: [], error: new Error(friendlyMessage) };
     }
 }
 
@@ -587,7 +870,8 @@ export async function getDistanceWalked(startDate, endDate) {
         return { data: samples || [], error: null };
     } catch (error) {
         console.error('❌ Error getting distance walked:', error);
-        return { data: [], error: error instanceof Error ? error : new Error(String(error)) };
+        const friendlyMessage = mapHealthKitError(error);
+        return { data: [], error: new Error(friendlyMessage) };
     }
 }
 
@@ -682,7 +966,8 @@ export async function syncHealthData(startDate, endDate) {
         };
     } catch (error) {
         console.error('❌ Error syncing health data:', error);
-        return { data: null, error: error instanceof Error ? error : new Error(String(error)) };
+        const friendlyMessage = mapHealthKitError(error);
+        return { data: null, error: new Error(friendlyMessage) };
     }
 }
 
@@ -691,6 +976,7 @@ export default {
     checkHealthKitPermissions,
     saveHealthPermissionsGranted,
     hasHealthPermissionsBeenGranted,
+    detectPermissionRevocation,
     getWalkingSpeed,
     getWalkingStepLength,
     getWalkingAsymmetry,

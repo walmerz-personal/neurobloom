@@ -20,6 +20,75 @@ const QUALITY_THRESHOLDS = {
     MIN_SAMPLES: 3, // Minimum number of samples for reliable average
 };
 
+// Reasonable value ranges for validation (to catch obviously bad data)
+const VALUE_RANGES = {
+    WALKING_SPEED: { min: 0.1, max: 5.0 }, // m/s (0.1 m/s = 0.36 km/h, 5.0 m/s = 18 km/h)
+    WALKING_STEP_LENGTH: { min: 0.1, max: 2.0 }, // meters
+    WALKING_ASYMMETRY: { min: 0, max: 100 }, // percentage
+    WALKING_DOUBLE_SUPPORT: { min: 0, max: 100 }, // percentage
+    STEP_COUNT: { min: 0, max: 100000 }, // steps per day
+    DISTANCE: { min: 0, max: 100000 }, // meters (100km max)
+    SIX_MINUTE_WALK: { min: 0, max: 2000 }, // meters
+};
+
+/**
+ * Validate a HealthKit sample structure
+ * @param {Object} sample - HealthKit sample object
+ * @param {string} metricType - Type of metric for range validation
+ * @returns {boolean} - True if sample is valid
+ */
+function validateSample(sample, metricType = null) {
+    if (!sample || typeof sample !== 'object') {
+        return false;
+    }
+
+    // Check for required date field (at least one should exist)
+    const hasDate = !!(sample.startDate || sample.date || sample.timestamp);
+    if (!hasDate) {
+        return false;
+    }
+
+    // Validate date is reasonable (not in future, not too old)
+    try {
+        const sampleDate = new Date(sample.startDate || sample.date || sample.timestamp);
+        if (isNaN(sampleDate.getTime())) {
+            return false;
+        }
+        
+        const now = new Date();
+        const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+        const oneDayFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        
+        // Date should be within reasonable range (not more than 1 year ago, not in future)
+        if (sampleDate < oneYearAgo || sampleDate > oneDayFromNow) {
+            return false;
+        }
+    } catch (error) {
+        return false;
+    }
+
+    // For quantity samples, validate value exists and is reasonable
+    if (metricType && VALUE_RANGES[metricType]) {
+        const value = sample.value || sample.quantity || sample.amount;
+        if (value === null || value === undefined) {
+            return false;
+        }
+        
+        const numValue = typeof value === 'number' ? value : parseFloat(value);
+        if (isNaN(numValue)) {
+            return false;
+        }
+        
+        const range = VALUE_RANGES[metricType];
+        if (numValue < range.min || numValue > range.max) {
+            // Value is outside reasonable range - log but don't fail (might be edge case)
+            console.warn(`⚠️ Sample value ${numValue} outside expected range for ${metricType}`);
+        }
+    }
+
+    return true;
+}
+
 /**
  * Calculate daily aggregates from HealthKit samples
  * @param {Array} samples - Array of HealthKit samples
@@ -31,7 +100,23 @@ function aggregateDailySamples(samples, metricType) {
         return { average: null, min: null, max: null, count: 0, values: [] };
     }
 
-    const values = samples
+    // Map metric type to validation key
+    const validationKey = {
+        'speed': 'WALKING_SPEED',
+        'length': 'WALKING_STEP_LENGTH',
+        'percentage': 'WALKING_ASYMMETRY',
+        'count': 'STEP_COUNT',
+        'distance': 'DISTANCE',
+    }[metricType] || null;
+
+    // Filter and validate samples
+    const validSamples = samples.filter(sample => validateSample(sample, validationKey));
+
+    if (validSamples.length === 0) {
+        return { average: null, min: null, max: null, count: 0, values: [] };
+    }
+
+    const values = validSamples
         .map(sample => {
             // Extract value based on sample structure (may vary by library)
             const value = sample.value || sample.quantity || sample.amount;
@@ -67,8 +152,15 @@ function getLatestSteadiness(samples) {
         return null;
     }
 
+    // Filter valid samples first
+    const validSamples = samples.filter(sample => validateSample(sample));
+
+    if (validSamples.length === 0) {
+        return null;
+    }
+
     // Sort by date (most recent first)
-    const sorted = [...samples].sort((a, b) => {
+    const sorted = [...validSamples].sort((a, b) => {
         const dateA = new Date(a.startDate || a.date || a.timestamp);
         const dateB = new Date(b.startDate || b.date || b.timestamp);
         return dateB - dateA;
@@ -101,10 +193,22 @@ function calculateDailyStepCount(samples) {
         return null;
     }
 
+    // Filter valid samples first
+    const validSamples = samples.filter(sample => validateSample(sample, 'STEP_COUNT'));
+
+    if (validSamples.length === 0) {
+        return null;
+    }
+
     // Sum all step count samples for the day
-    const total = samples.reduce((sum, sample) => {
+    const total = validSamples.reduce((sum, sample) => {
         const value = sample.value || sample.quantity || sample.count || 0;
-        return sum + (typeof value === 'number' ? value : parseFloat(value) || 0);
+        const numValue = typeof value === 'number' ? value : parseFloat(value) || 0;
+        // Additional validation: step count should be non-negative
+        if (numValue < 0 || numValue > VALUE_RANGES.STEP_COUNT.max) {
+            return sum; // Skip invalid values
+        }
+        return sum + numValue;
     }, 0);
 
     return Math.round(total);
@@ -120,9 +224,21 @@ function calculateDailyDistance(samples) {
         return null;
     }
 
-    const total = samples.reduce((sum, sample) => {
+    // Filter valid samples first
+    const validSamples = samples.filter(sample => validateSample(sample, 'DISTANCE'));
+
+    if (validSamples.length === 0) {
+        return null;
+    }
+
+    const total = validSamples.reduce((sum, sample) => {
         const value = sample.value || sample.quantity || sample.distance || 0;
-        return sum + (typeof value === 'number' ? value : parseFloat(value) || 0);
+        const numValue = typeof value === 'number' ? value : parseFloat(value) || 0;
+        // Additional validation: distance should be non-negative and reasonable
+        if (numValue < 0 || numValue > VALUE_RANGES.DISTANCE.max) {
+            return sum; // Skip invalid values
+        }
+        return sum + numValue;
     }, 0);
 
     return parseFloat(total.toFixed(2));
@@ -216,8 +332,10 @@ export async function processDailyMetrics(date, rawData) {
     const walkingSteadiness = getLatestSteadiness(walkingSteadinessSamples);
 
     // Get six-minute walk distance (usually a single value per test)
-    const sixMinuteWalkDistance = sixMinuteWalkSamples.length > 0
-        ? parseFloat((sixMinuteWalkSamples[0].value || sixMinuteWalkSamples[0].quantity || 0).toFixed(2))
+    // Filter valid samples first
+    const validSixMinuteWalkSamples = sixMinuteWalkSamples.filter(sample => validateSample(sample, 'SIX_MINUTE_WALK'));
+    const sixMinuteWalkDistance = validSixMinuteWalkSamples.length > 0
+        ? parseFloat((validSixMinuteWalkSamples[0].value || validSixMinuteWalkSamples[0].quantity || 0).toFixed(2))
         : null;
 
     // Calculate total sample count
@@ -260,15 +378,112 @@ export async function processDailyMetrics(date, rawData) {
 export async function syncAndSaveHealthData(userId, startDate, endDate) {
     try {
         // Check permissions first (userInitiated=true to verify with native HealthKit API)
-        const { granted } = await HealthKitService.checkHealthKitPermissions(true);
+        const { granted, error: permissionError } = await HealthKitService.checkHealthKitPermissions(true);
+        
+        // Even if permission check fails, attempt a test query to verify actual permissions
+        // This handles cases where permission check is unreliable but permissions are actually granted
         if (!granted) {
-            return { success: false, synced: 0, error: new Error('HealthKit permissions not granted') };
+            console.log('⚠️ Permission check failed, attempting test query to verify actual permissions...');
+            
+            // Attempt a lightweight test query to verify permissions are actually working
+            const today = new Date();
+            const testStart = new Date(today);
+            testStart.setHours(0, 0, 0, 0);
+            const testEnd = new Date(today);
+            testEnd.setHours(23, 59, 59, 999);
+            
+            try {
+                const { data: testData, error: testError } = await HealthKitService.getStepCount(testStart, testEnd);
+                
+                // If test query succeeds (even with empty data), permissions are actually granted
+                if (!testError) {
+                    console.log('✅ Test query succeeded - permissions are actually granted, proceeding with sync');
+                    // Permissions are granted, continue with sync
+                } else {
+                    // Test query failed - check if it's a permission error
+                    const errorMessage = testError?.message || String(testError);
+                    const isPermissionError = 
+                        errorMessage.toLowerCase().includes('permission') ||
+                        errorMessage.toLowerCase().includes('authorization') ||
+                        errorMessage.toLowerCase().includes('denied') ||
+                        errorMessage.toLowerCase().includes('not authorized');
+                    
+                    if (isPermissionError) {
+                        return { 
+                            success: false, 
+                            synced: 0, 
+                            error: new Error('PERMISSION_DENIED: Apple Health permissions are required. Please grant permissions in Settings > Health > Data Access & Devices > NeuroBloom')
+                        };
+                    }
+                    
+                    // Other error - return generic error
+                    return { 
+                        success: false, 
+                        synced: 0, 
+                        error: new Error(`Unable to access health data: ${errorMessage}`)
+                    };
+                }
+            } catch (testQueryError) {
+                // Test query threw an exception - check if it's permission-related
+                const errorMessage = testQueryError?.message || String(testQueryError);
+                const isPermissionError = 
+                    errorMessage.toLowerCase().includes('permission') ||
+                    errorMessage.toLowerCase().includes('authorization') ||
+                    errorMessage.toLowerCase().includes('denied') ||
+                    errorMessage.toLowerCase().includes('not authorized');
+                
+                if (isPermissionError) {
+                    return { 
+                        success: false, 
+                        synced: 0, 
+                        error: new Error('PERMISSION_DENIED: Apple Health permissions are required. Please grant permissions in Settings > Health > Data Access & Devices > NeuroBloom')
+                    };
+                }
+                
+                // Unknown error - return with details
+                return { 
+                    success: false, 
+                    synced: 0, 
+                    error: new Error(`Failed to verify health data access: ${errorMessage}`)
+                };
+            }
         }
 
         // Sync raw data from HealthKit
         const { data: rawData, error: syncError } = await HealthKitService.syncHealthData(startDate, endDate);
-        if (syncError || !rawData) {
-            return { success: false, synced: 0, error: syncError || new Error('Failed to sync health data') };
+        
+        if (syncError) {
+            // Check if error is permission-related
+            const errorMessage = syncError?.message || String(syncError);
+            const isPermissionError = 
+                errorMessage.toLowerCase().includes('permission') ||
+                errorMessage.toLowerCase().includes('authorization') ||
+                errorMessage.toLowerCase().includes('denied') ||
+                errorMessage.toLowerCase().includes('not authorized');
+            
+            if (isPermissionError) {
+                return { 
+                    success: false, 
+                    synced: 0, 
+                    error: new Error('PERMISSION_DENIED: Apple Health permissions are required. Please grant permissions in Settings > Health > Data Access & Devices > NeuroBloom')
+                };
+            }
+            
+            return { 
+                success: false, 
+                synced: 0, 
+                error: new Error(`Failed to sync health data: ${errorMessage}`)
+            };
+        }
+        
+        if (!rawData) {
+            return { success: false, synced: 0, error: new Error('NO_DATA: No health data found. Make sure you have walking data in Apple Health.') };
+        }
+        
+        // Check if we actually have any data to process
+        const hasData = Object.values(rawData).some(samples => Array.isArray(samples) && samples.length > 0);
+        if (!hasData) {
+            return { success: false, synced: 0, error: new Error('NO_DATA: No health data found for the selected date range. Make sure you have walking data in Apple Health.') };
         }
 
         // Process data for each day in range
