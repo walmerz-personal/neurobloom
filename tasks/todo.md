@@ -73,3 +73,21 @@ The `handleSyncHealth()` function returns silently at the guard clause (line 503
 - Updated tests to be more flexible with module state issues caused by `jest.resetModules()`
 - Increased timeout for timeout test to 10 seconds
 - Simplified assertions to test return structure rather than mock calls that get cleared by module reset
+
+---
+
+# Fix Metro Module Resolution Error
+
+## Problem Summary
+Metro bundler reports "none of these files exist" for `@expo/metro-runtime` even though files are present.
+
+## Root Cause
+The nested `@expo/metro-runtime` package at `node_modules/expo-router/node_modules/@expo/metro-runtime/` has restrictive file permissions (600 for files, 700 for directories) - owner-only access.
+
+## Todo Items
+
+- [x] Fix permissions on nested @expo/metro-runtime directory
+- [ ] Verify the app starts without Metro module resolution error
+
+## Files Modified
+None - this is a file permission fix only
