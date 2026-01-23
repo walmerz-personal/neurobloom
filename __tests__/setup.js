@@ -103,6 +103,19 @@ jest.mock('expo-constants', () => ({
     },
 }));
 
+// Mock expo-notifications
+jest.mock('expo-notifications', () => ({
+    setNotificationHandler: jest.fn(),
+    getPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
+    requestPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
+    scheduleNotificationAsync: jest.fn(() => Promise.resolve('notification-id')),
+    cancelAllScheduledNotificationsAsync: jest.fn(() => Promise.resolve()),
+    getAllScheduledNotificationsAsync: jest.fn(() => Promise.resolve([])),
+    SchedulableTriggerInputTypes: {
+        DAILY: 'daily',
+    },
+}));
+
 // Mock react-native-safe-area-context
 jest.mock('react-native-safe-area-context', () => {
     const React = require('react');

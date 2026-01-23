@@ -2,7 +2,7 @@ module.exports = {
     preset: 'react-native',
     setupFilesAfterEnv: ['<rootDir>/__tests__/setup.js'],
     transformIgnorePatterns: [
-        'node_modules/(?!(react-native|@react-native|@react-navigation|expo|@expo|react-native-svg|@react-native-community|react-native-url-polyfill|lucide-react-native)/)',
+        'node_modules/(?!(react-native|@react-native|@react-navigation|expo|expo-.*|@expo|react-native-svg|@react-native-community|react-native-url-polyfill|lucide-react-native)/)',
     ],
     testPathIgnorePatterns: [
         '/node_modules/',

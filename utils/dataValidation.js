@@ -8,14 +8,14 @@
  * @returns {boolean} True if point is valid
  */
 export const validateChartPoint = (point) => {
-    return point &&
+    return !!(point &&
            typeof point.value === 'number' &&
            !isNaN(point.value) &&
            isFinite(point.value) &&
            point.date &&
            typeof point.date === 'string' &&
            point.date.trim().length > 0 &&
-           !isNaN(new Date(point.date).getTime());
+           !isNaN(new Date(point.date).getTime()));
 };
 
 /**
@@ -53,10 +53,10 @@ export const validateChartData = (data) => {
  * @returns {boolean} True if log is valid
  */
 export const validateMoodLog = (log) => {
-    return log &&
+    return !!(log &&
            log.log_date &&
            typeof log.log_date === 'string' &&
            !isNaN(new Date(log.log_date).getTime()) &&
            log.mood &&
-           typeof log.mood === 'string';
+           typeof log.mood === 'string');
 };

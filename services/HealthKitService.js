@@ -81,8 +81,8 @@ export async function testHealthKitCompatibility() {
         // isHealthDataAvailable() is the safest method to test compatibility
         const result = await Promise.race([
             HealthKit.isHealthDataAvailable(),
-            new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('HealthKit compatibility test timeout')), 1000)
+            new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('HealthKit compatibility test timeout')), 3000)
             )
         ]);
         
@@ -97,6 +97,17 @@ export async function testHealthKitCompatibility() {
         nativeCrashDetected = true;
         return false;
     }
+}
+
+/**
+ * Reset HealthKit safe mode flags
+ * Call this to retry HealthKit after it was disabled due to errors
+ */
+export function resetHealthKitSafeMode() {
+    healthKitSafeMode = false;
+    nativeCrashDetected = false;
+    turboModuleCompatible = null;
+    console.log('✅ HealthKit safe mode reset - will retry on next call');
 }
 
 // Async check for actual HealthKit availability on device
@@ -693,4 +704,5 @@ export default {
     isHealthKitAvailable,
     checkHealthKitDataAvailable,
     testHealthKitCompatibility,
+    resetHealthKitSafeMode,
 };

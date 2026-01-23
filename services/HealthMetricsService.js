@@ -259,8 +259,8 @@ export async function processDailyMetrics(date, rawData) {
  */
 export async function syncAndSaveHealthData(userId, startDate, endDate) {
     try {
-        // Check permissions first
-        const { granted } = await HealthKitService.checkHealthKitPermissions();
+        // Check permissions first (userInitiated=true to verify with native HealthKit API)
+        const { granted } = await HealthKitService.checkHealthKitPermissions(true);
         if (!granted) {
             return { success: false, synced: 0, error: new Error('HealthKit permissions not granted') };
         }

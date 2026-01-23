@@ -499,8 +499,16 @@ export default function Progress() {
     };
 
     const handleSyncHealth = async () => {
-        // Guard: Check user, mount status, and HealthKit availability
-        if (!user?.id || !isMountedRef.current) return;
+        // Guard: Check user and mount status
+        if (!user?.id) {
+            Alert.alert(
+                'Sign In Required',
+                'Please sign in to sync your health data.',
+                [{ text: 'OK' }]
+            );
+            return;
+        }
+        if (!isMountedRef.current) return;
 
         // Check if HealthKit is available before attempting sync
         if (!HealthKitService.isHealthKitAvailable()) {
@@ -510,8 +518,17 @@ export default function Progress() {
             }
             Alert.alert(
                 'HealthKit Unavailable',
-                'Apple Health integration is temporarily unavailable. Your other progress data is still being tracked.',
-                [{ text: 'OK', style: 'default' }]
+                'Apple Health integration is temporarily unavailable.',
+                [
+                    { text: 'OK', style: 'cancel' },
+                    {
+                        text: 'Retry',
+                        onPress: () => {
+                            HealthKitService.resetHealthKitSafeMode();
+                            handleSyncHealth();
+                        }
+                    }
+                ]
             );
             return;
         }
@@ -587,12 +604,30 @@ export default function Progress() {
                         });
                     }
                 }
+                // Show success feedback
+                if (isMountedRef.current) {
+                    Alert.alert(
+                        'Sync Complete',
+                        syncResult.synced > 0
+                            ? `Synced ${syncResult.synced} days of health data.`
+                            : 'No new health data found. Make sure walking data exists in Apple Health.',
+                        [{ text: 'OK' }]
+                    );
+                }
             } else {
                 console.error('[Progress] Error syncing health data:', {
                     error: syncResult?.error?.message || syncResult?.error || 'Unknown error',
                     userId: user?.id,
                     timestamp: new Date().toISOString()
                 });
+                // Show failure feedback
+                if (isMountedRef.current) {
+                    Alert.alert(
+                        'Sync Failed',
+                        'Unable to sync health data. Please check your Apple Health permissions.',
+                        [{ text: 'OK' }]
+                    );
+                }
             }
         } catch (error) {
             // Catch any unexpected errors

@@ -80,7 +80,7 @@ describe('NotificationService', () => {
                     title: "Time for Your Exercises! 🌸",
                     body: expect.any(String),
                     sound: true,
-                    data: { type: 'daily-reminder' },
+                    data: expect.objectContaining({ type: 'daily-reminder' }),
                 }),
                 trigger: {
                     type: Notifications.SchedulableTriggerInputTypes.DAILY,
@@ -159,13 +159,15 @@ describe('NotificationService', () => {
     describe('saveNotificationPrefs', () => {
         it('should save notification preferences', async () => {
             const prefs = { enabled: true, hour: 9, minute: 0 };
+            // Service normalizes prefs by adding times array
+            const expectedPrefs = { enabled: true, hour: 9, minute: 0, times: [{ hour: 9, minute: 0 }] };
             AsyncStorage.setItem.mockResolvedValue();
 
             await NotificationService.saveNotificationPrefs(prefs);
 
             expect(AsyncStorage.setItem).toHaveBeenCalledWith(
                 '@neurobloom_notification_prefs',
-                JSON.stringify(prefs)
+                JSON.stringify(expectedPrefs)
             );
         });
 
@@ -180,11 +182,14 @@ describe('NotificationService', () => {
     describe('loadNotificationPrefs', () => {
         it('should load notification preferences', async () => {
             const prefs = { enabled: true, hour: 9, minute: 0 };
+            // Service migrates old format by adding times array
+            const expectedPrefs = { enabled: true, hour: 9, minute: 0, times: [{ hour: 9, minute: 0 }] };
             AsyncStorage.getItem.mockResolvedValue(JSON.stringify(prefs));
+            AsyncStorage.setItem.mockResolvedValue(); // Migration saves the updated prefs
 
             const result = await NotificationService.loadNotificationPrefs();
 
-            expect(result).toEqual(prefs);
+            expect(result).toEqual(expectedPrefs);
             expect(AsyncStorage.getItem).toHaveBeenCalledWith('@neurobloom_notification_prefs');
         });
 
