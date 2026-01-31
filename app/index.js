@@ -9,8 +9,11 @@ export default function Index() {
     const { user, userData, loading } = useAuth();
     const timeoutRef = useRef(null);
     const hasNavigatedRef = useRef(false);
+    const isMountedRef = useRef(true);
 
     useEffect(() => {
+        isMountedRef.current = true;
+
         // Reset navigation flag when user changes (logout/login)
         if (!user) {
             hasNavigatedRef.current = false;
@@ -25,7 +28,8 @@ export default function Index() {
         // Safety timeout: if loading takes more than 10 seconds, proceed anyway
         // This prevents infinite loading screens
         timeoutRef.current = setTimeout(() => {
-            if (!hasNavigatedRef.current) {
+            // Only navigate if component is still mounted
+            if (isMountedRef.current && !hasNavigatedRef.current) {
                 console.warn('⚠️ Loading timeout reached, proceeding with navigation');
                 if (user) {
                     // If we have a user but no userData, auth context should have set fallback data
@@ -69,8 +73,10 @@ export default function Index() {
         }
 
         return () => {
+            isMountedRef.current = false;
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
+                timeoutRef.current = null;
             }
         };
     }, [user, userData, loading, router]);

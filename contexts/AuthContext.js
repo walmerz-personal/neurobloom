@@ -231,8 +231,9 @@ export const AuthProvider = ({ children }) => {
     const loadUserData = async (userId, authUser = null) => {
         if (!userId) {
             console.error('❌ loadUserData called without userId');
-            if (authUser) {
-                setFallbackUserData(userId, authUser);
+            if (authUser && authUser.id) {
+                // Use authUser.id as fallback when userId is missing
+                setFallbackUserData(authUser.id, authUser);
             }
             return;
         }
@@ -286,11 +287,18 @@ export const AuthProvider = ({ children }) => {
             return;
         }
 
+        // Use authUser.id as fallback if userId is missing
+        const effectiveUserId = userId || authUser.id;
+        if (!effectiveUserId) {
+            console.error('❌ Cannot create fallback data: no userId or authUser.id available');
+            return;
+        }
+
         let fallbackData;
         
         if (authUser.user_metadata) {
             fallbackData = {
-                id: userId,
+                id: effectiveUserId,
                 name: authUser.user_metadata.name || 'Friend',
                 role: authUser.user_metadata.role || 'survivor',
                 email: authUser.email || '',
@@ -299,7 +307,7 @@ export const AuthProvider = ({ children }) => {
         } else {
             // Minimal fallback - at least we have a user
             fallbackData = {
-                id: userId,
+                id: effectiveUserId,
                 name: 'Friend',
                 role: 'survivor',
                 email: authUser.email || '',

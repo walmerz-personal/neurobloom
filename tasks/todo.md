@@ -91,3 +91,63 @@ The nested `@expo/metro-runtime` package at `node_modules/expo-router/node_modul
 
 ## Files Modified
 None - this is a file permission fix only
+
+---
+
+# Bug Fixes - January 2026
+
+## Bugs Found and Fixed
+
+### Bug 1: Missing Error Feedback in Voice Recording (lilly.js)
+**Problem:** When `stopRecording()` completes but `audioRecorder.uri` is missing, the function returns silently without user feedback.
+
+**Root Cause:** The code checked `if (uri)` but didn't handle the case where `uri` is missing, leaving users confused when recordings fail silently.
+
+**Fix:** 
+- Added explicit check for missing URI with error alert
+- Added check for empty transcription text with user feedback
+- Now users get clear error messages when recording/transcription fails
+
+**Files Modified:**
+- `app/(tabs)/lilly.js` - Added error handling for missing URI and empty transcription
+
+---
+
+### Bug 2: Null userId in setFallbackUserData (AuthContext.js)
+**Problem:** `setFallbackUserData()` was called with `null` userId when `loadUserData()` received no userId, causing fallback data to have `id: null`.
+
+**Root Cause:** Line 235 called `setFallbackUserData(userId, authUser)` when `userId` was falsy, but the function uses `userId` directly to set the `id` field.
+
+**Fix:**
+- Modified `loadUserData()` to use `authUser.id` as fallback when `userId` is missing
+- Added safety check in `setFallbackUserData()` to use `authUser.id` if `userId` is falsy
+- Added validation to prevent creating fallback data without any valid ID
+
+**Files Modified:**
+- `contexts/AuthContext.js` - Fixed null userId handling in two places
+
+---
+
+### Bug 3: Potential Navigation After Unmount (index.js)
+**Problem:** The timeout callback in `app/index.js` could attempt navigation after the component unmounted, potentially causing errors.
+
+**Root Cause:** No mounted check before calling `router.replace()` in the timeout callback.
+
+**Fix:**
+- Added `isMountedRef` to track component mount state
+- Added check `isMountedRef.current` before navigation in timeout callback
+- Set `isMountedRef.current = false` in cleanup function
+
+**Files Modified:**
+- `app/index.js` - Added mounted check to prevent navigation after unmount
+
+---
+
+## Summary
+
+**Total Bugs Fixed:** 3
+- **Critical:** 1 (null userId causing data corruption)
+- **Medium:** 1 (missing error feedback)
+- **Low:** 1 (potential navigation after unmount)
+
+**Impact:** All fixes improve app stability and user experience by preventing silent failures and data corruption issues.

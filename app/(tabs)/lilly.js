@@ -84,24 +84,31 @@ export default function Lilly() {
 
             console.log('✅ Recording stopped, URI:', uri);
 
-            if (uri) {
-                setIsTranscribing(true);
-                console.log('🎤 Transcribing audio...');
+            if (!uri) {
+                console.error('❌ No audio URI after stopping recording');
+                Alert.alert('Error', 'Failed to save recording. Please try again.');
+                return;
+            }
 
-                const { text, error } = await transcribeAudio(uri);
+            setIsTranscribing(true);
+            console.log('🎤 Transcribing audio...');
 
-                setIsTranscribing(false);
+            const { text, error } = await transcribeAudio(uri);
 
-                if (error) {
-                    console.error('❌ Transcription failed:', error);
-                    Alert.alert('Error', 'Failed to transcribe audio. Please try again.');
-                    return;
-                }
+            setIsTranscribing(false);
 
-                if (text) {
-                    console.log('✅ Transcription successful:', text);
-                    setInputText(text);
-                }
+            if (error) {
+                console.error('❌ Transcription failed:', error);
+                Alert.alert('Error', 'Failed to transcribe audio. Please try again.');
+                return;
+            }
+
+            if (text) {
+                console.log('✅ Transcription successful:', text);
+                setInputText(text);
+            } else {
+                console.warn('⚠️ Transcription returned empty text');
+                Alert.alert('Error', 'No text was transcribed from the recording. Please try again.');
             }
         } catch (error) {
             console.error('❌ Failed to stop recording:', error);
