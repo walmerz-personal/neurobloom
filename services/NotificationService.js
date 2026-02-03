@@ -86,7 +86,7 @@ export async function scheduleDailyReminder(timesOrHour = DEFAULT_TIMES, minute 
         const identifiers = [];
         for (let i = 0; i < times.length; i++) {
             const { hour, minute: min } = times[i];
-            
+
             try {
                 const identifier = await Notifications.scheduleNotificationAsync({
                     content: {
@@ -112,7 +112,7 @@ export async function scheduleDailyReminder(timesOrHour = DEFAULT_TIMES, minute 
         if (identifiers.length === 1) {
             return identifiers[0];
         }
-        
+
         return identifiers.length > 0 ? identifiers : null;
     } catch (error) {
         console.error('❌ Error scheduling daily reminders:', error);
@@ -165,7 +165,7 @@ export async function saveNotificationPrefs(prefs) {
                 normalizedPrefs.times = [normalizedPrefs.times];
             }
         }
-        
+
         await AsyncStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(normalizedPrefs));
         console.log('✅ Notification preferences saved:', normalizedPrefs);
     } catch (error) {
@@ -183,7 +183,7 @@ export async function loadNotificationPrefs() {
         const prefsJson = await AsyncStorage.getItem(NOTIFICATION_PREFS_KEY);
         if (prefsJson) {
             const prefs = JSON.parse(prefsJson);
-            
+
             // Migrate old format to new format
             if (prefs.hour !== undefined && prefs.minute !== undefined && !prefs.times) {
                 console.log('🔄 Migrating old notification preferences format to new format');
@@ -195,7 +195,7 @@ export async function loadNotificationPrefs() {
                 console.warn('⚠️ Invalid notification preferences format, using defaults');
                 return { enabled: prefs.enabled !== false, times: DEFAULT_TIMES };
             }
-            
+
             return prefs;
         }
         return null;
@@ -258,6 +258,46 @@ export async function sendKudosNotification(caregiverName) {
         }
     } catch (error) {
         console.error('❌ Error sending kudos notification:', error);
+        return { sent: false, error };
+    }
+}
+
+/**
+ * Send an immediate push notification for a nudge received
+ * @param {string} senderName - Name of the caregiver/medical professional who sent the nudge
+ * @param {string} message - The nudge message
+ * @param {string} emoji - Emoji to display with the nudge (default: 💪)
+ * @returns {Promise<{sent, error}>} - Whether notification was sent
+ */
+export async function sendNudgeNotification(senderName, message, emoji = '💪') {
+    try {
+        // Check if we have notification permissions
+        const { status } = await Notifications.getPermissionsAsync();
+        if (status !== 'granted') {
+            console.log('⏭️ Skipping nudge notification: notification permissions not granted');
+            return { sent: false, error: null };
+        }
+
+        // Send the nudge notification immediately
+        const notificationId = await Notifications.scheduleNotificationAsync({
+            content: {
+                title: `Nudge from ${senderName} ${emoji}`,
+                body: message,
+                sound: true,
+                data: { type: 'nudge' },
+            },
+            trigger: null, // Send immediately
+        });
+
+        if (notificationId) {
+            console.log(`✅ Nudge notification sent from ${senderName}`);
+            return { sent: true, error: null };
+        } else {
+            console.error('❌ Failed to send nudge notification: notification ID not returned');
+            return { sent: false, error: new Error('Notification scheduling failed') };
+        }
+    } catch (error) {
+        console.error('❌ Error sending nudge notification:', error);
         return { sent: false, error };
     }
 }
@@ -347,6 +387,7 @@ export const NotificationService = {
     initializeNotifications,
     checkAndSendInactivityReminder,
     sendKudosNotification,
+    sendNudgeNotification,
     DEFAULT_TIMES,
     DEFAULT_HOUR, // For backward compatibility
     DEFAULT_MINUTE, // For backward compatibility

@@ -9,6 +9,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { CareTeamService } from '../../services/CareTeamService';
 import { ArrowLeft, Activity, Smile, Zap, Target, TrendingUp, Calendar, Heart, AlertTriangle } from 'lucide-react-native';
 import { KudosSendModal } from '../../components/KudosSendModal';
+import { NudgeSendModal } from '../../components/NudgeSendModal';
 import { HealthMetricsCard } from '../../components/HealthMetricsCard';
 import { SupabaseService } from '../../services/SupabaseService';
 
@@ -29,6 +30,9 @@ export default function SurvivorProgress() {
     // Kudos modal state
     const [kudosModalVisible, setKudosModalVisible] = useState(false);
     const [selectedKudosItem, setSelectedKudosItem] = useState(null);
+
+    // Nudge modal state
+    const [nudgeModalVisible, setNudgeModalVisible] = useState(false);
 
     const openKudosModal = (itemType, itemValue, itemDate = null) => {
         setSelectedKudosItem({ itemType, itemValue, itemDate });
@@ -165,7 +169,13 @@ export default function SurvivorProgress() {
                     <ArrowLeft size={24} color={Colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{survivor?.name || 'Progress'}</Text>
-                <View style={{ width: 40 }} />
+                <TouchableOpacity
+                    onPress={() => setNudgeModalVisible(true)}
+                    style={styles.nudgeButton}
+                    activeOpacity={0.7}
+                >
+                    <Text style={styles.nudgeButtonText}>Send Nudge</Text>
+                </TouchableOpacity>
             </View>
 
             <ScrollView
@@ -329,6 +339,20 @@ export default function SurvivorProgress() {
                 itemValue={selectedKudosItem?.itemValue}
                 itemDate={selectedKudosItem?.itemDate}
             />
+
+            {/* Nudge Modal */}
+            <NudgeSendModal
+                visible={nudgeModalVisible}
+                onClose={() => setNudgeModalVisible(false)}
+                senderId={user?.id}
+                senderName={user?.name}
+                survivorId={survivorId}
+                survivorName={survivor?.name || survivorName}
+                onNudgeSent={() => {
+                    // Optional: refresh data or show feedback
+                    console.log('Nudge sent successfully');
+                }}
+            />
         </ScreenWrapper>
     );
 }
@@ -351,6 +375,19 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter_700Bold',
         fontSize: 18,
         color: Colors.text,
+        flex: 1,
+        textAlign: 'center',
+    },
+    nudgeButton: {
+        backgroundColor: Colors.primary,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+    },
+    nudgeButtonText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 14,
+        color: 'white',
     },
     loadingContainer: {
         flex: 1,

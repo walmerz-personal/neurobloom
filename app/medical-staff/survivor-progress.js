@@ -10,6 +10,7 @@ import { MedicalStaffService } from '../../services/MedicalStaffService';
 import { CareTeamService } from '../../services/CareTeamService';
 import { ArrowLeft, Activity, Smile, Zap, Target, TrendingUp, Calendar, Heart, ClipboardList, Settings } from 'lucide-react-native';
 import { KudosSendModal } from '../../components/KudosSendModal';
+import { NudgeSendModal } from '../../components/NudgeSendModal';
 import { HealthChart } from '../../components/HealthChart';
 import { SupabaseService } from '../../services/SupabaseService';
 
@@ -32,6 +33,9 @@ export default function SurvivorProgress() {
     // Kudos modal state
     const [kudosModalVisible, setKudosModalVisible] = useState(false);
     const [selectedKudosItem, setSelectedKudosItem] = useState(null);
+
+    // Nudge modal state
+    const [nudgeModalVisible, setNudgeModalVisible] = useState(false);
 
     const openKudosModal = (itemType, itemValue, itemDate = null) => {
         setSelectedKudosItem({ itemType, itemValue, itemDate });
@@ -169,12 +173,21 @@ export default function SurvivorProgress() {
                     <ArrowLeft size={24} color={Colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{survivor?.name || 'Progress'}</Text>
-                <TouchableOpacity
-                    onPress={() => router.push(`/medical-staff/manage-assignments?survivorId=${survivorId}&survivorName=${encodeURIComponent(survivor?.name || survivorName || '')}`)}
-                    style={styles.settingsButton}
-                >
-                    <Settings size={20} color={Colors.primary} />
-                </TouchableOpacity>
+                <View style={styles.headerActions}>
+                    <TouchableOpacity
+                        onPress={() => setNudgeModalVisible(true)}
+                        style={styles.nudgeButton}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={styles.nudgeButtonText}>Nudge</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() => router.push(`/medical-staff/manage-assignments?survivorId=${survivorId}&survivorName=${encodeURIComponent(survivor?.name || survivorName || '')}`)}
+                        style={styles.settingsButton}
+                    >
+                        <Settings size={20} color={Colors.primary} />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <ScrollView
@@ -412,8 +425,8 @@ export default function SurvivorProgress() {
                                                             healthMetrics[0].walking_steadiness === 'OK'
                                                                 ? Colors.success
                                                                 : healthMetrics[0].walking_steadiness === 'Low'
-                                                                ? Colors.warning
-                                                                : Colors.error,
+                                                                    ? Colors.warning
+                                                                    : Colors.error,
                                                     },
                                                 ]}
                                             >
@@ -463,6 +476,20 @@ export default function SurvivorProgress() {
                 itemValue={selectedKudosItem?.itemValue}
                 itemDate={selectedKudosItem?.itemDate}
             />
+
+            {/* Nudge Modal */}
+            <NudgeSendModal
+                visible={nudgeModalVisible}
+                onClose={() => setNudgeModalVisible(false)}
+                senderId={user?.id}
+                senderName={user?.name}
+                survivorId={survivorId}
+                survivorName={survivor?.name || survivorName}
+                onNudgeSent={() => {
+                    // Optional: refresh data or show feedback
+                    console.log('Nudge sent successfully');
+                }}
+            />
         </ScreenWrapper>
     );
 }
@@ -487,6 +514,22 @@ const styles = StyleSheet.create({
         color: Colors.text,
         flex: 1,
         textAlign: 'center',
+    },
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    nudgeButton: {
+        backgroundColor: Colors.primary,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+    },
+    nudgeButtonText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 14,
+        color: 'white',
     },
     settingsButton: {
         padding: 8,
