@@ -2,7 +2,7 @@
  * NudgeService - Handles nudge-related business logic
  * Allows caregivers and medical staff to send motivational nudges to survivors
  */
-import { SupabaseService } from './SupabaseService';
+import { supabase } from './SupabaseService';
 import { NotificationService } from './NotificationService';
 
 // Pre-defined nudge templates
@@ -43,7 +43,7 @@ export const NUDGE_TEMPLATES = [
 export async function canSendNudge(senderId, survivorId) {
   try {
     // Call Supabase function to check rate limiting
-    const { data, error } = await SupabaseService.supabase.rpc('can_send_nudge', {
+    const { data, error } = await supabase.rpc('can_send_nudge', {
       p_sender_id: senderId,
       p_survivor_id: survivorId,
     });
@@ -54,9 +54,9 @@ export async function canSendNudge(senderId, survivorId) {
     }
 
     if (!data) {
-      return { 
-        canSend: false, 
-        error: 'You can only send one nudge per day to each survivor. Please try again tomorrow.' 
+      return {
+        canSend: false,
+        error: 'You can only send one nudge per day to each survivor. Please try again tomorrow.'
       };
     }
 
@@ -103,7 +103,7 @@ export async function sendNudge(senderId, senderName, survivorId, nudgeData) {
     };
 
     // Insert nudge into database
-    const { data, error } = await SupabaseService.supabase
+    const { data, error } = await supabase
       .from('nudges')
       .insert(nudge)
       .select()
@@ -142,11 +142,11 @@ export async function sendNudge(senderId, senderName, survivorId, nudgeData) {
  */
 export async function getNudgesForSurvivor(survivorId, limit = 20) {
   try {
-    const { data, error } = await SupabaseService.supabase
+    const { data, error } = await supabase
       .from('nudges')
       .select(`
         *,
-        sender:users!nudges_sender_id_fkey(id, name, role)
+        sender:user_profiles!nudges_sender_id_fkey(id, name, role)
       `)
       .eq('survivor_id', survivorId)
       .order('sent_at', { ascending: false })
@@ -172,7 +172,7 @@ export async function getNudgesForSurvivor(survivorId, limit = 20) {
  */
 export async function getSentNudges(senderId, limit = 20) {
   try {
-    const { data, error } = await SupabaseService.supabase
+    const { data, error } = await supabase
       .from('nudges')
       .select(`
         *,
@@ -202,7 +202,7 @@ export async function getSentNudges(senderId, limit = 20) {
  */
 export async function markNudgeAsRead(nudgeId, survivorId) {
   try {
-    const { error } = await SupabaseService.supabase
+    const { error } = await supabase
       .from('nudges')
       .update({ read_at: new Date().toISOString() })
       .eq('id', nudgeId)
@@ -228,7 +228,7 @@ export async function markNudgeAsRead(nudgeId, survivorId) {
  */
 export async function getUnreadNudgeCount(survivorId) {
   try {
-    const { count, error } = await SupabaseService.supabase
+    const { count, error } = await supabase
       .from('nudges')
       .select('*', { count: 'exact', head: true })
       .eq('survivor_id', survivorId)

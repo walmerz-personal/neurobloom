@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
         borderBottomColor: Colors.border,
     },
     headerTitle: {
-        fontFamily: 'Inter_700Bold',
+        fontFamily: 'SourceSans3_600SemiBold',
         fontSize: 20,
         color: Colors.text,
     },
@@ -238,7 +238,6 @@ const styles = StyleSheet.create({
         padding: 4,
     },
     scrollView: {
-        flex: 1,
         paddingHorizontal: 20,
     },
     subtitle: {
@@ -248,7 +247,7 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     sectionTitle: {
-        fontFamily: 'Inter_600SemiBold',
+        fontFamily: 'SourceSans3_600SemiBold',
         fontSize: 16,
         color: Colors.text,
         marginBottom: 12,
@@ -278,7 +277,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     templateMessageSelected: {
-        fontFamily: 'Inter_600SemiBold',
+        fontFamily: 'SourceSans3_600SemiBold',
     },
     customMessageContainer: {
         marginBottom: 16,
@@ -289,7 +288,7 @@ const styles = StyleSheet.create({
         padding: 16,
         borderWidth: 1,
         borderColor: Colors.border,
-        fontFamily: 'Inter_400Regular',
+        fontFamily: 'SourceSans3_400Regular',
         fontSize: 15,
         color: Colors.text,
         minHeight: 100,
@@ -305,7 +304,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     previewLabel: {
-        fontFamily: 'Inter_600SemiBold',
+        fontFamily: 'SourceSans3_600SemiBold',
         fontSize: 14,
         color: Colors.textSecondary,
         marginBottom: 8,
@@ -318,7 +317,7 @@ const styles = StyleSheet.create({
         borderLeftColor: Colors.primary,
     },
     previewTitle: {
-        fontFamily: 'Inter_600SemiBold',
+        fontFamily: 'SourceSans3_600SemiBold',
         fontSize: 15,
         color: Colors.text,
         marginBottom: 8,
@@ -345,7 +344,7 @@ const styles = StyleSheet.create({
         opacity: 0.5,
     },
     sendButtonText: {
-        fontFamily: 'Inter_600SemiBold',
+        fontFamily: 'SourceSans3_600SemiBold',
         fontSize: 16,
         color: 'white',
     },

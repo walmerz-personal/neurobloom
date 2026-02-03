@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Colors } from '../../constants/Colors';
-import { Sprout, Flower, Plus, Leaf } from 'lucide-react-native';
+import { Sprout, Plus, Leaf } from 'lucide-react-native';
+import { getPlantGraphic } from './PlantGraphics';
 
 export const PlantingBox = ({ plant, onPress, disabled, index }) => {
     const isPlanted = !!plant;
@@ -47,12 +48,11 @@ export const PlantingBox = ({ plant, onPress, disabled, index }) => {
                 );
             case 3: // Day 3+: Full bloom
             default:
-                // Use different flower colors based on index/random for variety
-                const flowerColors = ['#F48FB1', '#90CAF9', '#CE93D8', '#FFCC80', '#80DEEA'];
-                const color = flowerColors[index % flowerColors.length];
+                // Use the custom plant graphic based on plant type
+                const plantName = plant.items?.name || 'Flower';
                 return (
                     <View style={styles.plantContainer}>
-                        <Flower size={60} color={color} fill={color} />
+                        {getPlantGraphic(plantName, 70)}
                     </View>
                 );
         }
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
         paddingBottom: 10,
     },
     plantContainer: {
-        marginBottom: 15, // Push plant up out of the box
+        marginBottom: 45, // Push plant up higher out of the box for taller graphics with stems
         alignItems: 'center',
         justifyContent: 'flex-end',
         shadowColor: '#000',

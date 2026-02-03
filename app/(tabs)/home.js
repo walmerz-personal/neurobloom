@@ -7,11 +7,13 @@ import { Typography } from '../../constants/Typography';
 import { useAuth } from '../../contexts/AuthContext';
 import { SupabaseService } from '../../services/SupabaseService';
 import { KudosService } from '../../services/KudosService';
+import { NudgeService } from '../../services/NudgeService';
 import { MessageCircle, PlayCircle, CheckCircle, LogOut, Quote, User, Flower } from 'lucide-react-native';
 import Svg, { Circle } from 'react-native-svg';
 import Logo from '../../components/Logo';
 import { CareTeamSection } from '../../components/CareTeamSection';
 import { KudosReceivedModal } from '../../components/KudosReceivedModal';
+import { NudgeReceivedModal } from '../../components/NudgeReceivedModal';
 import { CaregiverHomeView } from '../../components/CaregiverHomeView';
 import { MedicalStaffHomeView } from '../../components/MedicalStaffHomeView';
 
@@ -90,6 +92,10 @@ export default function Home() {
     const [unreadKudos, setUnreadKudos] = useState([]);
     const [showKudosModal, setShowKudosModal] = useState(false);
 
+    // Nudge state
+    const [unreadNudges, setUnreadNudges] = useState([]);
+    const [showNudgeModal, setShowNudgeModal] = useState(false);
+
     // Show loading spinner if user exists but userData is not yet loaded
     // This prevents showing "Friend" and default progress while data is loading
     if (user && !userData) {
@@ -114,9 +120,10 @@ export default function Home() {
         useCallback(() => {
             if (user) {
                 fetchDailyProgress();
-                // Check for kudos only if user is a survivor
+                // Check for kudos and nudges only if user is a survivor
                 if (userData?.role === 'survivor') {
                     checkForKudos();
+                    checkForNudges();
                 }
             }
         }, [user, userData])
@@ -140,6 +147,34 @@ export default function Home() {
             setUnreadKudos([]);
         } catch (error) {
             console.error('Error marking kudos as read:', error);
+        }
+    };
+
+    const checkForNudges = async () => {
+        try {
+            const { nudges, error } = await NudgeService.getNudgesForSurvivor(user.id, 10);
+            if (!error && nudges.length > 0) {
+                // Filter for unread nudges only
+                const unread = nudges.filter(n => !n.read_at);
+                if (unread.length > 0) {
+                    setUnreadNudges(unread);
+                    setShowNudgeModal(true);
+                }
+            }
+        } catch (error) {
+            console.error('Error checking for nudges:', error);
+        }
+    };
+
+    const handleDismissNudges = async () => {
+        try {
+            // Mark all unread nudges as read
+            for (const nudge of unreadNudges) {
+                await NudgeService.markNudgeAsRead(nudge.id, user.id);
+            }
+            setUnreadNudges([]);
+        } catch (error) {
+            console.error('Error marking nudges as read:', error);
         }
     };
 
@@ -385,6 +420,14 @@ export default function Home() {
                 onClose={() => setShowKudosModal(false)}
                 kudosList={unreadKudos}
                 onDismiss={handleDismissKudos}
+            />
+
+            {/* Nudge Received Modal for Survivors */}
+            <NudgeReceivedModal
+                visible={showNudgeModal}
+                onClose={() => setShowNudgeModal(false)}
+                nudgesList={unreadNudges}
+                onDismiss={handleDismissNudges}
             />
         </ScreenWrapper>
     );
