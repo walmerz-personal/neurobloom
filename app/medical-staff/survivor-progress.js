@@ -16,7 +16,7 @@ import { SupabaseService } from '../../services/SupabaseService';
 
 export default function SurvivorProgress() {
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, userData } = useAuth();
     const params = useLocalSearchParams();
     const survivorId = params.survivorId;
     const survivorName = params.survivorName;
@@ -482,7 +482,7 @@ export default function SurvivorProgress() {
                 visible={nudgeModalVisible}
                 onClose={() => setNudgeModalVisible(false)}
                 senderId={user?.id}
-                senderName={user?.name}
+                senderName={userData?.name}
                 survivorId={survivorId}
                 survivorName={survivor?.name || survivorName}
                 onNudgeSent={() => {
