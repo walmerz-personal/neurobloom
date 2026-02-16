@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAudioRecorder, AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorderState } from 'expo-audio';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
@@ -12,9 +13,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Send, Mic, Flower2, User } from 'lucide-react-native';
 
 export default function Lilly() {
-    const [messages, setMessages] = useState([
-        { id: 1, isLilly: true, text: "Hi! I'm Lilly. How are you feeling today?" }
-    ]);
+    const [messages, setMessages] = useState([]);
     const [inputText, setInputText] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
@@ -28,6 +27,7 @@ export default function Lilly() {
     const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
     const recorderState = useAudioRecorderState(audioRecorder);
 
+    // Load user profile
     useEffect(() => {
         const loadProfile = async () => {
             if (!user?.id) return;
@@ -37,6 +37,52 @@ export default function Lilly() {
             }
         };
         loadProfile();
+    }, [user]);
+
+    // Check if this is the user's first interaction with Lilly
+    useEffect(() => {
+        const checkFirstTimeUser = async () => {
+            if (!user?.id) return;
+
+            try {
+                const storageKey = `LILLY_INTRO_SHOWN_${user.id}`;
+                const hasSeenIntro = await AsyncStorage.getItem(storageKey);
+
+                if (!hasSeenIntro) {
+                    // First-time user - show full introduction
+                    const introMessage = {
+                        id: 1,
+                        isLilly: true,
+                        text: `Hi, I'm Lilly! 👋\n\nI'm here to help you with stroke rehabilitation. I can:\n• Answer questions about recovery\n• Guide you through exercises\n• Track your progress\n• Provide emotional support\n\nIMPORTANT: I'm an AI assistant, not a medical professional. I cannot provide medical advice, diagnose conditions, or replace consultations with your healthcare team.\n\nFor medical emergencies, please call 911 or contact your doctor immediately. Always consult your healthcare providers about treatment decisions.\n\nHow are you feeling today?`
+                    };
+                    setMessages([introMessage]);
+
+                    // Mark introduction as shown
+                    await AsyncStorage.setItem(storageKey, 'true');
+                    console.log('✅ Lilly introduction shown and saved to AsyncStorage');
+                } else {
+                    // Returning user - show simple greeting
+                    const simpleGreeting = {
+                        id: 1,
+                        isLilly: true,
+                        text: "Hi! I'm Lilly. How are you feeling today?"
+                    };
+                    setMessages([simpleGreeting]);
+                    console.log('✅ Returning user - simple greeting shown');
+                }
+            } catch (error) {
+                console.error('❌ Error checking first-time user status:', error);
+                // Fallback to simple greeting on error
+                const fallbackMessage = {
+                    id: 1,
+                    isLilly: true,
+                    text: "Hi! I'm Lilly. How are you feeling today?"
+                };
+                setMessages([fallbackMessage]);
+            }
+        };
+
+        checkFirstTimeUser();
     }, [user]);
 
     // Request permissions on mount
