@@ -11,7 +11,7 @@ const CHART_HEIGHT = 180;
 const PADDING_LEFT = 50;
 const PADDING_RIGHT = 20;
 const PADDING_TOP = 20;
-const PADDING_BOTTOM = 40;
+const PADDING_BOTTOM = 50;
 
 /**
  * HealthChart - Line chart component for health metrics over time
