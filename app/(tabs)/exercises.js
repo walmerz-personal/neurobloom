@@ -541,7 +541,7 @@ function ExerciseCard({ data, isExpanded, isCompleted, isCustom, isAssigned, isS
 
     const handleToggleComplete = (e) => {
         e.stopPropagation();
-        
+
         // Only celebrate when completing, not un-completing
         if (!isCompleted) {
             // Trigger haptic feedback
@@ -549,7 +549,7 @@ function ExerciseCard({ data, isExpanded, isCompleted, isCustom, isAssigned, isS
             // Trigger confetti animation
             setShowConfetti(true);
         }
-        
+
         onToggleComplete();
     };
 
@@ -607,8 +607,8 @@ function ExerciseCard({ data, isExpanded, isCompleted, isCustom, isAssigned, isS
                                 <Circle size={28} color="rgba(0,0,0,0.3)" fill="rgba(255,255,255,0.8)" />
                             )}
                         </TouchableOpacity>
-                        <ConfettiBurst 
-                            trigger={showConfetti} 
+                        <ConfettiBurst
+                            trigger={showConfetti}
                             onComplete={handleConfettiComplete}
                         />
                     </View>
@@ -970,6 +970,8 @@ const styles = StyleSheet.create({
         color: Colors.text,
         lineHeight: 24,
         flex: 1,
+        flexShrink: 1,
+        flexWrap: 'wrap',
     },
 });
 
