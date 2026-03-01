@@ -33,7 +33,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>42</string>
+	<string>44</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSMinimumSystemVersion</key>
@@ -47,6 +47,8 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSHealthClinicalHealthRecordsShareUsageDescription</key>
+	<string>NeuroBloom uses your Apple Health data to help you understand your recovery progress</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>NeuroBloom tracks your walking speed, steadiness, and mobility to help monitor your recovery progress.</string>
 	<key>NSHealthUpdateUsageDescription</key>
