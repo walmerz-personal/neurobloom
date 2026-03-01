@@ -100,7 +100,7 @@ export const PlantingBox = ({ plant, onPress, disabled, index }) => {
 const styles = StyleSheet.create({
     container: {
         width: 110,
-        height: 110,
+        height: 185,
         marginHorizontal: 4,
         justifyContent: 'flex-end',
         marginBottom: 0, // Sits on the soil
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     },
     backRim: {
         position: 'absolute',
-        top: 20,
+        bottom: 60,
         left: 5,
         right: 5,
         height: 20,
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     },
     innerBox: {
         position: 'absolute',
-        top: 25,
+        bottom: 65,
         left: 10,
         right: 10,
         height: 60,
@@ -128,10 +128,9 @@ const styles = StyleSheet.create({
         zIndex: 1, // Behind front, in front of back
         alignItems: 'center',
         justifyContent: 'flex-end', // Plant grows from bottom of inside
-        paddingBottom: 10,
+        paddingBottom: 5,
     },
     plantContainer: {
-        marginBottom: 45, // Push plant up higher out of the box for taller graphics with stems
         alignItems: 'center',
         justifyContent: 'flex-end',
         shadowColor: '#000',
