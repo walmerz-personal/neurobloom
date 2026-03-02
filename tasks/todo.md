@@ -27,6 +27,23 @@ Create animated Remotion videos using a detailed illustrated figure driven by Ne
 
 ---
 
+## Fix: Caregiver Names Showing as "Unknown" for Survivors
+
+### Root Cause
+The Supabase RLS policy on the `users` table allows caregivers to view survivors' profiles, but has **no policy** allowing survivors to view their linked caregivers' profiles. When the app does `caregiver:caregiver_id(id, name, email)` in the join, RLS blocks the read → name returns null → falls back to `'Unknown'`.
+
+### Todo Items
+- [x] Create SQL migration `supabase/fix-survivor-caregiver-visibility.sql` with the missing RLS policy
+- [x] User applies the SQL in Supabase SQL Editor
+
+### Review
+- Added one RLS policy to the `users` table: `"Survivors can view linked caregiver profiles"`
+- This allows a survivor to SELECT the `users` row of any caregiver linked to them via an accepted `care_team_links` entry
+- Previously, the Supabase join `caregiver:caregiver_id(id, name, email)` in `getCareTeamLinks` was blocked by RLS, returning null and falling back to `'Unknown'`
+- No app code changes required — purely a database policy fix
+
+---
+
 ## Fix Plant/Flower Clipping in Garden
 
 ### Plan
