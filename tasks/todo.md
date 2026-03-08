@@ -60,3 +60,35 @@ Fix: Increase container height to 185px and switch backRim/innerBox from `top`-a
 - Switched `innerBox` from `top: 25` → `bottom: 65` (same reason), and reduced `paddingBottom` 10 → 5.
 - Removed `plantContainer.marginBottom: 45` — no longer needed since the container is now tall enough to contain the plant naturally (plant occupies y≈17–115, box occupies y=115–185).
 - Only `PlantingBox.js` was touched; 4 style property changes total.
+
+---
+
+## Fix: Medical Staff Signup "Database error saving new user"
+
+### Root Cause Analysis
+
+The error "Sign Up Failed - Database error saving new user" comes from **Supabase GoTrue** wrapping a trigger failure. The `handle_new_user()` trigger fires on auth signup and INSERTs into the `users` table.
+
+**Most likely cause:** The `users` table CHECK constraint on the live Supabase DB may not include `'medical_staff'` as a valid role. If the DB was initially created before medical staff support was added, the CHECK constraint would reject `'medical_staff'`, causing the trigger to fail.
+
+### Additional Code Bugs Found
+
+1. **`signup.js` line 83** - `userData` is referenced but never defined in this component. This causes a ReferenceError after successful signup.
+2. **`details.js` line 34** - When medical staff selects "Other" and types custom text, the raw text is passed as `medicalStaffRole`. The DB CHECK constraint only allows specific enum values. Should pass `'other'` to the DB.
+3. **`signup.js` line 78** - `saveUserProfile` errors are not checked, so failures are silently ignored.
+
+### Fix Plan
+
+- [x] 1. Create SQL migration to ensure `users.role` CHECK includes `'medical_staff'` on the live DB
+- [x] 2. Fix `signup.js` line 83: replace undefined `userData` with `params.role`
+- [x] 3. Fix `details.js` line 34: pass `'other'` as the DB value instead of free text
+- [x] 4. Fix `signup.js` line 78: handle `saveUserProfile` errors properly
+
+### Review
+
+**4 changes across 3 files:**
+
+1. **`supabase/fix-medical-staff-role-check.sql`** (new) — SQL migration that dynamically finds and drops the existing CHECK constraint on `users.role`, then re-adds it with all 3 valid values (`survivor`, `caregiver`, `medical_staff`). **Must be run in Supabase SQL Editor.**
+2. **`app/auth/signup.js:78`** — `saveUserProfile` return value is now checked for errors (logged but non-blocking since auth account already exists).
+3. **`app/auth/signup.js:86`** — Replaced undefined `userData?.role` with `params.role` which was already in scope.
+4. **`app/onboarding/details.js:34`** — Changed from `medicalStaffRole === 'other' ? otherRole : medicalStaffRole` to just `medicalStaffRole`, so `'other'` is passed to the DB instead of free text that violates the CHECK constraint.

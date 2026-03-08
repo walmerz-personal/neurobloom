@@ -75,12 +75,15 @@ export default function CreateAccount() {
                     preferences: {},
                 };
 
-                await SupabaseService.saveUserProfile(user.id, profileData);
+                const { error: profileError } = await SupabaseService.saveUserProfile(user.id, profileData);
+                if (profileError) {
+                    console.error('❌ Profile save error:', profileError);
+                }
                 console.log('✅ Profile saved to Supabase');
             }
 
             // Navigate to reminders screen (for survivors) or completion (for others)
-            const userRole = userData?.role || params.role || 'survivor';
+            const userRole = params.role || 'survivor';
             if (userRole === 'survivor') {
                 router.replace('/onboarding/reminders');
             } else {

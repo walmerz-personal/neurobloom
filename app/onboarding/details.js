@@ -31,7 +31,7 @@ export default function Details() {
     const handleNext = () => {
         if (role === 'medical_staff') {
             // For medical_staff, go directly to goals (which will skip to signup)
-            const finalRole = medicalStaffRole === 'other' ? otherRole : medicalStaffRole;
+            const finalRole = medicalStaffRole;
             router.push({
                 pathname: '/onboarding/goals',
                 params: { 
