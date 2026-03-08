@@ -2099,7 +2099,7 @@ export const SupabaseService = {
         try {
             let query = supabase
                 .from('exercise_assignments')
-                .select('*')
+                .select('*, assigned_by:assigned_by_id(name)')
                 .eq('survivor_id', survivorId)
                 .order('assigned_date', { ascending: false });
 
@@ -2149,6 +2149,38 @@ export const SupabaseService = {
             return { data, error: null };
         } catch (error) {
             console.error('❌ Update assignment status error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
+     * Update assignment notes
+     * @param {string} assignmentId - Assignment ID
+     * @param {string} notes - New notes text
+     * @returns {Promise<{data, error}>}
+     */
+    async updateAssignmentNotes(assignmentId, notes) {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('exercise_assignments')
+                .update({ notes, updated_at: new Date().toISOString() })
+                .eq('id', assignmentId)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Update assignment notes error:', error);
+                return { data: null, error };
+            }
+
+            console.log('✅ Assignment notes updated:', assignmentId);
+            return { data, error: null };
+        } catch (error) {
+            console.error('❌ Update assignment notes error:', error);
             return { data: null, error };
         }
     },

@@ -92,3 +92,26 @@ The error "Sign Up Failed - Database error saving new user" comes from **Supabas
 2. **`app/auth/signup.js:78`** — `saveUserProfile` return value is now checked for errors (logged but non-blocking since auth account already exists).
 3. **`app/auth/signup.js:86`** — Replaced undefined `userData?.role` with `params.role` which was already in scope.
 4. **`app/onboarding/details.js:34`** — Changed from `medicalStaffRole === 'other' ? otherRole : medicalStaffRole` to just `medicalStaffRole`, so `'other'` is passed to the DB instead of free text that violates the CHECK constraint.
+
+---
+
+## Medical Staff Exercise Assignment UX Fixes
+
+### Context
+The exercise assignment feature exists end-to-end but has UX gaps that make it confusing for our users.
+
+### Todo Items
+- [x] 1. Show exercise titles (not raw IDs) in Manage Assignments (`manage-assignments.js`)
+- [x] 2. Add due date and notes fields to Assign Exercises screen (`assign-exercises.js`)
+- [x] 3. Show assigner name and notes on survivor's exercise cards (`exercises.js`)
+- [x] 4. Show already-assigned exercises in assign screen to prevent duplicates (`assign-exercises.js`)
+- [x] 5. Implement note editing in Manage Assignments + add `updateAssignmentNotes` to SupabaseService
+
+### Review
+
+**5 UX fixes across 3 screens and 1 service file:**
+
+1. **`manage-assignments.js`** — Added EXERCISES_DATA lookup + `getExerciseTitle()` helper so assignments show "Shoulder Shrugs" instead of "a1". Added SupabaseService import and wired up `handleSaveNotes` to actually persist notes via `updateAssignmentNotes`.
+2. **`assign-exercises.js`** — Added optional due date (text input) and notes (multiline) fields before the save button, passed to `assignExercise()`. Added `alreadyAssigned` Set that loads existing assignments when a patient is selected; already-assigned exercises show a subtle badge and are dimmed.
+3. **`exercises.js`** — Changed `assignedExercises` from ID array to Map storing full assignment details (assigner name, notes, due date). ExerciseCard now shows a green info box with "Assigned by [Name]", notes in italics, and due date.
+4. **`SupabaseService.js`** — Added `updateAssignmentNotes()` method. Changed `getAssignedExercises` select to join users table for assigner name.

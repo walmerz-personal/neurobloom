@@ -1,6 +1,6 @@
 // app/medical-staff/assign-exercises.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
@@ -41,6 +41,9 @@ export default function AssignExercises() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
+    const [assignmentNotes, setAssignmentNotes] = useState('');
+    const [dueDate, setDueDate] = useState(null);
+    const [alreadyAssigned, setAlreadyAssigned] = useState(new Set());
 
     useEffect(() => {
         loadSurvivors();
@@ -49,6 +52,7 @@ export default function AssignExercises() {
     useEffect(() => {
         if (selectedSurvivor && user) {
             loadCustomExercises();
+            loadExistingAssignments();
         }
     }, [selectedSurvivor, user]);
 
@@ -83,6 +87,18 @@ export default function AssignExercises() {
             }
         } catch (error) {
             console.error('Error loading custom exercises:', error);
+        }
+    };
+
+    const loadExistingAssignments = async () => {
+        if (!selectedSurvivor) return;
+        try {
+            const { assignments, error } = await MedicalStaffService.getAssignedExercises(selectedSurvivor, 'assigned');
+            if (!error && assignments) {
+                setAlreadyAssigned(new Set(assignments.map(a => a.exercise_id)));
+            }
+        } catch (error) {
+            console.error('Error loading existing assignments:', error);
         }
     };
 
@@ -121,7 +137,9 @@ export default function AssignExercises() {
                     selectedSurvivor,
                     user.id,
                     exerciseId,
-                    exerciseType
+                    exerciseType,
+                    dueDate || null,
+                    assignmentNotes || null
                 );
 
                 if (error) {
@@ -135,6 +153,9 @@ export default function AssignExercises() {
             if (successCount > 0) {
                 Alert.alert('Success', `Successfully assigned ${successCount} exercise(s)${errorCount > 0 ? ` (${errorCount} failed)` : ''}.`);
                 setSelectedExercises(new Set());
+                setAssignmentNotes('');
+                setDueDate(null);
+                loadExistingAssignments();
                 router.back();
             } else {
                 Alert.alert('Error', 'Failed to assign exercises. Please try again.');
@@ -236,15 +257,27 @@ export default function AssignExercises() {
                     <Text style={styles.sectionTitle}>Exercises ({selectedExercises.size} selected)</Text>
                     {filteredExercises.map((exercise) => {
                         const isSelected = selectedExercises.has(exercise.id);
+                        const isAlreadyAssigned = alreadyAssigned.has(exercise.id);
                         return (
                             <TouchableOpacity
                                 key={exercise.id}
-                                style={[styles.exerciseCard, isSelected && styles.exerciseCardSelected]}
+                                style={[
+                                    styles.exerciseCard,
+                                    isSelected && styles.exerciseCardSelected,
+                                    isAlreadyAssigned && !isSelected && styles.exerciseCardDimmed
+                                ]}
                                 onPress={() => toggleExercise(exercise.id)}
                             >
                                 <View style={[styles.thumbnail, { backgroundColor: exercise.thumbnailColor || '#E0F2FE' }]} />
                                 <View style={styles.exerciseInfo}>
-                                    <Text style={styles.exerciseTitle}>{exercise.title}</Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                        <Text style={styles.exerciseTitle}>{exercise.title}</Text>
+                                        {isAlreadyAssigned && (
+                                            <View style={styles.assignedBadge}>
+                                                <Text style={styles.assignedBadgeText}>Assigned</Text>
+                                            </View>
+                                        )}
+                                    </View>
                                     <Text style={styles.exerciseCategory}>{exercise.category} • {exercise.mode}</Text>
                                     {exercise.description && (
                                         <Text style={styles.exerciseDescription} numberOfLines={2}>{exercise.description}</Text>
@@ -259,6 +292,30 @@ export default function AssignExercises() {
                         );
                     })}
                 </View>
+
+                {/* Due Date & Notes */}
+                {selectedExercises.size > 0 && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Assignment Details</Text>
+                        <TextInput
+                            style={styles.textInput}
+                            placeholder="YYYY-MM-DD (optional)"
+                            placeholderTextColor={Colors.textSecondary}
+                            value={dueDate || ''}
+                            onChangeText={(text) => setDueDate(text || null)}
+                        />
+                        <TextInput
+                            style={[styles.textInput, styles.notesInput]}
+                            placeholder="Notes for patient (optional)"
+                            placeholderTextColor={Colors.textSecondary}
+                            value={assignmentNotes}
+                            onChangeText={setAssignmentNotes}
+                            multiline
+                            numberOfLines={3}
+                            textAlignVertical="top"
+                        />
+                    </View>
+                )}
 
                 {/* Save Button */}
                 <TouchableOpacity
@@ -422,6 +479,34 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter_400Regular',
         fontSize: 13,
         color: Colors.textSecondary,
+    },
+    exerciseCardDimmed: {
+        opacity: 0.6,
+    },
+    assignedBadge: {
+        backgroundColor: Colors.primary + '20',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 8,
+    },
+    assignedBadgeText: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 11,
+        color: Colors.primary,
+    },
+    textInput: {
+        backgroundColor: 'white',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        padding: 16,
+        fontFamily: 'Inter_400Regular',
+        fontSize: 15,
+        color: Colors.text,
+        marginBottom: 12,
+    },
+    notesInput: {
+        minHeight: 80,
     },
     saveButton: {
         backgroundColor: Colors.primary,

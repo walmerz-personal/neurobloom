@@ -247,7 +247,7 @@ export default function Exercises() {
     const [completedExercises, setCompletedExercises] = useState([]);
     const [loading, setLoading] = useState(true);
     const [customExercises, setCustomExercises] = useState([]);
-    const [assignedExercises, setAssignedExercises] = useState([]);
+    const [assignedExercises, setAssignedExercises] = useState(new Map());
     const [modalVisible, setModalVisible] = useState(false);
     const [exerciseToEdit, setExerciseToEdit] = useState(null);
 
@@ -296,11 +296,17 @@ export default function Exercises() {
                 console.error('Error fetching assigned exercises:', error);
                 return;
             }
-            // Get active assignments (assigned status) and map to exercise IDs
-            const activeAssignments = (assignments || [])
-                .filter(a => a.status === 'assigned')
-                .map(a => a.exercise_id);
-            setAssignedExercises(activeAssignments);
+            const activeAssignments = (assignments || []).filter(a => a.status === 'assigned');
+            const assignmentMap = new Map();
+            activeAssignments.forEach(a => {
+                assignmentMap.set(a.exercise_id, {
+                    notes: a.notes,
+                    assignerName: a.assigned_by?.name || 'Your care team',
+                    dueDate: a.due_date,
+                    id: a.id,
+                });
+            });
+            setAssignedExercises(assignmentMap);
         } catch (error) {
             console.error('Error fetching assigned exercises:', error);
         }
@@ -335,7 +341,7 @@ export default function Exercises() {
             alert('Failed to update status. Please try again.');
         } else {
             // If this was an assigned exercise, update assignment status
-            if (!isCompleted && assignedExercises.includes(exerciseId)) {
+            if (!isCompleted && assignedExercises.has(exerciseId)) {
                 // Find the assignment and update its status
                 const { assignments } = await MedicalStaffService.getAssignedExercises(user.id);
                 const assignment = assignments?.find(a => a.exercise_id === exerciseId && a.status === 'assigned');
@@ -503,7 +509,8 @@ export default function Exercises() {
 
             <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {filteredExercises.map((exercise) => {
-                    const isAssigned = assignedExercises.includes(exercise.id);
+                    const isAssigned = assignedExercises.has(exercise.id);
+                    const assignmentDetails = assignedExercises.get(exercise.id);
                     const isShared = exercise.isCustom && exercise.userId !== user?.id;
                     return (
                         <ExerciseCard
@@ -513,6 +520,7 @@ export default function Exercises() {
                             isCompleted={completedExercises.includes(exercise.id)}
                             isCustom={exercise.isCustom}
                             isAssigned={isAssigned}
+                            assignmentDetails={assignmentDetails}
                             isShared={isShared}
                             onPress={() => toggleExpand(exercise.id)}
                             onToggleComplete={() => toggleCompletion(exercise.id)}
@@ -536,7 +544,7 @@ export default function Exercises() {
     );
 }
 
-function ExerciseCard({ data, isExpanded, isCompleted, isCustom, isAssigned, isShared, onPress, onToggleComplete, onEdit, onDelete }) {
+function ExerciseCard({ data, isExpanded, isCompleted, isCustom, isAssigned, assignmentDetails, isShared, onPress, onToggleComplete, onEdit, onDelete }) {
     const [showConfetti, setShowConfetti] = useState(false);
 
     const handleToggleComplete = (e) => {
@@ -651,6 +659,24 @@ function ExerciseCard({ data, isExpanded, isCompleted, isCustom, isAssigned, isS
                     <Text style={styles.sharedBy}>
                         Shared by {data.creatorName}
                     </Text>
+                )}
+
+                {isAssigned && assignmentDetails && (
+                    <View style={styles.assignmentInfo}>
+                        <Text style={styles.assignedBy}>
+                            Assigned by {assignmentDetails.assignerName}
+                        </Text>
+                        {assignmentDetails.notes && (
+                            <Text style={styles.assignmentNotes}>
+                                "{assignmentDetails.notes}"
+                            </Text>
+                        )}
+                        {assignmentDetails.dueDate && (
+                            <Text style={styles.assignmentDueDate}>
+                                Due: {new Date(assignmentDetails.dueDate).toLocaleDateString()}
+                            </Text>
+                        )}
+                    </View>
                 )}
 
                 {data.description && (
@@ -938,6 +964,32 @@ const styles = StyleSheet.create({
         color: Colors.primary,
         marginBottom: 12,
         fontStyle: 'italic',
+    },
+    assignmentInfo: {
+        marginBottom: 12,
+        padding: 10,
+        backgroundColor: '#F0FDF4',
+        borderRadius: 8,
+        borderLeftWidth: 3,
+        borderLeftColor: '#10B981',
+    },
+    assignedBy: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 13,
+        color: '#059669',
+        marginBottom: 4,
+    },
+    assignmentNotes: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 13,
+        color: Colors.text,
+        fontStyle: 'italic',
+        marginBottom: 4,
+    },
+    assignmentDueDate: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 12,
+        color: Colors.textSecondary,
     },
     instructionsContainer: {
         marginTop: 20,

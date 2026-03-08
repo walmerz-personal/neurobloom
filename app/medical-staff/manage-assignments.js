@@ -7,6 +7,30 @@ import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../contexts/AuthContext';
 import { MedicalStaffService } from '../../services/MedicalStaffService';
 import { ArrowLeft, CheckCircle, Circle, X, Edit2, Trash2, Calendar } from 'lucide-react-native';
+import { SupabaseService } from '../../services/SupabaseService';
+
+const EXERCISES_DATA = [
+    { id: 'a1', title: 'Shoulder Shrugs', category: 'Arms' },
+    { id: 'a2', title: 'Table Push', category: 'Arms' },
+    { id: 'a3', title: 'Bicep Curls', category: 'Arms' },
+    { id: 'l1', title: 'Ankle Pumps', category: 'Legs' },
+    { id: 'l2', title: 'Seated Marching', category: 'Legs' },
+    { id: 'l3', title: 'Sit-to-Stand', category: 'Legs' },
+    { id: 'c1', title: 'Trunk Rotations', category: 'Core' },
+    { id: 'c2', title: 'Lateral Flexion', category: 'Core' },
+    { id: 'c3', title: 'Seated Balance', category: 'Core' },
+    { id: 'h1', title: 'Fist Clenches', category: 'Hands' },
+    { id: 'h2', title: 'Towel Scrunch', category: 'Hands' },
+    { id: 'h3', title: 'Thumb Touch', category: 'Hands' },
+];
+
+const getExerciseTitle = (exerciseId, exerciseType) => {
+    if (exerciseType === 'built_in') {
+        const exercise = EXERCISES_DATA.find(e => e.id === exerciseId);
+        return exercise ? exercise.title : exerciseId;
+    }
+    return 'Custom Exercise';
+};
 
 export default function ManageAssignments() {
     const router = useRouter();
@@ -73,9 +97,16 @@ export default function ManageAssignments() {
     };
 
     const handleSaveNotes = async (assignmentId) => {
-        // Note: This would require extending SupabaseService to update notes
-        // For now, we'll just show an alert
-        Alert.alert('Coming Soon', 'Note editing will be available in the next update.');
+        try {
+            const { error } = await SupabaseService.updateAssignmentNotes(assignmentId, notesText);
+            if (error) {
+                Alert.alert('Error', 'Failed to save notes. Please try again.');
+            } else {
+                await loadAssignments();
+            }
+        } catch (error) {
+            Alert.alert('Error', 'Failed to save notes. Please try again.');
+        }
         setEditingNotes(null);
         setNotesText('');
     };
@@ -168,7 +199,7 @@ export default function ManageAssignments() {
                                 <View style={styles.assignmentHeaderLeft}>
                                     <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(assignment.status) }]} />
                                     <View>
-                                        <Text style={styles.exerciseId}>Exercise: {assignment.exercise_id}</Text>
+                                        <Text style={styles.exerciseId}>{getExerciseTitle(assignment.exercise_id, assignment.exercise_type)}</Text>
                                         <Text style={styles.exerciseType}>
                                             {assignment.exercise_type === 'built_in' ? 'Built-in' : 'Custom'}
                                         </Text>
