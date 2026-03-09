@@ -1,9 +1,9 @@
 // components/HealthSharingSection.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Switch, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, Switch, TouchableOpacity, ActivityIndicator, Alert, Modal } from 'react-native';
 import { Colors } from '../constants/Colors';
 import { Typography } from '../constants/Typography';
-import { Shield, Users, UserCheck, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { Shield, Users, UserCheck, ChevronDown, ChevronUp, X } from 'lucide-react-native';
 import { CareTeamService } from '../services/CareTeamService';
 import { MedicalStaffService } from '../services/MedicalStaffService';
 import { SupabaseService } from '../services/SupabaseService';
@@ -18,6 +18,7 @@ export function HealthSharingSection({ userId, userRole }) {
     const [medicalStaff, setMedicalStaff] = useState([]);
     const [sharingPreferences, setSharingPreferences] = useState({});
     const [expandedUsers, setExpandedUsers] = useState({});
+    const [profileMember, setProfileMember] = useState(null);
 
     useEffect(() => {
         if (userRole === 'survivor' && userId) {
@@ -40,6 +41,7 @@ export function HealthSharingSection({ userId, userRole }) {
                 .map(link => ({
                     id: link.medical_staff_id,
                     name: link.medical_staff?.name || 'Unknown',
+                    email: link.medical_staff?.email,
                     linkId: link.id,
                 }));
             setMedicalStaff(staff);
@@ -192,7 +194,17 @@ export function HealthSharingSection({ userId, userRole }) {
                 >
                     <View style={styles.userInfo}>
                         <UserCheck size={20} color={Colors.primary} />
-                        <Text style={styles.userName}>{user.name}</Text>
+                        <TouchableOpacity
+                            onPress={() => setProfileMember({
+                                name: user.name,
+                                email: user.email,
+                                roleLabel: relationshipType === 'caregiver' ? 'Caregiver' : 'Medical Staff',
+                            })}
+                            style={styles.userNameTouchable}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={styles.userName}>{user.name}</Text>
+                        </TouchableOpacity>
                         <Text style={styles.userRole}>
                             {relationshipType === 'caregiver' ? 'Caregiver' : 'Medical Staff'}
                         </Text>
@@ -296,6 +308,41 @@ export function HealthSharingSection({ userId, userRole }) {
                     )}
                 </>
             )}
+
+            <Modal
+                visible={profileMember !== null}
+                animationType="fade"
+                transparent
+                onRequestClose={() => setProfileMember(null)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setProfileMember(null)}
+                >
+                    <TouchableOpacity
+                        style={styles.profileModalContent}
+                        activeOpacity={1}
+                        onPress={(e) => e.stopPropagation()}
+                    >
+                        <View style={styles.profileModalHeader}>
+                            <Text style={styles.profileModalTitle}>Profile</Text>
+                            <TouchableOpacity style={styles.profileModalClose} onPress={() => setProfileMember(null)}>
+                                <X size={24} color={Colors.text} />
+                            </TouchableOpacity>
+                        </View>
+                        {profileMember && (
+                            <View style={styles.profileModalBody}>
+                                <Text style={styles.profileModalName}>{profileMember.name}</Text>
+                                <Text style={styles.profileModalRole}>{profileMember.roleLabel}</Text>
+                                {profileMember.email ? (
+                                    <Text style={styles.profileModalEmail}>{profileMember.email}</Text>
+                                ) : null}
+                            </View>
+                        )}
+                    </TouchableOpacity>
+                </TouchableOpacity>
+            </Modal>
         </View>
     );
 }
@@ -372,10 +419,12 @@ const styles = StyleSheet.create({
         gap: 12,
         flex: 1,
     },
+    userNameTouchable: {
+        flex: 1,
+    },
     userName: {
         ...Typography.body,
         fontFamily: 'Inter_600SemiBold',
-        flex: 1,
     },
     userRole: {
         ...Typography.caption,
@@ -407,5 +456,57 @@ const styles = StyleSheet.create({
     metricLabel: {
         ...Typography.body,
         flex: 1,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24,
+    },
+    profileModalContent: {
+        backgroundColor: 'white',
+        borderRadius: 12,
+        width: '100%',
+        maxWidth: 340,
+        overflow: 'hidden',
+    },
+    profileModalHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.border,
+    },
+    profileModalTitle: {
+        fontFamily: 'Inter_700Bold',
+        fontSize: 18,
+        color: Colors.text,
+    },
+    profileModalClose: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: Colors.surfaceHighlight,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    profileModalBody: {
+        padding: 20,
+    },
+    profileModalName: {
+        ...Typography.headline,
+        marginBottom: 4,
+    },
+    profileModalRole: {
+        ...Typography.caption,
+        color: Colors.textSecondary,
+        marginBottom: 8,
+    },
+    profileModalEmail: {
+        ...Typography.body,
+        color: Colors.text,
     },
 });

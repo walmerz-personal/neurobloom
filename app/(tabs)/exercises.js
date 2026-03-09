@@ -14,6 +14,11 @@ import { getRecommendedExercises } from '../../services/RecommendationService';
 
 const CATEGORIES = ['All', 'Arms', 'Legs', 'Core', 'Hands', 'Head & Neck'];
 const MODE_TYPES = ['All', 'Solo', 'Partner'];
+const RECOMMENDATION_FILTERS = [
+    { value: 'all', label: 'All' },
+    { value: 'ai_recommended', label: 'AI recommended' },
+    { value: 'staff_assigned', label: 'Staff assigned' },
+];
 
 export const EXERCISES_DATA = [
     // Arms & Shoulders
@@ -1095,6 +1100,7 @@ export default function Exercises() {
     const [recommendedExercises, setRecommendedExercises] = useState([]);
     const [recommendedIds, setRecommendedIds] = useState(new Set());
     const [showInfoModal, setShowInfoModal] = useState(false);
+    const [recommendationFilter, setRecommendationFilter] = useState('all'); // 'all' | 'ai_recommended' | 'staff_assigned'
 
     useEffect(() => {
         if (user) {
@@ -1228,7 +1234,11 @@ export default function Exercises() {
     const filteredExercises = allExercises.filter(ex => {
         const categoryMatch = selectedCategory === 'All' || ex.category === selectedCategory;
         const modeMatch = selectedMode === 'All' || ex.mode === selectedMode.toLowerCase();
-        return categoryMatch && modeMatch;
+        const recommendationMatch =
+            recommendationFilter === 'all' ||
+            (recommendationFilter === 'ai_recommended' && recommendedIds.has(ex.id)) ||
+            (recommendationFilter === 'staff_assigned' && assignedExercises.has(ex.id));
+        return categoryMatch && modeMatch && recommendationMatch;
     });
 
     const handleSaveExercise = async (exerciseData, exerciseId) => {
@@ -1360,6 +1370,32 @@ export default function Exercises() {
                                 selectedMode === mode && styles.modeTextActive
                             ]}>
                                 {mode === 'Solo' ? '🧍 Solo' : mode === 'Partner' ? '🤝 Partner' : mode}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
+
+            <View style={styles.modeContainer}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.modeContent}
+                >
+                    {RECOMMENDATION_FILTERS.map(({ value, label }) => (
+                        <TouchableOpacity
+                            key={value}
+                            style={[
+                                styles.modeChip,
+                                recommendationFilter === value && styles.modeChipActive
+                            ]}
+                            onPress={() => setRecommendationFilter(value)}
+                        >
+                            <Text style={[
+                                styles.modeText,
+                                recommendationFilter === value && styles.modeTextActive
+                            ]}>
+                                {label}
                             </Text>
                         </TouchableOpacity>
                     ))}

@@ -1,5 +1,48 @@
 # NeuroBloom Tasks
 
+## Add AI and Staff-Recommended Exercise Filters
+
+### Plan
+Add two filters to the patient/survivor exercises screen: "AI recommended" (NEUROBLOOM recommendations from profile) and "Medical staff recommended" (exercises assigned by staff), as a single row of filter chips consistent with existing category/mode UI.
+
+### Todo Items
+- [x] Add recommendationFilter state to exercises screen
+- [x] Extend filteredExercises with AI/staff filter logic
+- [x] Add recommendation filter chip row UI (reuse mode styles)
+
+### Review
+- **File:** `app/(tabs)/exercises.js`. Added `RECOMMENDATION_FILTERS` constant with three options: All, AI recommended, Staff assigned. Added `recommendationFilter` state (default `'all'`). Extended `filteredExercises` to apply recommendation filter: when `ai_recommended`, only exercises in `recommendedIds`; when `staff_assigned`, only exercises in `assignedExercises`; when `all`, no extra filter. Added a new horizontal chip row below the Mode row reusing `modeContainer`, `modeContent`, `modeChip`, `modeChipActive`, `modeText`, `modeTextActive`. No new APIs or styles; uses existing `recommendedIds` and `assignedExercises` already loaded on the screen.
+
+---
+
+## Fix keyboard obscuring Assignment Details on Assign Exercises screen
+
+### Plan
+Wrap the Assign Exercises screen scroll content in KeyboardAvoidingView and add ScrollView keyboard options so the Assignment Details section and Save button stay visible when the keyboard is open.
+
+### Todo Items
+- [x] Add KeyboardAvoidingView + ScrollView keyboard options to assign-exercises
+
+### Review
+- **File:** `app/medical-staff/assign-exercises.js`. Added `KeyboardAvoidingView` and `Platform` to the React Native import. Wrapped the main `ScrollView` in `KeyboardAvoidingView` with `behavior={Platform.OS === 'ios' ? 'padding' : 'height'}` and `style={{ flex: 1 }}`. On the `ScrollView` added `contentContainerStyle={{ paddingBottom: 100 }}`, `keyboardShouldPersistTaps="handled"`, and `keyboardDismissMode="on-drag"`. When the user focuses the due date or notes field, the keyboard no longer fully obscures Assignment Details; the layout shrinks and the user can scroll to keep the section and Save button visible and tappable. Matches the pattern used on check-in, profile, and other form screens.
+
+---
+
+## Fix patient/staff names and add care team profile view
+
+### Plan
+Fix patient name showing as "Unknown" on medical staff home (RLS policies). Let patients see caregiver/medical staff names and tap a name to open a basic profile (name, email, role).
+
+### Todo Items
+- [x] Add RLS migration: medical staff can view linked survivor profiles; survivors can view linked medical staff profiles
+- [x] HealthSharingSection: add email to medical staff map, profileMember state, tappable name, profile modal
+
+### Review
+- **RLS:** New migration `supabase/migrations/20260309100000_fix_staff_survivor_profile_visibility.sql` adds two policies on `users`: (1) Medical staff can SELECT users who are their linked survivors (accepted care_team_links); (2) Survivors can SELECT users who are their linked medical staff. Once applied in Supabase, staff will see patient names (e.g. Katie Adler) and patients will see staff names instead of "Unknown".
+- **HealthSharingSection:** Medical staff list now includes `email` from the getCareTeamLinks join. Added `profileMember` state and a tappable name (TouchableOpacity) that opens a modal; modal shows name, role label (Caregiver / Medical Staff), and email when present, with a close button. Caregivers already had email from getLinkedCaregivers. Row tap still toggles expand/collapse for sharing settings; only the name opens the profile modal.
+
+---
+
 ## Add Physical Therapy Exercises to NeuroBloom
 
 ### Plan

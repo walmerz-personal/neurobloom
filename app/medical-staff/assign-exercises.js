@@ -1,6 +1,6 @@
 // app/medical-staff/assign-exercises.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
@@ -256,7 +256,16 @@ export default function AssignExercises() {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.content}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{ flex: 1 }}
+            >
+                <ScrollView
+                    style={styles.content}
+                    contentContainerStyle={{ paddingBottom: 100 }}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                >
                 {/* Survivor Selection */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Select Patient</Text>
@@ -377,7 +386,8 @@ export default function AssignExercises() {
                         {saving ? 'Assigning...' : `Assign ${selectedExercises.size} Exercise(s)`}
                     </Text>
                 </TouchableOpacity>
-            </ScrollView>
+                </ScrollView>
+            </KeyboardAvoidingView>
 
             <CustomExerciseModal
                 visible={modalVisible}
