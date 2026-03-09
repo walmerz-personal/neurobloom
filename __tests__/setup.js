@@ -3,6 +3,12 @@
 // Define __DEV__ for React Native
 global.__DEV__ = true;
 
+// Provide requestAnimationFrame for environments that lack it (e.g., legacy fake timers)
+if (typeof global.requestAnimationFrame === 'undefined') {
+    global.requestAnimationFrame = (callback) => setTimeout(callback, 0);
+    global.cancelAnimationFrame = (id) => clearTimeout(id);
+}
+
 // Mock React Native native bridge
 global.__fbBatchedBridgeConfig = {
     remoteModuleConfig: [],
@@ -188,14 +194,91 @@ jest.mock('react-native', () => {
             spring: jest.fn(() => ({ start: jest.fn() })),
             View: 'View',
             Text: 'Text',
-            Value: jest.fn(() => ({ interpolate: jest.fn() })),
+            Value: jest.fn(() => ({ interpolate: jest.fn(), setValue: jest.fn(), addListener: jest.fn(), removeAllListeners: jest.fn() })),
+            parallel: jest.fn(() => ({ start: jest.fn((cb) => cb && cb()) })),
+            stagger: jest.fn(() => ({ start: jest.fn((cb) => cb && cb()) })),
+            sequence: jest.fn(() => ({ start: jest.fn((cb) => cb && cb()) })),
             createAnimatedComponent: (component) => component,
         },
     };
 });
 
-// Mock React Native Alert
+// Mock NativeAnimatedHelper to prevent animation cleanup errors in tests
+jest.mock('react-native/src/private/animated/NativeAnimatedHelper', () => ({
+    API: {
+        getValue: jest.fn(),
+        setWaitingForIdentifier: jest.fn(),
+        unsetWaitingForIdentifier: jest.fn(),
+        disableQueue: jest.fn(),
+        flushQueue: jest.fn(),
+        createAnimatedNode: jest.fn(),
+        updateAnimatedNodeConfig: jest.fn(),
+        startListeningToAnimatedNodeValue: jest.fn(),
+        stopListeningToAnimatedNodeValue: jest.fn(),
+        connectAnimatedNodes: jest.fn(),
+        disconnectAnimatedNodes: jest.fn(),
+        startAnimatingNode: jest.fn(),
+        stopAnimation: jest.fn(),
+        setAnimatedNodeValue: jest.fn(),
+        setAnimatedNodeOffset: jest.fn(),
+        flattenAnimatedNodeOffset: jest.fn(),
+        extractAnimatedNodeOffset: jest.fn(),
+        connectAnimatedNodeToView: jest.fn(),
+        disconnectAnimatedNodeFromView: jest.fn(),
+        restoreDefaultValues: jest.fn(),
+        dropAnimatedNode: jest.fn(),
+        addAnimatedEventToView: jest.fn(),
+        removeAnimatedEventFromView: jest.fn(),
+        addListener: jest.fn(),
+        removeListener: jest.fn(),
+    },
+    addWhitelistedNativeProps: jest.fn(),
+    addWhitelistedUIProps: jest.fn(),
+    validateStyles: jest.fn(),
+    validateInterpolation: jest.fn(),
+    generateNewNodeTag: jest.fn(() => 1),
+    generateNewAnimationId: jest.fn(() => 1),
+    assertNativeAnimatedModule: jest.fn(),
+    shouldUseNativeDriver: jest.fn(() => false),
+    transformDataType: jest.fn((value) => value),
+    default: {
+        createAnimatedNode: jest.fn(),
+        startListeningToAnimatedNodeValue: jest.fn(),
+        stopListeningToAnimatedNodeValue: jest.fn(),
+        connectAnimatedNodes: jest.fn(),
+        disconnectAnimatedNodes: jest.fn(),
+        startAnimatingNode: jest.fn(),
+        stopAnimation: jest.fn(),
+        setAnimatedNodeValue: jest.fn(),
+        setAnimatedNodeOffset: jest.fn(),
+        flattenAnimatedNodeOffset: jest.fn(),
+        extractAnimatedNodeOffset: jest.fn(),
+        connectAnimatedNodeToView: jest.fn(),
+        disconnectAnimatedNodeFromView: jest.fn(),
+        restoreDefaultValues: jest.fn(),
+        dropAnimatedNode: jest.fn(),
+        addAnimatedEventToView: jest.fn(),
+        removeAnimatedEventFromView: jest.fn(),
+        addListener: jest.fn(),
+        removeListener: jest.fn(),
+    },
+}));
+
+// Mock React Native Alert (both global and RCTAlertManager)
 global.alert = jest.fn();
+
+// Mock RCTAlertManager so Alert.alert works in tests
+jest.mock('react-native/Libraries/Alert/RCTAlertManager', () => ({
+    alertWithArgs: jest.fn(),
+}));
+
+// Mock NativeAlertManager so Alert.alert works in tests
+jest.mock('react-native/Libraries/Alert/NativeAlertManager', () => ({
+    __esModule: true,
+    default: {
+        alertWithArgs: jest.fn(),
+    },
+}));
 
 // Mock console methods to reduce noise in tests
 global.console = {
@@ -236,6 +319,59 @@ jest.mock('@kingstinct/react-native-healthkit', () => {
         ...mockHealthKit,
     };
 }, { virtual: true });
+
+// Mock expo-haptics
+jest.mock('expo-haptics', () => ({
+    impactAsync: jest.fn(),
+    notificationAsync: jest.fn(),
+    selectionAsync: jest.fn(),
+    ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+    NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}));
+
+// Mock expo-clipboard
+jest.mock('expo-clipboard', () => ({
+    setStringAsync: jest.fn(() => Promise.resolve(true)),
+    getStringAsync: jest.fn(() => Promise.resolve('')),
+    hasStringAsync: jest.fn(() => Promise.resolve(false)),
+}));
+
+// Mock expo-linear-gradient
+jest.mock('expo-linear-gradient', () => {
+    const { View } = require('react-native');
+    return {
+        LinearGradient: View,
+    };
+});
+
+// Mock expo-font
+jest.mock('expo-font', () => ({
+    useFonts: jest.fn(() => [true, null]),
+    isLoaded: jest.fn(() => true),
+    loadAsync: jest.fn(() => Promise.resolve()),
+}));
+
+// Mock expo-status-bar
+jest.mock('expo-status-bar', () => ({
+    StatusBar: 'StatusBar',
+}));
+
+// Mock lottie-react-native
+jest.mock('lottie-react-native', () => 'LottieView');
+
+// Mock lucide-react-native — return a generic component for any icon import
+jest.mock('lucide-react-native', () => {
+    return new Proxy({}, {
+        get: (_target, name) => name,
+    });
+});
+
+// Mock rive-react-native
+jest.mock('rive-react-native', () => ({
+    default: 'RiveView',
+    Fit: { Contain: 'contain' },
+    Alignment: { Center: 'center' },
+}));
 
 // Reset mocks before each test
 beforeEach(() => {

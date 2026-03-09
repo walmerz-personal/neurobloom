@@ -1,20 +1,21 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert, Modal } from 'react-native';
 import { useState, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
-import { PlayCircle, Clock, Target, ChevronDown, ChevronUp, CheckCircle, Circle, Plus, Edit, Trash2 } from 'lucide-react-native';
+import { PlayCircle, Clock, Target, ChevronDown, ChevronUp, CheckCircle, Circle, Plus, Edit, Trash2, Info, X } from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { SupabaseService } from '../../services/SupabaseService';
 import { MedicalStaffService } from '../../services/MedicalStaffService';
 import { CustomExerciseModal } from '../../components/CustomExerciseModal';
 import { ConfettiBurst } from '../../components/ConfettiBurst';
+import { getRecommendedExercises } from '../../services/RecommendationService';
 
 const CATEGORIES = ['All', 'Arms', 'Legs', 'Core', 'Hands'];
 const MODE_TYPES = ['All', 'Solo', 'Partner'];
 
-const EXERCISES_DATA = [
+export const EXERCISES_DATA = [
     // Arms & Shoulders
     {
         id: 'a1',
@@ -250,12 +251,16 @@ export default function Exercises() {
     const [assignedExercises, setAssignedExercises] = useState(new Map());
     const [modalVisible, setModalVisible] = useState(false);
     const [exerciseToEdit, setExerciseToEdit] = useState(null);
+    const [recommendedExercises, setRecommendedExercises] = useState([]);
+    const [recommendedIds, setRecommendedIds] = useState(new Set());
+    const [showInfoModal, setShowInfoModal] = useState(false);
 
     useEffect(() => {
         if (user) {
             fetchCompletedExercises();
             fetchCustomExercises();
             fetchAssignedExercises();
+            fetchRecommendations();
         }
     }, [user]);
 
@@ -309,6 +314,19 @@ export default function Exercises() {
             setAssignedExercises(assignmentMap);
         } catch (error) {
             console.error('Error fetching assigned exercises:', error);
+        }
+    };
+
+    const fetchRecommendations = async () => {
+        try {
+            const { profile } = await SupabaseService.getUserProfile(user.id);
+            if (profile) {
+                const { recommended } = getRecommendedExercises(profile, EXERCISES_DATA);
+                setRecommendedExercises(recommended);
+                setRecommendedIds(new Set(recommended.map(r => r.id)));
+            }
+        } catch (error) {
+            console.error('Error fetching recommendations:', error);
         }
     };
 
@@ -508,6 +526,44 @@ export default function Exercises() {
             </View>
 
             <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                {recommendedExercises.length > 0 && (
+                    <View style={styles.recommendedSection}>
+                        <View style={styles.recommendedHeader}>
+                            <Text style={styles.recommendedTitle}>Recommended for You</Text>
+                            <TouchableOpacity onPress={() => setShowInfoModal(true)} style={styles.infoButton}>
+                                <Info size={20} color={Colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+                        {recommendedExercises.map((exercise) => (
+                            <TouchableOpacity
+                                key={`rec-${exercise.id}`}
+                                style={styles.recommendedCard}
+                                onPress={() => toggleExpand(exercise.id)}
+                                activeOpacity={0.8}
+                            >
+                                <View style={[styles.recommendedDot, { backgroundColor: exercise.thumbnailColor }]} />
+                                <View style={styles.recommendedCardContent}>
+                                    <Text style={styles.recommendedCardTitle}>{exercise.title}</Text>
+                                    <Text style={styles.recommendedCardReason}>{exercise.recommendationReason}</Text>
+                                </View>
+                                <TouchableOpacity
+                                    onPress={() => toggleCompletion(exercise.id)}
+                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                >
+                                    {completedExercises.includes(exercise.id) ? (
+                                        <CheckCircle size={24} color={Colors.primary} />
+                                    ) : (
+                                        <Circle size={24} color={Colors.border} />
+                                    )}
+                                </TouchableOpacity>
+                            </TouchableOpacity>
+                        ))}
+                        <Text style={styles.recommendedDisclaimer}>
+                            Based on your profile. Always consult your care team.
+                        </Text>
+                    </View>
+                )}
+
                 {filteredExercises.map((exercise) => {
                     const isAssigned = assignedExercises.has(exercise.id);
                     const assignmentDetails = assignedExercises.get(exercise.id);
@@ -520,6 +576,7 @@ export default function Exercises() {
                             isCompleted={completedExercises.includes(exercise.id)}
                             isCustom={exercise.isCustom}
                             isAssigned={isAssigned}
+                            isRecommended={recommendedIds.has(exercise.id)}
                             assignmentDetails={assignmentDetails}
                             isShared={isShared}
                             onPress={() => toggleExpand(exercise.id)}
@@ -540,11 +597,44 @@ export default function Exercises() {
                 userId={user?.id}
                 userRole={userData?.role || 'survivor'}
             />
+
+            <Modal
+                visible={showInfoModal}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowInfoModal(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setShowInfoModal(false)}
+                >
+                    <View style={styles.infoSheet}>
+                        <View style={styles.infoSheetHandle} />
+                        <Text style={styles.infoSheetTitle}>How Recommendations Work</Text>
+                        <Text style={styles.infoSheetText}>
+                            These exercises were selected based on your recovery profile, including your impairments, affected side, and recovery phase.
+                        </Text>
+                        <Text style={styles.infoSheetText}>
+                            Your care team can also assign specific exercises, which will always appear first.
+                        </Text>
+                        <Text style={styles.infoSheetText}>
+                            You can update your profile anytime from the About Me screen.
+                        </Text>
+                        <TouchableOpacity
+                            style={styles.infoSheetClose}
+                            onPress={() => setShowInfoModal(false)}
+                        >
+                            <Text style={styles.infoSheetCloseText}>Got it</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
         </ScreenWrapper>
     );
 }
 
-function ExerciseCard({ data, isExpanded, isCompleted, isCustom, isAssigned, assignmentDetails, isShared, onPress, onToggleComplete, onEdit, onDelete }) {
+function ExerciseCard({ data, isExpanded, isCompleted, isCustom, isAssigned, isRecommended, assignmentDetails, isShared, onPress, onToggleComplete, onEdit, onDelete }) {
     const [showConfetti, setShowConfetti] = useState(false);
 
     const handleToggleComplete = (e) => {
@@ -575,7 +665,7 @@ function ExerciseCard({ data, isExpanded, isCompleted, isCustom, isAssigned, ass
                 <PlayCircle size={40} color={Colors.text} style={{ opacity: 0.6 }} />
                 <View style={styles.categoryBadge}>
                     <Text style={styles.categoryBadgeText}>
-                        {data.category}{isCustom ? ' • Custom' : ''}{isAssigned ? ' • Assigned' : ''}
+                        {data.category}{isCustom ? ' • Custom' : ''}{isAssigned ? ' • Assigned' : ''}{isRecommended ? ' • Recommended' : ''}
                     </Text>
                 </View>
 
@@ -1024,6 +1114,113 @@ const styles = StyleSheet.create({
         flex: 1,
         flexShrink: 1,
         flexWrap: 'wrap',
+    },
+    // Recommended section
+    recommendedSection: {
+        marginBottom: 24,
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+        elevation: 3,
+    },
+    recommendedHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    recommendedTitle: {
+        fontFamily: 'Inter_700Bold',
+        fontSize: 18,
+        color: Colors.text,
+    },
+    infoButton: {
+        padding: 4,
+    },
+    recommendedCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.border,
+    },
+    recommendedDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        marginRight: 12,
+    },
+    recommendedCardContent: {
+        flex: 1,
+    },
+    recommendedCardTitle: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 15,
+        color: Colors.text,
+    },
+    recommendedCardReason: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 13,
+        color: Colors.textSecondary,
+        marginTop: 2,
+    },
+    recommendedDisclaimer: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 12,
+        color: Colors.textTertiary,
+        marginTop: 12,
+        textAlign: 'center',
+        fontStyle: 'italic',
+    },
+    // Info modal
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'flex-end',
+    },
+    infoSheet: {
+        backgroundColor: 'white',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        padding: 24,
+        paddingBottom: 40,
+    },
+    infoSheetHandle: {
+        width: 40,
+        height: 4,
+        backgroundColor: Colors.border,
+        borderRadius: 2,
+        alignSelf: 'center',
+        marginBottom: 20,
+    },
+    infoSheetTitle: {
+        fontFamily: 'Inter_700Bold',
+        fontSize: 20,
+        color: Colors.text,
+        marginBottom: 16,
+    },
+    infoSheetText: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 15,
+        color: Colors.textSecondary,
+        lineHeight: 22,
+        marginBottom: 12,
+    },
+    infoSheetClose: {
+        backgroundColor: Colors.primary,
+        borderRadius: 12,
+        paddingVertical: 14,
+        alignItems: 'center',
+        marginTop: 12,
+    },
+    infoSheetCloseText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 16,
+        color: 'white',
     },
 });
 

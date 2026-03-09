@@ -319,6 +319,8 @@ export const SupabaseService = {
                     user_id: userId,
                     stroke_date: profileData.strokeDate || null,
                     impairments: profileData.impairments || [],
+                    affected_side: profileData.affectedSide || null,
+                    impairment_severity: profileData.impairmentSeverity || null,
                     recovery_phase: profileData.recoveryPhase || null,
                     goals: profileData.goals || null,
                     medical_staff_role: profileData.medicalStaffRole || null,

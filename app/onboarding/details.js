@@ -17,6 +17,8 @@ export default function Details() {
     const [strokeDate, setStrokeDate] = useState('');
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [impairments, setImpairments] = useState([]);
+    const [affectedSide, setAffectedSide] = useState('');
+    const [impairmentSeverity, setImpairmentSeverity] = useState('');
     const [medicalStaffRole, setMedicalStaffRole] = useState('');
     const [otherRole, setOtherRole] = useState('');
 
@@ -45,7 +47,7 @@ export default function Details() {
         } else {
             router.push({
                 pathname: '/onboarding/goals',
-                params: { role, name, strokeDate, impairments: JSON.stringify(impairments) }
+                params: { role, name, strokeDate, impairments: JSON.stringify(impairments), affectedSide, impairmentSeverity }
             });
         }
     };
@@ -57,7 +59,7 @@ export default function Details() {
         }
         router.push({
             pathname: '/onboarding/goals',
-            params: { role, name, strokeDate: '', impairments: JSON.stringify([]) }
+            params: { role, name, strokeDate: '', impairments: JSON.stringify([]), affectedSide: '', impairmentSeverity: '' }
         });
     };
 
@@ -66,6 +68,19 @@ export default function Details() {
         { id: 'speech', label: 'Speech / Communication', icon: '🗣️' },
         { id: 'cognitive', label: 'Memory / Thinking', icon: '🧠' },
         { id: 'vision', label: 'Vision', icon: '👁️' },
+    ];
+
+    const affectedSideOptions = [
+        { id: 'left', label: 'Left side', icon: '👈' },
+        { id: 'right', label: 'Right side', icon: '👉' },
+        { id: 'both', label: 'Both sides', icon: '🙌' },
+        { id: 'unknown', label: "I'm not sure", icon: '❓' },
+    ];
+
+    const severityOptions = [
+        { id: 'mild', label: 'Mild', description: 'I can do most things, just slower or weaker' },
+        { id: 'moderate', label: 'Moderate', description: 'I need help with some daily activities' },
+        { id: 'severe', label: 'Severe', description: 'I need help with most daily activities' },
     ];
 
     const medicalStaffRoleOptions = [
@@ -209,6 +224,62 @@ export default function Details() {
                                 </TouchableOpacity>
                             ))}
                         </View>
+
+                        <Text style={[styles.subtitle, { marginTop: 24 }]}>
+                            Which side is more affected?
+                        </Text>
+                        <View style={styles.optionsContainer}>
+                            {affectedSideOptions.map((option) => (
+                                <TouchableOpacity
+                                    key={option.id}
+                                    style={[
+                                        styles.optionCard,
+                                        affectedSide === option.id && styles.optionCardSelected
+                                    ]}
+                                    onPress={() => setAffectedSide(option.id)}
+                                >
+                                    <Text style={styles.optionIcon}>{option.icon}</Text>
+                                    <Text style={[
+                                        styles.optionLabel,
+                                        affectedSide === option.id && styles.optionLabelSelected
+                                    ]}>
+                                        {option.label}
+                                    </Text>
+                                    {affectedSide === option.id && (
+                                        <Text style={styles.checkmark}>✓</Text>
+                                    )}
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <Text style={[styles.subtitle, { marginTop: 24 }]}>
+                            How would you describe the severity?
+                        </Text>
+                        <View style={styles.optionsContainer}>
+                            {severityOptions.map((option) => (
+                                <TouchableOpacity
+                                    key={option.id}
+                                    style={[
+                                        styles.optionCard,
+                                        impairmentSeverity === option.id && styles.optionCardSelected
+                                    ]}
+                                    onPress={() => setImpairmentSeverity(option.id)}
+                                >
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={[
+                                            styles.optionLabel,
+                                            impairmentSeverity === option.id && styles.optionLabelSelected
+                                        ]}>
+                                            {option.label}
+                                        </Text>
+                                        <Text style={styles.optionDescription}>{option.description}</Text>
+                                    </View>
+                                    {impairmentSeverity === option.id && (
+                                        <Text style={styles.checkmark}>✓</Text>
+                                    )}
+                                </TouchableOpacity>
+                            ))}
+                        </View>
                     </>
                 )}
 
@@ -296,6 +367,11 @@ const styles = StyleSheet.create({
         color: Colors.primary,
         fontSize: 18,
         fontWeight: 'bold',
+    },
+    optionDescription: {
+        ...Typography.caption1,
+        color: Colors.textSecondary,
+        marginTop: 2,
     },
     buttonContainer: {
         marginTop: 24,

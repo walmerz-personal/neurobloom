@@ -29,6 +29,8 @@ export default function Goals() {
                     medicalStaffRole,
                     strokeDate: '',
                     impairments: JSON.stringify([]),
+                    affectedSide: '',
+                    impairmentSeverity: '',
                     recoveryPhase: '',
                     goals: ''
                 }
@@ -47,6 +49,8 @@ export default function Goals() {
                 role,
                 strokeDate: params.strokeDate || '',
                 impairments: JSON.stringify(impairments),
+                affectedSide: params.affectedSide || '',
+                impairmentSeverity: params.impairmentSeverity || '',
                 recoveryPhase,
                 goals
             }
@@ -64,6 +68,8 @@ export default function Goals() {
                 role,
                 strokeDate: params.strokeDate || '',
                 impairments: JSON.stringify(impairments),
+                affectedSide: params.affectedSide || '',
+                impairmentSeverity: params.impairmentSeverity || '',
                 recoveryPhase: '',
                 goals: ''
             }

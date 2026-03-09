@@ -19,6 +19,8 @@ export default function CreateAccount() {
     const role = params.role || 'survivor';
     const strokeDate = params.strokeDate || '';
     const impairments = params.impairments ? JSON.parse(params.impairments) : [];
+    const affectedSide = params.affectedSide || '';
+    const impairmentSeverity = params.impairmentSeverity || '';
     const recoveryPhase = params.recoveryPhase || '';
     const goals = params.goals || '';
     const medicalStaffRole = params.medicalStaffRole || '';
@@ -69,6 +71,8 @@ export default function CreateAccount() {
                 const profileData = {
                     strokeDate,
                     impairments,
+                    affectedSide: affectedSide || null,
+                    impairmentSeverity: impairmentSeverity || null,
                     recoveryPhase,
                     goals,
                     medicalStaffRole: role === 'medical_staff' ? medicalStaffRole : null,

@@ -24,6 +24,8 @@ export default function Profile() {
     const [role, setRole] = useState('survivor');
     const [strokeDate, setStrokeDate] = useState('');
     const [impairments, setImpairments] = useState('');
+    const [affectedSide, setAffectedSide] = useState('');
+    const [impairmentSeverity, setImpairmentSeverity] = useState('');
     const [goals, setGoals] = useState('');
     const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -89,6 +91,8 @@ export default function Profile() {
             if (profile) {
                 setStrokeDate(profile.stroke_date || '');
                 setImpairments(Array.isArray(profile.impairments) ? profile.impairments.join(', ') : profile.impairments || '');
+                setAffectedSide(profile.affected_side || '');
+                setImpairmentSeverity(profile.impairment_severity || '');
                 setGoals(profile.goals || '');
             }
         } catch (error) {
@@ -110,6 +114,8 @@ export default function Profile() {
             const profileUpdates = {
                 strokeDate,
                 impairments: impairments.split(',').map(i => i.trim()).filter(i => i),
+                affectedSide: affectedSide || null,
+                impairmentSeverity: impairmentSeverity || null,
                 goals
             };
             await SupabaseService.saveUserProfile(user.id, profileUpdates);
@@ -435,6 +441,63 @@ export default function Profile() {
                             accessibilityLabel="Impairments and challenges"
                         />
                         <Text style={styles.helperText}>Separate with commas</Text>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <View style={styles.labelContainer}>
+                            <Activity size={18} color={Colors.primary} />
+                            <Text style={styles.label}>Affected Side</Text>
+                        </View>
+                        <View style={styles.roleContainer}>
+                            {[
+                                { id: 'left', label: 'Left' },
+                                { id: 'right', label: 'Right' },
+                                { id: 'both', label: 'Both' },
+                                { id: 'unknown', label: 'Not sure' },
+                            ].map((option) => (
+                                <TouchableOpacity
+                                    key={option.id}
+                                    style={[
+                                        styles.roleOption,
+                                        affectedSide === option.id && styles.roleOptionSelected
+                                    ]}
+                                    onPress={() => setAffectedSide(option.id)}
+                                >
+                                    <Text style={[
+                                        styles.roleText,
+                                        affectedSide === option.id && styles.roleTextSelected
+                                    ]}>{option.label}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <View style={styles.labelContainer}>
+                            <Activity size={18} color={Colors.primary} />
+                            <Text style={styles.label}>Impairment Severity</Text>
+                        </View>
+                        <View style={styles.roleContainer}>
+                            {[
+                                { id: 'mild', label: 'Mild' },
+                                { id: 'moderate', label: 'Moderate' },
+                                { id: 'severe', label: 'Severe' },
+                            ].map((option) => (
+                                <TouchableOpacity
+                                    key={option.id}
+                                    style={[
+                                        styles.roleOption,
+                                        impairmentSeverity === option.id && styles.roleOptionSelected
+                                    ]}
+                                    onPress={() => setImpairmentSeverity(option.id)}
+                                >
+                                    <Text style={[
+                                        styles.roleText,
+                                        impairmentSeverity === option.id && styles.roleTextSelected
+                                    ]}>{option.label}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
                     </View>
 
                     <View style={styles.inputGroup}>

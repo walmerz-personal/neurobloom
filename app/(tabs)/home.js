@@ -8,7 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { SupabaseService } from '../../services/SupabaseService';
 import { KudosService } from '../../services/KudosService';
 import { NudgeService } from '../../services/NudgeService';
-import { MessageCircle, PlayCircle, CheckCircle, LogOut, Quote, User, Flower } from 'lucide-react-native';
+import { MessageCircle, PlayCircle, CheckCircle, LogOut, Quote, User, Flower, Circle as CircleIcon } from 'lucide-react-native';
 import Svg, { Circle } from 'react-native-svg';
 import Logo from '../../components/Logo';
 import { CareTeamSection } from '../../components/CareTeamSection';
@@ -16,6 +16,8 @@ import { KudosReceivedModal } from '../../components/KudosReceivedModal';
 import { NudgeReceivedModal } from '../../components/NudgeReceivedModal';
 import { CaregiverHomeView } from '../../components/CaregiverHomeView';
 import { MedicalStaffHomeView } from '../../components/MedicalStaffHomeView';
+import { getRecommendedExercises, getDailyPlan, getBadDayPlan } from '../../services/RecommendationService';
+import { EXERCISES_DATA } from './exercises';
 
 const SURVIVOR_QUOTES = [
     "Every small step forward is progress. You're doing great! 🌟",
@@ -87,6 +89,9 @@ export default function Home() {
     const { userData, user, signOut } = useAuth();
     const [motivationalQuote, setMotivationalQuote] = useState('');
     const [dailyProgress, setDailyProgress] = useState({ completed: 0, total: 4 }); // Default goal of 4
+    const [dailyPlanExercises, setDailyPlanExercises] = useState([]);
+    const [isLightPlan, setIsLightPlan] = useState(false);
+    const [completedExercises, setCompletedExercises] = useState([]);
 
     // Kudos state
     const [unreadKudos, setUnreadKudos] = useState([]);
@@ -120,6 +125,7 @@ export default function Home() {
         useCallback(() => {
             if (user) {
                 fetchDailyProgress();
+                fetchDailyPlan();
                 // Check for kudos and nudges only if user is a survivor
                 if (userData?.role === 'survivor') {
                     checkForKudos();
@@ -182,15 +188,43 @@ export default function Home() {
         try {
             const { log, error } = await SupabaseService.getTodayLog(user.id);
             if (log && log.exercises_completed) {
+                setCompletedExercises(log.exercises_completed);
                 setDailyProgress({
                     completed: log.exercises_completed.length,
-                    total: 4 // Keeping the goal at 4 for now as per design
+                    total: 4 // Default, may be overridden by fetchDailyPlan
                 });
             } else {
+                setCompletedExercises([]);
                 setDailyProgress({ completed: 0, total: 4 });
             }
         } catch (error) {
             console.error('Error fetching daily progress:', error);
+        }
+    };
+
+    const fetchDailyPlan = async () => {
+        try {
+            const { profile } = await SupabaseService.getUserProfile(user.id);
+            if (!profile) return;
+
+            const { recommended } = getRecommendedExercises(profile, EXERCISES_DATA);
+            if (recommended.length === 0) return;
+
+            // Check for bad day: low energy or high pain from today's check-in
+            const { log } = await SupabaseService.getTodayLog(user.id);
+            if (log && (log.energy_level <= 3 || log.pain_level >= 7)) {
+                const { exercises, isLightPlan: light } = getBadDayPlan(recommended);
+                setDailyPlanExercises(exercises);
+                setIsLightPlan(light);
+                setDailyProgress(prev => ({ ...prev, total: exercises.length }));
+            } else {
+                const plan = getDailyPlan(recommended);
+                setDailyPlanExercises(plan);
+                setIsLightPlan(false);
+                setDailyProgress(prev => ({ ...prev, total: plan.length }));
+            }
+        } catch (error) {
+            console.error('Error fetching daily plan:', error);
         }
     };
 
@@ -341,15 +375,46 @@ export default function Home() {
             <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={styles.heroCard}>
                     <View style={styles.heroContent}>
-                        <Text style={styles.heroTitle}>Your Daily Progress</Text>
+                        <Text style={styles.heroTitle}>
+                            {isLightPlan ? "Today's Lighter Plan" : "Today's Plan"}
+                        </Text>
                         <Text style={styles.heroSubtitle}>
                             {dailyProgress.completed} of {dailyProgress.total} exercises completed
                         </Text>
-                        <Text style={styles.heroMessage}>
-                            {dailyProgress.completed >= dailyProgress.total
-                                ? "You hit your daily goal! 🎉"
-                                : "Keep up the amazing work!"}
-                        </Text>
+                        {isLightPlan && (
+                            <Text style={styles.lightPlanMessage}>
+                                Low energy today? Rest is part of recovery.
+                            </Text>
+                        )}
+                        {dailyPlanExercises.length > 0 ? (
+                            <View style={styles.dailyPlanList}>
+                                {dailyPlanExercises.map((exercise) => (
+                                    <TouchableOpacity
+                                        key={exercise.id}
+                                        style={styles.dailyPlanItem}
+                                        onPress={() => router.push('/exercises')}
+                                    >
+                                        {completedExercises.includes(exercise.id) ? (
+                                            <CheckCircle size={18} color={Colors.primary} />
+                                        ) : (
+                                            <CircleIcon size={18} color={Colors.border} />
+                                        )}
+                                        <Text style={[
+                                            styles.dailyPlanItemText,
+                                            completedExercises.includes(exercise.id) && styles.dailyPlanItemDone
+                                        ]}>
+                                            {exercise.title}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        ) : (
+                            <Text style={styles.heroMessage}>
+                                {dailyProgress.completed >= dailyProgress.total
+                                    ? "You hit your daily goal!"
+                                    : "Keep up the amazing work!"}
+                            </Text>
+                        )}
                     </View>
                     <CircularProgress progress={progressPercentage} color={Colors.primary} />
                 </View>
@@ -547,6 +612,31 @@ const styles = StyleSheet.create({
     heroMessage: {
         fontFamily: 'Inter_400Regular',
         fontSize: 13,
+        color: Colors.textSecondary,
+    },
+    lightPlanMessage: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 13,
+        color: Colors.success,
+        fontStyle: 'italic',
+        marginBottom: 4,
+    },
+    dailyPlanList: {
+        marginTop: 8,
+        gap: 6,
+    },
+    dailyPlanItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    dailyPlanItemText: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 14,
+        color: Colors.text,
+    },
+    dailyPlanItemDone: {
+        textDecorationLine: 'line-through',
         color: Colors.textSecondary,
     },
     quoteCard: {
