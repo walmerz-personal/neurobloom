@@ -1,5 +1,43 @@
 # NeuroBloom Tasks
 
+## Add Physical Therapy Exercises to NeuroBloom
+
+### Plan
+Add ~50 new built-in exercises from PT/OT documents, plus a new "Head & Neck" category for TMJ and cervical exercises. Update exercises data, metadata, assign-exercises list, category dropdowns, thumbnail color map, and tests.
+
+### Todo Items
+- [x] Add 50 new exercises to EXERCISES_DATA in app/(tabs)/exercises.js + add Head & Neck category
+- [x] Add metadata for all 50 new exercises in constants/exerciseMetadata.js + head_neck body region
+- [x] Add 50 new exercises to app/medical-staff/assign-exercises.js + Head & Neck category
+- [x] Add Head & Neck to CATEGORIES in components/CustomExerciseModal.js
+- [x] Add Head & Neck color to _getThumbnailColorForCategory in SupabaseService.js
+- [x] Update __tests__/exerciseMetadata.test.js for new IDs and body region
+- [x] Write review section in tasks/todo.md
+
+### Review
+
+**Summary:** Added 50 new built-in exercises (n1–n7, a4–a16, l4–l24, c4–c12) from physical therapy documents and introduced a new "Head & Neck" category. Total built-in exercises are now 62.
+
+**Files changed (6):**
+
+1. **`app/(tabs)/exercises.js`** — Added `'Head & Neck'` to `CATEGORIES`. Appended 50 full exercise objects to `EXERCISES_DATA` with id, category, mode, title, time, target, description, difficulty, thumbnailColor, and instructions. Head & Neck uses pink/rose colors (#FFE4E6, #FECDD3, #FDA4AF, #FB7185); Arms/Legs/Core use existing color families.
+
+2. **`constants/exerciseMetadata.js`** — Added 50 metadata entries (targetImpairments, bodyRegion, bilateral, safeForSevere, phaseRelevance). Introduced `head_neck` body region. Added `REGION_REASONS.head_neck`: "For jaw and cervical recovery."
+
+3. **`app/medical-staff/assign-exercises.js`** — Added same 50 exercises in compact form (id, category, mode, title, thumbnailColor, description). Added `'Head & Neck'` to `CATEGORIES`.
+
+4. **`components/CustomExerciseModal.js`** — Added `'Head & Neck'` to `CATEGORIES` so custom exercises can be assigned to Head & Neck.
+
+5. **`services/SupabaseService.js`** — In `_getThumbnailColorForCategory`, added `'Head & Neck': '#FFE4E6'` so custom Head & Neck exercises get the correct thumbnail color.
+
+6. **`__tests__/exerciseMetadata.test.js`** — Updated `EXPECTED_IDS` to all 62 IDs. Added `'head_neck'` to `VALID_BODY_REGIONS`. Changed metadata count assertion from 12 to 62 and REGION_REASONS count from 4 to 5.
+
+**Exercises skipped as duplicates:** Sit to Stand (duplicate of l3), Seated Marches (duplicate of l2), AROM Ankle DF/PF (duplicate of l1).
+
+**Note:** The DB schema for custom exercises still has `CHECK (category IN ('Arms', 'Legs', 'Core', 'Hands'))`. To allow custom "Head & Neck" exercises to be saved, a migration would be needed to add `'Head & Neck'` to that constraint. Built-in Head & Neck exercises work everywhere; only creating/editing *custom* exercises in Head & Neck would require the migration.
+
+---
+
 ## Personalized Exercise Recommendations
 
 ### Plan
@@ -516,3 +554,33 @@ Write unit tests for 7 screens: 4 caregiver screens and 3 medical staff screens.
 **Key finding:** Components with `useEffect` dependencies on `user` (from `useAuth()`) require stable object references in mocks to prevent infinite re-render loops. Fixed by defining mock objects outside the mock factory.
 
 **To verify:** `npx jest __tests__/app/caregiver/ __tests__/app/medical-staff/ --no-coverage`
+
+---
+
+## Fix: Access Request Not Found (RLS Bug)
+
+### Plan
+When a medical staff (or caregiver) invites a survivor via SMS, the survivor taps the link and sees "Access Request Not Found." The `care_team_links` row has `survivor_id = NULL` until the survivor accepts, so RLS blocks the survivor from reading that row. Fix by adding SECURITY DEFINER RPCs for lookup and accept (same pattern as invitation codes).
+
+### Todo Items
+- [x] Create new Supabase migration SQL with SECURITY DEFINER functions: get_access_request_by_token and accept_access_request
+- [x] Update SupabaseService.getAccessRequestByToken to use supabase.rpc() instead of direct table query
+- [x] Update SupabaseService.acceptAccessRequest to use supabase.rpc() instead of two-step lookup+update
+- [x] Add review section to tasks/todo.md
+
+### Review
+
+**Root cause:** For medical staff–initiated access requests, the `care_team_links` row has `survivor_id = NULL`. RLS SELECT policies only allow reads when `auth.uid()` equals `survivor_id`, `caregiver_id`, or `medical_staff_id`. The survivor’s UID matches none of these, so the direct table query returned no rows and the UI showed "Access Request Not Found."
+
+**Changes made:**
+
+1. **`supabase/migrations/20260308000000_fix_access_request_token_rls.sql`** (new)  
+   - **`get_access_request_by_token(p_token TEXT)`** — SECURITY DEFINER function that looks up the `care_team_links` row by `access_request_token`, joins with `users` to resolve requester (caregiver, medical_staff, or survivor for survivor-initiated invites), and returns one row with link fields plus requester_id, requester_name, requester_email, requester_role, requester_role_type. Expiry is not enforced in the RPC; the client still checks it so the same "expired" message is shown.  
+   - **`accept_access_request(p_token TEXT, p_survivor_id UUID)`** — SECURITY DEFINER function that finds the pending access request by token, validates status and expiry, then updates the row with `survivor_id`, `status = 'accepted'`, and clears token fields. Returns success/error_message plus requester_id, requester_name, requester_role_type for the UI.  
+   - Both functions use `SET search_path = public` and `GRANT EXECUTE ... TO authenticated`.
+
+2. **`services/SupabaseService.js`**  
+   - **`getAccessRequestByToken(token)`** — Replaced the direct `.from('care_team_links').select(...)` query with `supabase.rpc('get_access_request_by_token', { p_token: token })`. Response is normalized into the same shape as before (id, survivor_id, caregiver_id, medical_staff_id, relationship, status, permissions, access_request_expires_at, created_at, accepted_at, requester, requesterRole) so callers and expiry logic are unchanged.  
+   - **`acceptAccessRequest(token, survivorId)`** — Replaced the two-step flow (getAccessRequestByToken + updateCareTeamLink) with a single `supabase.rpc('accept_access_request', { p_token: token, p_survivor_id: survivorId })` call. Response is mapped to the existing result shape (success, requester_id, requester_name, requester_role) so CareTeamService and the accept-access-request screen need no changes.
+
+**No UI or CareTeamService changes.** The fix is confined to the database (new RPCs) and SupabaseService (use RPCs instead of direct table access). After applying the migration in the Supabase SQL Editor (or via `supabase db push`), medical staff and caregivers can connect to survivors via SMS and survivors will see the request and can approve or decline.

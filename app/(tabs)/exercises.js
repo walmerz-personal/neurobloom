@@ -12,7 +12,7 @@ import { CustomExerciseModal } from '../../components/CustomExerciseModal';
 import { ConfettiBurst } from '../../components/ConfettiBurst';
 import { getRecommendedExercises } from '../../services/RecommendationService';
 
-const CATEGORIES = ['All', 'Arms', 'Legs', 'Core', 'Hands'];
+const CATEGORIES = ['All', 'Arms', 'Legs', 'Core', 'Hands', 'Head & Neck'];
 const MODE_TYPES = ['All', 'Solo', 'Partner'];
 
 export const EXERCISES_DATA = [
@@ -236,6 +236,847 @@ export const EXERCISES_DATA = [
             'Open.',
             'Touch thumb to middle finger, then ring, then pinky.',
             'Repeat the sequence.'
+        ]
+    },
+
+    // Head & Neck (TMJ / cervical)
+    {
+        id: 'n1',
+        category: 'Head & Neck',
+        mode: 'solo',
+        title: 'Tongue Clucking',
+        time: '2 min',
+        target: 'TMJ / Breathing',
+        description: 'Positions tongue on hard palate for proper nasal and diaphragmatic breathing.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#FFE4E6',
+        instructions: [
+            'Make a gentle "clucking" sound with your tongue against the roof of your mouth.',
+            'This positions your tongue in the correct resting position.',
+            'Practice 6 times per session, 6 sessions per day.',
+            'Aim to maintain this tongue position during normal activity.'
+        ]
+    },
+    {
+        id: 'n2',
+        category: 'Head & Neck',
+        mode: 'solo',
+        title: 'Controlled TMJ Rotation',
+        time: '3 min',
+        target: 'TMJ',
+        description: 'Maintain tongue on palate while opening and closing jaw; limits opening to rotation only.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#FECDD3',
+        instructions: [
+            'Keep your tongue on the hard palate.',
+            'Slowly open your jaw while maintaining tongue position.',
+            'Close your jaw slowly.',
+            'This limits opening to rotational movement and prevents excessive protrusion.',
+            'Repeat 6 times per session, 6 sessions per day.'
+        ]
+    },
+    {
+        id: 'n3',
+        category: 'Head & Neck',
+        mode: 'solo',
+        title: 'Mandibular Rhythmic Stabilization',
+        time: '3 min',
+        target: 'TMJ',
+        description: 'Apply resistance to opening, closing, and lateral deviation with jaw in resting position.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#FDA4AF',
+        instructions: [
+            'Place your jaw in a resting position.',
+            'Apply gentle resistance with your hand to opening movement; hold briefly.',
+            'Apply resistance to closing movement; hold briefly.',
+            'Apply resistance to lateral (side) deviation; hold briefly.',
+            'Goal: promote normal jaw positioning while maintaining postural alignment.'
+        ]
+    },
+    {
+        id: 'n4',
+        category: 'Head & Neck',
+        mode: 'solo',
+        title: 'Upper Cervical Distraction',
+        time: '3 min',
+        target: 'Upper Cervical',
+        description: 'Upper cervical flexion while stabilizing with a hand-collar to relieve neurovascular compression.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#FB7185',
+        instructions: [
+            'Create a "hand-collar" by placing your hands to stabilize your cervical spine.',
+            'Perform upper cervical flexion (nodding motion at the top of the neck).',
+            'This relieves compression between the occiput and atlas.',
+            'Move slowly and hold briefly. Repeat as directed.'
+        ]
+    },
+    {
+        id: 'n5',
+        category: 'Head & Neck',
+        mode: 'solo',
+        title: 'Chin Tuck (Axial Extension)',
+        time: '3 min',
+        target: 'Cervical Spine',
+        description: 'Cervical retraction to normalize forward head posture.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#FFE4E6',
+        instructions: [
+            'Sit or stand with good posture.',
+            'Draw your chin straight back (retraction) without tilting your head up or down.',
+            'You should feel a stretch at the base of your skull.',
+            'Hold 3-5 seconds, then relax. Repeat 10 times.'
+        ]
+    },
+    {
+        id: 'n6',
+        category: 'Head & Neck',
+        mode: 'solo',
+        title: 'Chin Nods',
+        time: '3 min',
+        target: 'Jaw / Upper Cervical',
+        description: 'Cervical retraction in trunk-flexed position to maintain normal jaw and upper cervical alignment.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#FECDD3',
+        instructions: [
+            'Sit with your trunk slightly flexed (leaning forward).',
+            'Perform a gentle chin nod (cervical retraction).',
+            'Maintain normal jaw and upper cervical alignment throughout.',
+            'Repeat 10 times.'
+        ]
+    },
+    {
+        id: 'n7',
+        category: 'Head & Neck',
+        mode: 'solo',
+        title: 'Nasal Breathing Practice',
+        time: '3 min',
+        target: 'Jaw Rest Position',
+        description: 'Practice tongue on palate, lips closed, teeth slightly apart; maintains normal resting jaw position.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#FDA4AF',
+        instructions: [
+            'Rest your tongue gently on the hard palate.',
+            'Keep your lips closed and teeth slightly apart.',
+            'Breathe in and out through your nose.',
+            'Maintain this resting jaw position during the exercise.',
+            'Practice for a few minutes several times a day.'
+        ]
+    },
+
+    // Arms (continued)
+    {
+        id: 'a4',
+        category: 'Arms',
+        mode: 'solo',
+        title: 'PROM Shoulder External Rotation',
+        time: '5 min',
+        target: 'Shoulder',
+        description: 'Self-assisted shoulder external rotation to improve range of motion.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#E0F2FE',
+        instructions: [
+            'Hold the wrist of your involved arm with your other hand.',
+            'Keep the elbow of the involved arm bent and next to your side.',
+            'Move your forearm outward and away from your body.',
+            'Return to start and repeat. Perform 3 sets of 10 reps, three times a day.'
+        ]
+    },
+    {
+        id: 'a5',
+        category: 'Arms',
+        mode: 'solo',
+        title: 'PROM Shoulder Flexion (Self)',
+        time: '5 min',
+        target: 'Shoulder',
+        description: 'Self-assisted shoulder flexion; gently raise arm upward and in front.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#BAE6FD',
+        instructions: [
+            'Grasp the wrist of your involved arm with your other hand.',
+            'Gently raise your arm upward and in front through available range.',
+            'Return to start position and repeat.',
+            'Perform 3 sets of 10 reps, three times a day.'
+        ]
+    },
+    {
+        id: 'a6',
+        category: 'Arms',
+        mode: 'solo',
+        title: 'PROM Shoulder Extension (Self)',
+        time: '5 min',
+        target: 'Shoulder',
+        description: 'Sit with arm at side, elbow bent 90 deg; grasp forearm and gently move arm backward.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#7DD3FC',
+        instructions: [
+            'Sit with your involved arm at your side, elbow bent to 90 degrees.',
+            'Grasp your wrist or forearm of the involved arm with your other hand.',
+            'Gently move the involved arm backward through available range.',
+            'Return to start position and repeat. Perform 3 sets of 10 reps, three times a day.'
+        ]
+    },
+    {
+        id: 'a7',
+        category: 'Arms',
+        mode: 'solo',
+        title: 'PROM Elbow Flexion/Extension',
+        time: '5 min',
+        target: 'Elbow',
+        description: 'Self-assisted elbow motion through available range.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#38BDF8',
+        instructions: [
+            'Begin with your arm straight.',
+            'Grasp your arm at the wrist. Use a firm, yet soft grip; do not squeeze over bony areas.',
+            'Move your elbow through available range (bend and straighten).',
+            'Return to start position. Perform 3 sets of 10 reps, three times a day.'
+        ]
+    },
+    {
+        id: 'a8',
+        category: 'Arms',
+        mode: 'solo',
+        title: 'Shoulder Girdle Retraction',
+        time: '4 min',
+        target: 'Scapulae',
+        description: 'Retraction and depression of scapulae to normalize upper quarter posture.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#0EA5E9',
+        instructions: [
+            'Sit or stand with good posture.',
+            'Squeeze your shoulder blades together and down (retract and depress).',
+            'Hold for 3-5 seconds, then relax.',
+            'Repeat 10 times.'
+        ]
+    },
+    {
+        id: 'a9',
+        category: 'Arms',
+        mode: 'solo',
+        title: 'Seated Push Up',
+        time: '4 min',
+        target: 'Arms / Trunk',
+        description: 'Sitting in a chair, press down with arms to lift body slightly off the seat.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#0284C7',
+        instructions: [
+            'Sit in a sturdy chair with your hands on the armrests or seat beside your thighs.',
+            'Press down through your hands and lift your body slightly off the seat.',
+            'Hold briefly, then lower slowly.',
+            'Repeat 10 times.'
+        ]
+    },
+    {
+        id: 'a10',
+        category: 'Arms',
+        mode: 'partner',
+        title: 'PROM Shoulder Abduction (Partner)',
+        time: '6 min',
+        target: 'Shoulder',
+        description: 'Partner moves your arm away from body through available range.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#E0F2FE',
+        instructions: [
+            'Lie on your back with your arm at your side and elbow straight.',
+            'Your partner grasps your wrist and supports your elbow with their other hand.',
+            'Partner gently moves your arm away from your body (abduction) through available range.',
+            'Return to side. Do not force past available range. Perform 3 sets of 10 reps, three times a day.'
+        ]
+    },
+    {
+        id: 'a11',
+        category: 'Arms',
+        mode: 'partner',
+        title: 'PROM Shoulder Flexion (Partner)',
+        time: '6 min',
+        target: 'Shoulder',
+        description: 'Partner raises and lowers your arm through available range.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#BAE6FD',
+        instructions: [
+            'Lie on your back with your arm at your side.',
+            'Partner grasps your wrist with one hand and supports your elbow with the other.',
+            'Partner gently moves your arm upward and downward through available range.',
+            'Use a firm yet soft grip; do not force. Perform 3 sets of 10 reps, three times a day.'
+        ]
+    },
+    {
+        id: 'a12',
+        category: 'Arms',
+        mode: 'partner',
+        title: 'PROM Elbow Flex/Ext (Partner)',
+        time: '6 min',
+        target: 'Elbow',
+        description: 'Partner moves your elbow through available range of motion.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#7DD3FC',
+        instructions: [
+            'Begin with your arm straight.',
+            'Partner places one hand above your elbow and the other at your wrist or hand.',
+            'Partner moves your elbow through available range (flexion and extension).',
+            'Partner uses a firm yet soft grip; avoid squeezing over bony areas. Perform 3 sets of 10 reps, three times a day.'
+        ]
+    },
+    {
+        id: 'a13',
+        category: 'Arms',
+        mode: 'solo',
+        title: 'Resistance Band Chest Press',
+        time: '5 min',
+        target: 'Pectorals',
+        description: 'Using a flat resistance band for pectoral strengthening.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#38BDF8',
+        instructions: [
+            'Sit on the floor with knees bent. Place the band behind your back, just below shoulder blades.',
+            'Hold the band with both hands in front of your shoulders, palms facing in.',
+            'Press both arms forward, rotating shoulders inward until palms face down.',
+            'Keep shoulder blades together. Hold 1-2 seconds, slowly return. Repeat as directed.'
+        ]
+    },
+    {
+        id: 'a14',
+        category: 'Arms',
+        mode: 'solo',
+        title: 'Resistance Band Arm Curl',
+        time: '5 min',
+        target: 'Biceps',
+        description: 'Using a flat resistance band for bicep strengthening.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#0EA5E9',
+        instructions: [
+            'Sit on the floor with knees bent. Place the band around your feet (or one foot for more resistance).',
+            'Grasp each end of the band, palms facing in, arms extended toward your legs.',
+            'Keeping elbows stationary, bend arms and pull hands toward shoulders, turning palms up.',
+            'Hold 1-2 seconds, slowly return. Repeat as directed.'
+        ]
+    },
+    {
+        id: 'a15',
+        category: 'Arms',
+        mode: 'solo',
+        title: 'Resistance Band Arm Extension',
+        time: '5 min',
+        target: 'Triceps',
+        description: 'Using a flat resistance band for tricep strengthening.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#0284C7',
+        instructions: [
+            'Sit on the floor with knees bent. Hold the band with both hands, arms bent at 90 degrees, elbows at shoulder height, palms down.',
+            'Keeping elbows stationary, straighten arms until hands align with shoulders (do not lock elbows).',
+            'Hold 1-2 seconds, slowly return. Repeat as directed.'
+        ]
+    },
+    {
+        id: 'a16',
+        category: 'Arms',
+        mode: 'solo',
+        title: 'Resistance Band Shoulder Press',
+        time: '5 min',
+        target: 'Deltoids',
+        description: 'Using a flat resistance band for deltoid strengthening.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#0369A1',
+        instructions: [
+            'Sit on the floor with knees bent. Place the band under your buttocks.',
+            'Hold the band with both hands just above your shoulders, palms forward, band along inside of upper arms.',
+            'Press arms up and back overhead, turning palms toward each other, until arms are over shoulders.',
+            'Hold 1-2 seconds, slowly return. Repeat as directed.'
+        ]
+    },
+
+    // Legs (continued)
+    {
+        id: 'l4',
+        category: 'Legs',
+        mode: 'solo',
+        title: 'Seated Knee Extensions',
+        time: '5 min',
+        target: 'Quadriceps',
+        description: 'Sit with feet on floor; lift foot until knee is straight and parallel to floor, then slowly lower.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#FED7AA',
+        instructions: [
+            'Sit with both feet on the floor.',
+            'On the side you wish to exercise, lift your foot off the floor so the knee is straight and parallel to the floor.',
+            'Hold for 5 seconds.',
+            'Slowly lower your foot back to the floor. Repeat 30 times.'
+        ]
+    },
+    {
+        id: 'l5',
+        category: 'Legs',
+        mode: 'solo',
+        title: 'Seated Hip Adduction',
+        time: '5 min',
+        target: 'Inner Thigh',
+        description: 'Sitting with a pillow or ball between knees, gently squeeze and hold.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#FDBA74',
+        instructions: [
+            'Sit in a chair with a pillow or ball between your knees.',
+            'Gently squeeze your knees together and hold for 5 seconds.',
+            'Relax. Repeat 30 times.'
+        ]
+    },
+    {
+        id: 'l6',
+        category: 'Legs',
+        mode: 'solo',
+        title: 'Side Stepping on Line',
+        time: '5 min',
+        target: 'Hips / Balance',
+        description: 'Standing upright, step sideways along a line, then return in the opposite direction.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#FB923C',
+        instructions: [
+            'Stand upright with your hands at your sides.',
+            'Step sideways along the length of a line on the floor.',
+            'When you reach the end, side step in the opposite direction back to the start.',
+            'Keep an upright posture and eyes straight ahead.'
+        ]
+    },
+    {
+        id: 'l7',
+        category: 'Legs',
+        mode: 'solo',
+        title: 'Marching with Support',
+        time: '6 min',
+        target: 'Hip Flexors',
+        description: 'Standing at a counter or chair for support, raise knees alternately to waist level.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#F97316',
+        instructions: [
+            'Stand in front of a table, counter, or chair for support.',
+            'Raise one knee upward to waist level.',
+            'Lower and alternate to the other leg.',
+            'Keep your abdominals tight and stand upright, looking forward. Repeat 30 times.'
+        ]
+    },
+    {
+        id: 'l8',
+        category: 'Legs',
+        mode: 'solo',
+        title: 'Heel Slides',
+        time: '5 min',
+        target: 'Knee / Hip',
+        description: 'Lying on your back, slide your heel up to bend the knee, then slide back down.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#EA580C',
+        instructions: [
+            'Lie on your back with legs straight.',
+            'Slowly slide one heel up toward your buttocks, bending the knee.',
+            'Slide the heel back down to straighten the leg.',
+            'Repeat with the other leg. Perform 3 sets of 15 reps, three times a day.'
+        ]
+    },
+    {
+        id: 'l9',
+        category: 'Legs',
+        mode: 'solo',
+        title: 'Straight Leg Raise (Supine)',
+        time: '6 min',
+        target: 'Hip Flexors / Quads',
+        description: 'Lying on your back, raise one straight leg upward.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#FED7AA',
+        instructions: [
+            'Lie on your back with legs straight.',
+            'Tighten your thigh muscle and lift one leg straight up off the surface.',
+            'Lower slowly. Repeat with the other leg.',
+            'Perform 3 sets of 15 reps, three times a day.'
+        ]
+    },
+    {
+        id: 'l10',
+        category: 'Legs',
+        mode: 'solo',
+        title: 'Heel Raises',
+        time: '4 min',
+        target: 'Calves',
+        description: 'Standing, rise up on your toes then lower. Use support if needed.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#FDBA74',
+        instructions: [
+            'Stand holding onto a chair or counter for support if needed.',
+            'Rise up onto your toes.',
+            'Lower your heels back to the floor slowly.',
+            'Perform 3 sets of 15 reps, three times a day.'
+        ]
+    },
+    {
+        id: 'l11',
+        category: 'Legs',
+        mode: 'solo',
+        title: 'Standing Hamstring Curls',
+        time: '5 min',
+        target: 'Hamstrings',
+        description: 'Standing against support, bend knee to bring heel toward buttock.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#FB923C',
+        instructions: [
+            'Stand holding onto the back of a chair or tall support so your thigh cannot swing forward.',
+            'Pop your hip on the standing side; drop the opposite hip and keep it dropped.',
+            'Bend your knee so your heel moves toward your buttock.',
+            'Lower until your foot touches the floor, then repeat. Do 12 reps, 1 set, once a day.'
+        ]
+    },
+    {
+        id: 'l12',
+        category: 'Legs',
+        mode: 'partner',
+        title: 'Prone Hamstring Curls',
+        time: '6 min',
+        target: 'Hamstrings',
+        description: 'Lay on your stomach, flex knee slowly; partner holds pelvis down. 3 sets of 10.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#F97316',
+        instructions: [
+            'Lie on your stomach. Have someone hold your pelvis down to the mat or bed.',
+            'Flex your knee, bringing your heel toward your buttock.',
+            'Slowly control the movement back to the starting position.',
+            'Repeat 10 times. Complete 3 sets, once a day.'
+        ]
+    },
+    {
+        id: 'l13',
+        category: 'Legs',
+        mode: 'solo',
+        title: 'Hip Abduction (Supine)',
+        time: '6 min',
+        target: 'Hip Abductors',
+        description: 'Lying on your back, slide one leg out to the side and return.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#EA580C',
+        instructions: [
+            'Lie on your back with legs straight.',
+            'Slide one leg out to the side (abduction), then slide it back to center.',
+            'Keep the other leg still. Perform 3 sets of 15 reps, three times a day.'
+        ]
+    },
+    {
+        id: 'l14',
+        category: 'Legs',
+        mode: 'solo',
+        title: 'Hip Abduction (Standing)',
+        time: '5 min',
+        target: 'Hip Abductors',
+        description: 'Standing and holding support, lift one leg sideways.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#FED7AA',
+        instructions: [
+            'Stand straight holding onto a support (e.g., chair back).',
+            'Lift one leg sideways and bring it back, keeping your trunk straight.',
+            'Repeat on the other side. Perform 3 sets of 15 reps, three times a day.'
+        ]
+    },
+    {
+        id: 'l15',
+        category: 'Legs',
+        mode: 'solo',
+        title: 'Hip Extension (Standing)',
+        time: '4 min',
+        target: 'Glutes / Hamstrings',
+        description: 'Standing and holding support, bring one leg slightly backward.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#FDBA74',
+        instructions: [
+            'Stand holding onto a support.',
+            'Bring one leg slightly backward, keeping your trunk straight.',
+            'Return to standing. Repeat on the other side.'
+        ]
+    },
+    {
+        id: 'l16',
+        category: 'Legs',
+        mode: 'solo',
+        title: 'Partial Squats',
+        time: '6 min',
+        target: 'Quads / Glutes',
+        description: 'Standing, perform a partial (mini) squat.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#FB923C',
+        instructions: [
+            'Stand with feet shoulder-width apart, holding a support if needed.',
+            'Bend your knees and lower your body into a partial squat (do not go too deep).',
+            'Push back up to standing. Perform 3 sets of 15 reps, three times a day.'
+        ]
+    },
+    {
+        id: 'l17',
+        category: 'Legs',
+        mode: 'solo',
+        title: 'Forward Lunges',
+        time: '6 min',
+        target: 'Full Leg',
+        description: 'Step forward into a lunge position. 3 sets of 15 reps.',
+        difficulty: 'Advanced',
+        thumbnailColor: '#F97316',
+        instructions: [
+            'Stand with feet hip-width apart.',
+            'Step one leg forward and lower your back knee toward the floor (lunge position).',
+            'Push back to standing. Alternate legs. Perform 3 sets of 15 reps, three times a day.'
+        ]
+    },
+    {
+        id: 'l18',
+        category: 'Legs',
+        mode: 'partner',
+        title: 'Assisted Dorsiflexion Stretch',
+        time: '5 min',
+        target: 'Calf / Ankle',
+        description: 'Partner pulls your foot up while supporting your leg to stretch calf muscles.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#EA580C',
+        instructions: [
+            'Lie on your back. Your partner places your heel in their hand, foot against their forearm.',
+            'Partner straightens your hip and knee, then slowly pulls your heel up, moving toes toward you.',
+            'Support your leg with the opposite hand. Hold the stretch 30 seconds. Repeat 3 times, once a day.'
+        ]
+    },
+    {
+        id: 'l19',
+        category: 'Legs',
+        mode: 'partner',
+        title: 'Hamstring Stretch (Assisted)',
+        time: '5 min',
+        target: 'Hamstrings',
+        description: 'Lay flat; partner bends leg to 90 deg and pushes lower leg upward. Hold 30 sec.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#FED7AA',
+        instructions: [
+            'Lie flat on your back.',
+            'Partner bends one leg up to 90 degrees, then pushes the lower leg upward to straighten the leg.',
+            'You should feel the stretch on the underside of your thigh. Hold 30 seconds.',
+            'Repeat 3 times, once a day.'
+        ]
+    },
+    {
+        id: 'l20',
+        category: 'Legs',
+        mode: 'partner',
+        title: 'Retro Gait',
+        time: '5 min',
+        target: 'Gait / Balance',
+        description: 'Walk backwards, leading with toe then rolling to flat foot. Keep body upright, bend knee.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#FDBA74',
+        instructions: [
+            'Walk backwards, leading with your toe touching the floor first.',
+            'Then roll to a flat foot.',
+            'Keep your body upright and bend your knee as you step.'
+        ]
+    },
+    {
+        id: 'l21',
+        category: 'Legs',
+        mode: 'solo',
+        title: 'Walk on Toes',
+        time: '4 min',
+        target: 'Calves / Balance',
+        description: 'Stand and walk forward on your toes.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#FB923C',
+        instructions: [
+            'Stand tall. Walk forward on your toes for the prescribed time or distance.',
+            'Use a wall or support nearby if needed for balance.'
+        ]
+    },
+    {
+        id: 'l22',
+        category: 'Legs',
+        mode: 'solo',
+        title: 'Walk on Heels',
+        time: '4 min',
+        target: 'Shins / Balance',
+        description: 'Stand and walk forward on your heels.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#F97316',
+        instructions: [
+            'Stand tall. Walk forward on your heels for the prescribed time or distance.',
+            'Use a wall or support nearby if needed for balance.'
+        ]
+    },
+    {
+        id: 'l23',
+        category: 'Legs',
+        mode: 'solo',
+        title: 'Stair Walking',
+        time: '6 min',
+        target: 'Full Leg / Balance',
+        description: 'Walk up and down stairs with proper form.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#EA580C',
+        instructions: [
+            'Stand at the bottom of a flight of stairs.',
+            'Walk up and down the stairs, placing your whole foot on each step.',
+            'Use the railing for support if needed. Repeat as prescribed.'
+        ]
+    },
+    {
+        id: 'l24',
+        category: 'Legs',
+        mode: 'partner',
+        title: 'Gait Training with Cane',
+        time: '10 min',
+        target: 'Gait / Balance',
+        description: 'Practice walking phases with a cane: heel strike, loading response, midstance. Focus on pelvic tuck and weight shifting.',
+        difficulty: 'Advanced',
+        thumbnailColor: '#C2410C',
+        instructions: [
+            'Take a long step with one leg, landing on your heel first.',
+            'Loading response: tuck your pelvis and shift weight onto that leg; stand tall; let the other knee bend but do not step yet.',
+            'Midstance: continue scoop and pelvic motion; relax the swing leg so the knee bends (heel toward buttock); move the cane forward; stand tall; keep the non-weight-bearing hip dropped.',
+            'Repeat on the other side. Practice with your therapist or partner for safety.'
+        ]
+    },
+
+    // Core (continued)
+    {
+        id: 'c4',
+        category: 'Core',
+        mode: 'solo',
+        title: 'Bridging',
+        time: '5 min',
+        target: 'Glutes / Lower Abs',
+        description: 'Lying on your back, knees bent, tighten abs and glutes and raise your hips.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#D1FAE5',
+        instructions: [
+            'Lie on your back with knees bent and feet flat on the floor.',
+            'Tighten your lower abdominals and squeeze your buttocks.',
+            'Raise your buttocks off the floor to create a "bridge" with your body.',
+            'Hold, then lower and repeat. Do 12 reps, 1 set, once a day.'
+        ]
+    },
+    {
+        id: 'c5',
+        category: 'Core',
+        mode: 'partner',
+        title: 'Bridging Crossed Leg',
+        time: '5 min',
+        target: 'Glutes / Core',
+        description: 'Bridging with one leg crossed; partner helps hold the other knee straight. 12 reps.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#A7F3D0',
+        instructions: [
+            'Lie on your back and cross one leg over the other (e.g., right ankle on left knee).',
+            'Tighten your lower abdominals and squeeze your buttocks; raise your buttocks off the floor.',
+            'Have a partner help hold your supporting knee straight if needed. Do 12 reps, 1 set, once a day.'
+        ]
+    },
+    {
+        id: 'c6',
+        category: 'Core',
+        mode: 'partner',
+        title: 'Single Leg Bridge',
+        time: '5 min',
+        target: 'Glutes / Core',
+        description: 'Knees bent, extend one leg, raise hips keeping pelvis level. 5 reps.',
+        difficulty: 'Advanced',
+        thumbnailColor: '#6EE7B7',
+        instructions: [
+            'Lie on your back with knees bent. Extend one knee so that leg is straight.',
+            'Raise your buttocks off the floor, keeping your pelvis level.',
+            'Have someone hold your heels if needed. Do 5 reps, 1 set, once a day.'
+        ]
+    },
+    {
+        id: 'c7',
+        category: 'Core',
+        mode: 'solo',
+        title: 'Weight Shift - Lateral',
+        time: '4 min',
+        target: 'Balance / Core',
+        description: 'Standing, slowly shift body weight side-to-side. Keep body straight and upright.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#34D399',
+        instructions: [
+            'Stand in a safe position (near support if needed).',
+            'Slowly shift your body weight side to side.',
+            'Keep your body straight and upright throughout. Repeat 10 times, 1 set, once a day.'
+        ]
+    },
+    {
+        id: 'c8',
+        category: 'Core',
+        mode: 'solo',
+        title: 'Pelvic Tilt (Standing)',
+        time: '4 min',
+        target: 'Lower Back / Pelvis',
+        description: 'Standing, arch your low back then flatten it repeatedly through a comfortable range.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#10B981',
+        instructions: [
+            'Stand with good posture.',
+            'Arch your low back slightly, then flatten it (posterior pelvic tilt).',
+            'Your pelvis tilts forward and back. Move through a comfortable range. Repeat 10 times, 1 set, once a day.'
+        ]
+    },
+    {
+        id: 'c9',
+        category: 'Core',
+        mode: 'solo',
+        title: 'Sit to Stand - Thigh Support',
+        time: '6 min',
+        target: 'Legs / Core',
+        description: 'Scoot to front of chair, hands on thighs for support, lean forward, rise to standing.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#059669',
+        instructions: [
+            'Scoot to the front of the chair. Check your foot placement (especially on the weaker side).',
+            'Lean forward and place your hands on your thighs for support.',
+            'Push through your legs and rise to standing, ensuring weight goes through the intended leg.',
+            'Slowly lower back down: use your hands, flex forward, bend knees, and stick your buttocks back. Do 10 reps, 1 set, once a day.'
+        ]
+    },
+    {
+        id: 'c10',
+        category: 'Core',
+        mode: 'solo',
+        title: 'Wobble Board Balance',
+        time: '5 min',
+        target: 'Balance',
+        description: 'Stand on a wobble board and practice balancing. Do not let the sides touch the floor.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#047857',
+        instructions: [
+            'Stand on a wobble board.',
+            'Practice balancing. Do not let the sides of the board touch the floor.',
+            'Repeat for the prescribed time (e.g., several minutes).'
+        ]
+    },
+    {
+        id: 'c11',
+        category: 'Core',
+        mode: 'solo',
+        title: 'Weight Lift with Knee Raise',
+        time: '5 min',
+        target: 'Balance / Coordination',
+        description: 'Stand holding a small weight, lift arm forward while raising knee on the same side.',
+        difficulty: 'Intermediate',
+        thumbnailColor: '#D1FAE5',
+        instructions: [
+            'Stand straight holding a 1–2 kg weight in one hand.',
+            'Lift the weight with your arm straight forward.',
+            'Then lift your knee on the same side of your body.',
+            'Keep your balance. Repeat as prescribed.'
+        ]
+    },
+    {
+        id: 'c12',
+        category: 'Core',
+        mode: 'solo',
+        title: 'Weight Transfer (Standing)',
+        time: '4 min',
+        target: 'Balance',
+        description: 'Stand with legs apart, feet parallel; transfer weight from one leg to the other.',
+        difficulty: 'Beginner',
+        thumbnailColor: '#A7F3D0',
+        instructions: [
+            'Stand with your legs apart and feet parallel.',
+            'Transfer your weight from one leg to the other.',
+            'Repeat for the prescribed number of times.'
         ]
     },
 ];

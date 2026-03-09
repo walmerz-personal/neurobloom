@@ -17,7 +17,7 @@ import {
 import { X, Save } from 'lucide-react-native';
 import { Colors } from '../constants/Colors';
 
-const CATEGORIES = ['Arms', 'Legs', 'Core', 'Hands'];
+const CATEGORIES = ['Arms', 'Legs', 'Core', 'Hands', 'Head & Neck'];
 const MODE_TYPES = ['Solo', 'Partner'];
 const DIFFICULTY_LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
 

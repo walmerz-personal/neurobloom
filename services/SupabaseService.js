@@ -1573,23 +1573,16 @@ export const SupabaseService = {
         }
 
         try {
-            const { data, error } = await supabase
-                .from('care_team_links')
-                .select(`
-                    *,
-                    requester:caregiver_id(id, name, email, role),
-                    requester_medical:medical_staff_id(id, name, email, role),
-                    requester_survivor:survivor_id(id, name, email, role)
-                `)
-                .eq('access_request_token', token)
-                .single();
+            const { data: rows, error } = await supabase.rpc('get_access_request_by_token', { p_token: token });
 
             if (error) {
-                if (error.code === 'PGRST116') {
-                    return { data: null, error: new Error('Access request not found') };
-                }
                 console.error('❌ Get access request by token error:', error);
                 return { data: null, error };
+            }
+
+            const data = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+            if (!data) {
+                return { data: null, error: new Error('Access request not found') };
             }
 
             // Check if token has expired
@@ -1600,21 +1593,26 @@ export const SupabaseService = {
                 }
             }
 
-            // Determine if this is a survivor-initiated invite or caregiver/medical staff request
-            let requester, requesterRole;
-            if (data.survivor_id && !data.caregiver_id && !data.medical_staff_id) {
-                // Survivor-initiated invite
-                requester = data.requester_survivor;
-                requesterRole = 'survivor';
-            } else {
-                // Caregiver/medical staff-initiated request
-                requester = data.requester || data.requester_medical;
-                requesterRole = data.caregiver_id ? 'caregiver' : 'medical_staff';
-            }
+            const requester = {
+                id: data.requester_id,
+                name: data.requester_name,
+                email: data.requester_email,
+                role: data.requester_role,
+            };
+            const requesterRole = data.requester_role_type || (data.caregiver_id ? 'caregiver' : 'medical_staff');
 
             return {
                 data: {
-                    ...data,
+                    id: data.id,
+                    survivor_id: data.survivor_id,
+                    caregiver_id: data.caregiver_id,
+                    medical_staff_id: data.medical_staff_id,
+                    relationship: data.relationship,
+                    status: data.status,
+                    permissions: data.permissions,
+                    access_request_expires_at: data.access_request_expires_at,
+                    created_at: data.created_at,
+                    accepted_at: data.accepted_at,
                     requester,
                     requesterRole,
                 },
@@ -1638,38 +1636,29 @@ export const SupabaseService = {
         }
 
         try {
-            // Get the access request
-            const { data: request, error: lookupError } = await this.getAccessRequestByToken(token);
+            const { data: rows, error } = await supabase.rpc('accept_access_request', {
+                p_token: token,
+                p_survivor_id: survivorId,
+            });
 
-            if (lookupError || !request) {
-                return { data: null, error: lookupError || new Error('Access request not found') };
+            if (error) {
+                console.error('❌ Accept access request error:', error);
+                return { data: null, error };
             }
 
-            // Update the link to accept it
-            const updateData = {
-                survivor_id: survivorId,
-                status: 'accepted',
-                accepted_at: new Date().toISOString(),
-                // Clear access request fields
-                access_request_token: null,
-                access_request_phone: null,
-                access_request_expires_at: null,
-            };
-
-            const { data: updatedLink, error: updateError } = await this.updateCareTeamLink(request.id, updateData);
-
-            if (updateError || !updatedLink) {
-                console.error('❌ Accept access request error:', updateError);
-                return { data: null, error: updateError || new Error('Failed to accept access request') };
+            const row = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+            if (!row || !row.success) {
+                return {
+                    data: null,
+                    error: new Error(row?.error_message || 'Access request not found'),
+                };
             }
 
-            // Get requester name for response
-            const requester = request.requester;
             const result = {
                 success: true,
-                requester_id: request.caregiver_id || request.medical_staff_id,
-                requester_name: requester?.name || 'Unknown',
-                requester_role: request.requesterRole,
+                requester_id: row.requester_id,
+                requester_name: row.requester_name || 'Unknown',
+                requester_role: row.requester_role_type,
             };
 
             console.log('✅ Access request accepted:', result.requester_name);
@@ -1827,6 +1816,7 @@ export const SupabaseService = {
             'Legs': '#FED7AA', // Light orange
             'Core': '#D1FAE5', // Light green
             'Hands': '#E9D5FF', // Light purple
+            'Head & Neck': '#FFE4E6', // Light pink/rose
         };
         return colorMap[category] || '#E0F2FE';
     },
