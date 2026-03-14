@@ -7,11 +7,11 @@ import { Typography } from '../constants/Typography';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CHART_WIDTH = SCREEN_WIDTH - 48; // Account for padding
-const CHART_HEIGHT = 180;
-const PADDING_LEFT = 50;
-const PADDING_RIGHT = 20;
+const CHART_HEIGHT = 200;
+const PADDING_LEFT = 55;
+const PADDING_RIGHT = 15;
 const PADDING_TOP = 20;
-const PADDING_BOTTOM = 50;
+const PADDING_BOTTOM = 45;
 
 /**
  * HealthChart - Line chart component for health metrics over time
@@ -129,12 +129,11 @@ export function HealthChart({ data, metricName, unit = '', minValue, maxValue })
                     {yAxisLabels.map((label, i) => (
                         <SvgText
                             key={`y-${i}`}
-                            x={PADDING_LEFT - 10}
+                            x={PADDING_LEFT - 8}
                             y={label.y + 4}
-                            fontSize="10"
+                            fontSize="11"
                             fill={Colors.textSecondary}
                             textAnchor="end"
-                            fontFamily="Inter_500Medium"
                         >
                             {formatValue(label.value)}
                         </SvgText>
@@ -188,18 +187,24 @@ export function HealthChart({ data, metricName, unit = '', minValue, maxValue })
                 {/* X-axis labels (dates) */}
                 <G>
                     {data.map((point, i) => {
-                        // Show every other date if too many points
-                        const showLabel = data.length <= 7 || i % Math.ceil(data.length / 7) === 0 || i === data.length - 1;
+                        // Adaptive label density based on data length
+                        let showLabel = true;
+                        if (data.length > 30) {
+                            showLabel = i % Math.ceil(data.length / 8) === 0 || i === data.length - 1;
+                        } else if (data.length > 14) {
+                            showLabel = i % Math.ceil(data.length / 7) === 0 || i === data.length - 1;
+                        } else if (data.length > 7) {
+                            showLabel = i % 2 === 0 || i === data.length - 1;
+                        }
                         if (!showLabel) return null;
                         return (
                             <SvgText
                                 key={`x-${i}`}
                                 x={xScale(i)}
-                                y={CHART_HEIGHT - PADDING_BOTTOM + 16}
+                                y={CHART_HEIGHT - PADDING_BOTTOM + 18}
                                 fontSize="10"
                                 fill={Colors.textSecondary}
                                 textAnchor="middle"
-                                fontFamily="Inter_500Medium"
                             >
                                 {formatDate(point.date)}
                             </SvgText>

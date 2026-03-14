@@ -1,9 +1,9 @@
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Linking, Platform, Alert, AppState } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Linking, Platform, Alert, AppState, Modal } from 'react-native';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
-import { TrendingUp, Calendar, Award, Activity, Settings } from 'lucide-react-native';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { TrendingUp, Calendar, Award, Activity, Settings, ChevronDown } from 'lucide-react-native';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { SupabaseService } from '../../services/SupabaseService';
 import { HealthMetricsCard } from '../../components/HealthMetricsCard';
@@ -15,6 +15,7 @@ import Svg, { Path, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { validateChartPoint, safeFormatDate, validateChartData, validateMoodLog } from '../../utils/dataValidation';
 import { getHealthKitAvailabilityMessage } from '../../utils/deviceUtils';
+import { TIME_RANGE_OPTIONS, DEFAULT_TIME_RANGE, getDateRangeForSelection, getTimeRangeLabel } from '../../constants/progressTimeRanges';
 
 const MOOD_MAP = {
     '😄': 5,
@@ -45,6 +46,8 @@ export default function Progress() {
     const [distanceChartData, setDistanceChartData] = useState([]);
     const [stepLengthChartData, setStepLengthChartData] = useState([]);
     const [healthPermissionsGranted, setHealthPermissionsGranted] = useState(false);
+    const [selectedTimeRange, setSelectedTimeRange] = useState(DEFAULT_TIME_RANGE);
+    const [showRangePicker, setShowRangePicker] = useState(false);
 
     // Use ref to track if component is mounted
     const isMountedRef = useRef(true);
@@ -145,7 +148,7 @@ export default function Progress() {
         };
     }, [user?.id]);
 
-    const fetchData = async (signal) => {
+    const fetchData = async (signal, timeRange = selectedTimeRange) => {
         // Guard clause: check user and signal
         if (!user?.id || signal?.aborted) {
             if (!signal?.aborted && isMountedRef.current) {
@@ -158,8 +161,11 @@ export default function Progress() {
             setLoading(true);
         }
         try {
-            // Fetch logs for mood chart
-            const { logs, error } = await SupabaseService.getDailyLogs(user.id, 30); // Last 30 entries
+            // Get date range based on selection
+            const { startDate, days } = getDateRangeForSelection(timeRange);
+            
+            // Fetch logs for mood chart - get enough to cover selected range
+            const { logs, error } = await SupabaseService.getDailyLogs(user.id, Math.max(days, 30));
 
             if (signal?.aborted || !isMountedRef.current) return;
 
@@ -173,20 +179,22 @@ export default function Progress() {
                 // Validate and filter logs
                 const validLogs = logs.filter(validateMoodLog);
 
-                // Process logs for chart
+                // Filter logs to selected date range
+                const rangeFilteredLogs = validLogs.filter(log => {
+                    const logDate = new Date(log.log_date);
+                    return !isNaN(logDate.getTime()) && logDate >= startDate;
+                });
+
                 // Sort by date ascending
-                const sortedLogs = [...validLogs].sort((a, b) => {
+                const sortedLogs = [...rangeFilteredLogs].sort((a, b) => {
                     const dateA = new Date(a.log_date);
                     const dateB = new Date(b.log_date);
                     if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
                     return dateA - dateB;
                 });
 
-                // Take last 7 days for the chart for better visibility
-                const recentLogs = sortedLogs.slice(-7);
-
                 // Map to chart data with validation
-                const chartData = recentLogs
+                const chartData = sortedLogs
                     .map(log => {
                         const moodValue = MOOD_MAP[log.mood];
                         if (moodValue === undefined) return null;
@@ -364,7 +372,7 @@ export default function Progress() {
         }
     };
 
-    const fetchHealthData = async (signal) => {
+    const fetchHealthData = async (signal, timeRange = selectedTimeRange) => {
         // Guard clause: check user and signal
         if (!user?.id || signal?.aborted || !isMountedRef.current) {
             if (!signal?.aborted && isMountedRef.current) {
@@ -377,10 +385,8 @@ export default function Progress() {
             setHealthLoading(true);
         }
         try {
-            // Get last 60 days of health metrics
-            const endDate = new Date();
-            const startDate = new Date();
-            startDate.setDate(startDate.getDate() - 60);
+            // Get date range based on selection
+            const { startDate, endDate, days } = getDateRangeForSelection(timeRange);
 
             const { data: metrics, error } = await SupabaseService.getHealthMetrics(
                 user.id,
@@ -410,10 +416,12 @@ export default function Progress() {
                     });
                 }
 
-                // Prepare chart data for walking speed (last 14 days) with validation
+                // Use all metrics within the selected range (already filtered by query)
+                const rangeMetrics = metrics.slice(0, days);
+
+                // Prepare chart data for walking speed with validation
                 const chartData = validateChartData(
-                    metrics
-                        .slice(0, 14)
+                    rangeMetrics
                         .reverse()
                         .map(m => ({
                             date: m?.metric_date || '',
@@ -426,10 +434,10 @@ export default function Progress() {
                     setHealthChartData(chartData);
                 }
 
-                // Prepare chart data for steps (last 14 days) with validation
+                // Prepare chart data for steps with validation
                 const stepsData = validateChartData(
                     metrics
-                        .slice(0, 14)
+                        .slice(0, days)
                         .reverse()
                         .map(m => ({
                             date: m?.metric_date || '',
@@ -442,10 +450,10 @@ export default function Progress() {
                     setStepsChartData(stepsData);
                 }
 
-                // Prepare chart data for distance walked (last 14 days) with validation
+                // Prepare chart data for distance walked with validation
                 const distanceData = validateChartData(
                     metrics
-                        .slice(0, 14)
+                        .slice(0, days)
                         .reverse()
                         .map(m => ({
                             date: m?.metric_date || '',
@@ -458,10 +466,10 @@ export default function Progress() {
                     setDistanceChartData(distanceData);
                 }
 
-                // Prepare chart data for step length (last 14 days) with validation
+                // Prepare chart data for step length with validation
                 const stepLengthData = validateChartData(
                     metrics
-                        .slice(0, 14)
+                        .slice(0, days)
                         .reverse()
                         .map(m => ({
                             date: m?.metric_date || '',
@@ -606,9 +614,8 @@ export default function Progress() {
                 setHealthLoading(true);
             }
             
-            const endDate = new Date();
-            const startDate = new Date();
-            startDate.setDate(startDate.getDate() - 60);
+            // Use selected time range for sync window
+            const { startDate, endDate } = getDateRangeForSelection(selectedTimeRange);
 
             // Wrap sync call in additional error handling
             let syncResult;
@@ -744,6 +751,54 @@ export default function Progress() {
         }
     };
 
+    const handleTimeRangeChange = useCallback((newRange) => {
+        setSelectedTimeRange(newRange);
+        setShowRangePicker(false);
+        
+        // Refetch data with new range
+        const signal = abortControllerRef.current?.signal;
+        fetchData(signal, newRange);
+        fetchHealthData(signal, newRange);
+    }, [user?.id]);
+
+    const TimeRangePicker = () => (
+        <Modal
+            visible={showRangePicker}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowRangePicker(false)}
+        >
+            <TouchableOpacity
+                style={styles.pickerOverlay}
+                activeOpacity={1}
+                onPress={() => setShowRangePicker(false)}
+            >
+                <View style={styles.pickerContainer}>
+                    <Text style={styles.pickerTitle}>Select Time Range</Text>
+                    {TIME_RANGE_OPTIONS.map((option) => (
+                        <TouchableOpacity
+                            key={option.id}
+                            style={[
+                                styles.pickerOption,
+                                selectedTimeRange === option.id && styles.pickerOptionSelected,
+                            ]}
+                            onPress={() => handleTimeRangeChange(option.id)}
+                        >
+                            <Text
+                                style={[
+                                    styles.pickerOptionText,
+                                    selectedTimeRange === option.id && styles.pickerOptionTextSelected,
+                                ]}
+                            >
+                                {option.label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            </TouchableOpacity>
+        </Modal>
+    );
+
     const Chart = ({ data }) => {
         // Validate and filter data
         const validData = validateChartData(data || []);
@@ -758,12 +813,12 @@ export default function Progress() {
             );
         }
 
-        const height = 160;
+        const height = 175;
         const width = 320; // Approximate width of the card content
-        const paddingLeft = 35; // Extra space for Y-axis labels
-        const paddingRight = 15;
+        const paddingLeft = 38; // Extra space for Y-axis labels (emoji)
+        const paddingRight = 12;
         const paddingTop = 15;
-        const paddingBottom = 30; // Extra space for X-axis labels
+        const paddingBottom = 35; // Extra space for X-axis labels
         const chartHeight = height - paddingTop - paddingBottom;
         const chartWidth = width - paddingLeft - paddingRight;
 
@@ -850,19 +905,30 @@ export default function Progress() {
                 })}
 
                 {/* X-axis labels (dates) */}
-                {validData.map((point, i) => (
-                    <SvgText
-                        key={`x-${i}`}
-                        x={xScale(i)}
-                        y={height - paddingBottom + 16}
-                        fontSize="10"
-                        fill={Colors.textSecondary}
-                        textAnchor="middle"
-                        fontFamily="Inter_500Medium"
-                    >
-                        {safeFormatDate(point.date)}
-                    </SvgText>
-                ))}
+                {validData.map((point, i) => {
+                    // Adaptive label density based on data length
+                    let showLabel = true;
+                    if (validData.length > 30) {
+                        showLabel = i % Math.ceil(validData.length / 8) === 0 || i === validData.length - 1;
+                    } else if (validData.length > 14) {
+                        showLabel = i % Math.ceil(validData.length / 7) === 0 || i === validData.length - 1;
+                    } else if (validData.length > 7) {
+                        showLabel = i % 2 === 0 || i === validData.length - 1;
+                    }
+                    if (!showLabel) return null;
+                    return (
+                        <SvgText
+                            key={`x-${i}`}
+                            x={xScale(i)}
+                            y={height - paddingBottom + 18}
+                            fontSize="10"
+                            fill={Colors.textSecondary}
+                            textAnchor="middle"
+                        >
+                            {safeFormatDate(point.date)}
+                        </SvgText>
+                    );
+                })}
             </Svg>
         );
     };
@@ -872,7 +938,17 @@ export default function Progress() {
             <ScreenWrapper>
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Your Progress</Text>
+                    <TouchableOpacity
+                        style={styles.rangeSelector}
+                        onPress={() => setShowRangePicker(true)}
+                    >
+                        <Text style={styles.rangeSelectorText}>
+                            {getTimeRangeLabel(selectedTimeRange)}
+                        </Text>
+                        <ChevronDown size={16} color={Colors.primary} />
+                    </TouchableOpacity>
                 </View>
+                <TimeRangePicker />
 
                 <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={styles.card}>
@@ -936,7 +1012,7 @@ export default function Progress() {
 
                     <Text style={styles.cardFooter}>
                         {moodData.length > 0
-                            ? "Your mood history over the last few check-ins."
+                            ? `Your mood history over the ${getTimeRangeLabel(selectedTimeRange).toLowerCase()}.`
                             : "Start checking in to see your mood trend!"}
                     </Text>
                 </View>
@@ -1007,7 +1083,7 @@ export default function Progress() {
                                             />
                                         </View>
                                         <Text style={styles.cardFooter}>
-                                            Your walking speed over the last 14 days. Higher is better!
+                                            Your walking speed over the {getTimeRangeLabel(selectedTimeRange).toLowerCase()}. Higher is better!
                                         </Text>
                                     </View>
                                 )}
@@ -1028,7 +1104,7 @@ export default function Progress() {
                                             />
                                         </View>
                                         <Text style={styles.cardFooter}>
-                                            Your daily step count over the last 14 days. Keep moving!
+                                            Your daily step count over the {getTimeRangeLabel(selectedTimeRange).toLowerCase()}. Keep moving!
                                         </Text>
                                     </View>
                                 )}
@@ -1049,7 +1125,7 @@ export default function Progress() {
                                             />
                                         </View>
                                         <Text style={styles.cardFooter}>
-                                            Distance walked over the last 14 days. Track your progress!
+                                            Distance walked over the {getTimeRangeLabel(selectedTimeRange).toLowerCase()}. Track your progress!
                                         </Text>
                                     </View>
                                 )}
@@ -1070,7 +1146,7 @@ export default function Progress() {
                                             />
                                         </View>
                                         <Text style={styles.cardFooter}>
-                                            Average step length over the last 14 days. Longer steps indicate improved mobility.
+                                            Average step length over the {getTimeRangeLabel(selectedTimeRange).toLowerCase()}. Longer steps indicate improved mobility.
                                         </Text>
                                     </View>
                                 )}
@@ -1086,6 +1162,9 @@ export default function Progress() {
 
 const styles = StyleSheet.create({
     header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingVertical: 20,
         backgroundColor: Colors.background,
@@ -1096,6 +1175,59 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter_700Bold',
         fontSize: 28,
         color: Colors.text,
+    },
+    rangeSelector: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.primaryLight + '20',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+        gap: 4,
+    },
+    rangeSelectorText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 14,
+        color: Colors.primary,
+    },
+    pickerOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    pickerContainer: {
+        backgroundColor: 'white',
+        borderRadius: 16,
+        padding: 20,
+        width: '80%',
+        maxWidth: 300,
+    },
+    pickerTitle: {
+        fontFamily: 'Inter_700Bold',
+        fontSize: 18,
+        color: Colors.text,
+        marginBottom: 16,
+        textAlign: 'center',
+    },
+    pickerOption: {
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        borderRadius: 10,
+        marginBottom: 8,
+        backgroundColor: Colors.surfaceHighlight,
+    },
+    pickerOptionSelected: {
+        backgroundColor: Colors.primary,
+    },
+    pickerOptionText: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 16,
+        color: Colors.text,
+        textAlign: 'center',
+    },
+    pickerOptionTextSelected: {
+        color: 'white',
     },
     content: {
         flex: 1,
@@ -1187,11 +1319,10 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.border,
     },
     chartContainer: {
-        height: 180,
+        minHeight: 190,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 12,
-        overflow: 'hidden',
     },
     emptyChart: {
         alignItems: 'center',

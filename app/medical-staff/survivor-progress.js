@@ -1,6 +1,6 @@
-// app/caregiver/survivor-progress.js
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+// app/medical-staff/survivor-progress.js
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Modal } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
@@ -8,11 +8,12 @@ import { Typography } from '../../constants/Typography';
 import { useAuth } from '../../contexts/AuthContext';
 import { MedicalStaffService } from '../../services/MedicalStaffService';
 import { CareTeamService } from '../../services/CareTeamService';
-import { ArrowLeft, Activity, Smile, Zap, Target, TrendingUp, Calendar, Heart, ClipboardList, Settings } from 'lucide-react-native';
+import { ArrowLeft, Activity, Smile, Zap, Target, TrendingUp, Calendar, Heart, ClipboardList, Settings, ChevronDown } from 'lucide-react-native';
 import { KudosSendModal } from '../../components/KudosSendModal';
 import { NudgeSendModal } from '../../components/NudgeSendModal';
 import { HealthChart } from '../../components/HealthChart';
 import { SupabaseService } from '../../services/SupabaseService';
+import { TIME_RANGE_OPTIONS, DEFAULT_TIME_RANGE, getDateRangeForSelection, getTimeRangeLabel } from '../../constants/progressTimeRanges';
 
 export default function SurvivorProgress() {
     const router = useRouter();
@@ -29,6 +30,8 @@ export default function SurvivorProgress() {
     const [showAssignments, setShowAssignments] = useState(false);
     const [healthMetrics, setHealthMetrics] = useState([]);
     const [healthLoading, setHealthLoading] = useState(false);
+    const [selectedTimeRange, setSelectedTimeRange] = useState(DEFAULT_TIME_RANGE);
+    const [showRangePicker, setShowRangePicker] = useState(false);
 
     // Kudos modal state
     const [kudosModalVisible, setKudosModalVisible] = useState(false);
@@ -85,14 +88,13 @@ export default function SurvivorProgress() {
         loadHealthMetrics();
     };
 
-    const loadHealthMetrics = async () => {
+    const loadHealthMetrics = async (timeRange = selectedTimeRange) => {
         if (!survivorId || !user?.id) return;
 
         setHealthLoading(true);
         try {
-            const endDate = new Date();
-            const startDate = new Date();
-            startDate.setDate(startDate.getDate() - 30);
+            // Use selected time range
+            const { startDate, endDate } = getDateRangeForSelection(timeRange);
 
             // Use the viewer-aware method that respects sharing preferences
             const { data: metrics, error } = await SupabaseService.getHealthMetricsForViewer(
@@ -113,6 +115,50 @@ export default function SurvivorProgress() {
             setHealthLoading(false);
         }
     };
+
+    const handleTimeRangeChange = useCallback((newRange) => {
+        setSelectedTimeRange(newRange);
+        setShowRangePicker(false);
+        loadHealthMetrics(newRange);
+    }, [survivorId, user?.id]);
+
+    const TimeRangePicker = () => (
+        <Modal
+            visible={showRangePicker}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowRangePicker(false)}
+        >
+            <TouchableOpacity
+                style={styles.pickerOverlay}
+                activeOpacity={1}
+                onPress={() => setShowRangePicker(false)}
+            >
+                <View style={styles.pickerContainer}>
+                    <Text style={styles.pickerTitle}>Select Time Range</Text>
+                    {TIME_RANGE_OPTIONS.map((option) => (
+                        <TouchableOpacity
+                            key={option.id}
+                            style={[
+                                styles.pickerOption,
+                                selectedTimeRange === option.id && styles.pickerOptionSelected,
+                            ]}
+                            onPress={() => handleTimeRangeChange(option.id)}
+                        >
+                            <Text
+                                style={[
+                                    styles.pickerOptionText,
+                                    selectedTimeRange === option.id && styles.pickerOptionTextSelected,
+                                ]}
+                            >
+                                {option.label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            </TouchableOpacity>
+        </Modal>
+    );
 
     const getMoodEmoji = (score) => {
         if (score >= 4.5) return '😄';
@@ -386,10 +432,21 @@ export default function SurvivorProgress() {
                 {/* Health Metrics Section */}
                 {healthMetrics.length > 0 && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Health Metrics</Text>
+                        <View style={styles.sectionHeaderRow}>
+                            <Text style={styles.sectionTitle}>Health Metrics</Text>
+                            <TouchableOpacity
+                                style={styles.rangeSelector}
+                                onPress={() => setShowRangePicker(true)}
+                            >
+                                <Text style={styles.rangeSelectorText}>
+                                    {getTimeRangeLabel(selectedTimeRange)}
+                                </Text>
+                                <ChevronDown size={14} color={Colors.primary} />
+                            </TouchableOpacity>
+                        </View>
                         <View style={styles.healthCard}>
                             <Text style={styles.healthDescription}>
-                                Mobility and walking metrics tracked via Apple Health
+                                Mobility and walking metrics tracked via Apple Health ({getTimeRangeLabel(selectedTimeRange).toLowerCase()})
                             </Text>
 
                             {/* Walking Speed Chart */}
@@ -398,7 +455,7 @@ export default function SurvivorProgress() {
                                     <Text style={styles.chartTitle}>Walking Speed Trend</Text>
                                     <HealthChart
                                         data={healthMetrics
-                                            .slice(0, 14)
+                                            .slice()
                                             .reverse()
                                             .map(m => ({
                                                 date: m.metric_date,
@@ -464,6 +521,9 @@ export default function SurvivorProgress() {
 
                 <View style={{ height: 40 }} />
             </ScrollView>
+
+            {/* Time Range Picker */}
+            <TimeRangePicker />
 
             {/* Kudos Modal */}
             <KudosSendModal
@@ -598,11 +658,70 @@ const styles = StyleSheet.create({
         padding: 16,
         paddingTop: 8,
     },
+    sectionHeaderRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
     sectionTitle: {
         fontFamily: 'Inter_700Bold',
         fontSize: 18,
         color: Colors.text,
+        marginBottom: 0,
+    },
+    rangeSelector: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.primaryLight + '20',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 6,
+        gap: 4,
+    },
+    rangeSelectorText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 12,
+        color: Colors.primary,
+    },
+    pickerOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    pickerContainer: {
+        backgroundColor: 'white',
+        borderRadius: 16,
+        padding: 20,
+        width: '80%',
+        maxWidth: 300,
+    },
+    pickerTitle: {
+        fontFamily: 'Inter_700Bold',
+        fontSize: 18,
+        color: Colors.text,
         marginBottom: 16,
+        textAlign: 'center',
+    },
+    pickerOption: {
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        borderRadius: 10,
+        marginBottom: 8,
+        backgroundColor: Colors.surfaceHighlight,
+    },
+    pickerOptionSelected: {
+        backgroundColor: Colors.primary,
+    },
+    pickerOptionText: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 16,
+        color: Colors.text,
+        textAlign: 'center',
+    },
+    pickerOptionTextSelected: {
+        color: 'white',
     },
     averagesRow: {
         flexDirection: 'row',

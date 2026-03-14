@@ -1,0 +1,398 @@
+/**
+ * Visual guide config for exercises (Option 5: illustrated steps + Lilly narration).
+ * Only include exercises that have all step images in assets/exercises/.
+ * Spec: docs/exercise-illustration-spec.md
+ */
+
+const EXERCISE_VISUAL_GUIDES = {
+    // a1 – Shoulder Shrugs (Character A, Seated)
+    a1: {
+        title: 'Shoulder Shrugs',
+        steps: [
+            {
+                image: require('../assets/exercises/shoulder_shrugs_step1_rest.png'),
+                instruction: 'Sit up straight with your feet flat on the floor.',
+                lillyTip: 'Find a sturdy chair and get comfortable. Keep your back supported and your arms relaxed at your sides.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/shoulder_shrugs_step2_up.png'),
+                instruction: 'Lift your shoulders up towards your ears.',
+                lillyTip: 'Nice and gentle! Imagine trying to touch your ears with your shoulders. You should feel a gentle squeeze in your upper traps.',
+                holdSeconds: 3,
+            },
+            {
+                image: require('../assets/exercises/shoulder_shrugs_step3_down.png'),
+                instruction: 'Relax and lower them back down. Repeat 10 times.',
+                lillyTip: "Let your shoulders drop naturally -- don't force them down. Take a breath between each rep. You're doing great!",
+                holdSeconds: null,
+            },
+        ],
+    },
+    // a2 – Table Push (Character B, Seated, Partner)
+    a2: {
+        title: 'Table Push',
+        steps: [
+            {
+                image: require('../assets/exercises/a2_step1.png'),
+                instruction: 'Sit at a table with a towel under your affected hand. Interlace your fingers or place your strong hand over the affected one.',
+                lillyTip: 'Use a small towel so your hand slides easily. Your partner can sit beside you to help guide the movement if needed.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a2_step2.png'),
+                instruction: 'Slide your hands forward across the table, straightening your elbows. Lean forward slightly if needed.',
+                lillyTip: 'Go only as far as comfortable. You should feel a gentle stretch, not pain. Keep the movement smooth.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a2_step3.png'),
+                instruction: 'Slide back to the starting position.',
+                lillyTip: 'Control the return — don\'t let gravity do all the work. Repeat 10 times, then rest.',
+                holdSeconds: null,
+            },
+        ],
+    },
+    // a3 – Bicep Curls (Character C, Seated)
+    a3: {
+        title: 'Bicep Curls',
+        steps: [
+            {
+                image: require('../assets/exercises/bicep_curls_step1_rest.png'),
+                instruction: 'Sit or stand with your arm at your side. Hold a light weight or water bottle (optional).',
+                lillyTip: 'A water bottle works perfectly! If that feels too heavy, start without any weight at all. Keep your elbow close to your body.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/bicep_curls_step2_curl.png'),
+                instruction: 'Slowly bend your elbow, bringing your hand toward your shoulder.',
+                lillyTip: 'Go slow and steady -- about 2 seconds up. Focus on keeping your elbow tucked at your side. You should feel the front of your arm working.',
+                holdSeconds: 2,
+            },
+            {
+                image: require('../assets/exercises/bicep_curls_step3_lower.png'),
+                instruction: 'Slowly lower it back down. Keep your elbow tucked close to your side.',
+                lillyTip: "The lowering part is just as important! Take about 3 seconds to lower back down. Aim for 8-10 reps, then rest.",
+                holdSeconds: null,
+            },
+        ],
+    },
+    // a4 – PROM Shoulder External Rotation (Character D, Seated)
+    a4: {
+        title: 'PROM Shoulder External Rotation',
+        steps: [
+            {
+                image: require('../assets/exercises/a4_step1.png'),
+                instruction: 'Hold the wrist of your involved arm with your other hand. Keep the elbow of the involved arm bent and next to your side.',
+                lillyTip: 'Support the movement with your stronger arm. Go only to the point of a gentle stretch.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a4_step2.png'),
+                instruction: 'Move your forearm outward and away from your body.',
+                lillyTip: 'Keep your elbow tucked at your side like a hinge. Perform 3 sets of 10 reps, three times a day.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a4_step3.png'),
+                instruction: 'Return to start and repeat.',
+                lillyTip: 'Smooth and controlled both ways. You\'re building range and strength.',
+                holdSeconds: null,
+            },
+        ],
+    },
+    // a5 – PROM Shoulder Flexion (Self) (Character E, Seated)
+    a5: {
+        title: 'PROM Shoulder Flexion (Self)',
+        steps: [
+            {
+                image: require('../assets/exercises/a5_step1.png'),
+                instruction: 'Grasp the wrist of your involved arm with your other hand.',
+                lillyTip: 'Your stronger arm is the guide — use it to support, not force.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a5_step2.png'),
+                instruction: 'Gently raise your arm upward and in front through available range.',
+                lillyTip: 'Stop at the first sign of discomfort. Range will improve with consistency.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a5_step3.png'),
+                instruction: 'Return to start position and repeat. Perform 3 sets of 10 reps, three times a day.',
+                lillyTip: 'Nice work. Small progress each day adds up.',
+                holdSeconds: null,
+            },
+        ],
+    },
+    // a6 – PROM Shoulder Extension (Self) (Character F, Seated)
+    a6: {
+        title: 'PROM Shoulder Extension (Self)',
+        steps: [
+            {
+                image: require('../assets/exercises/a6_step1.png'),
+                instruction: 'Sit with your involved arm at your side, elbow bent to 90 degrees. Grasp your wrist or forearm with your other hand.',
+                lillyTip: 'Keep your elbow at your side — only the arm moves backward.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a6_step2.png'),
+                instruction: 'Gently move the involved arm backward through available range.',
+                lillyTip: 'Perform 3 sets of 10 reps, three times a day. Stop at comfort.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a6_step3.png'),
+                instruction: 'Return to start position and repeat.',
+                lillyTip: 'Smooth and controlled. You\'re doing great.',
+                holdSeconds: null,
+            },
+        ],
+    },
+    // a7 – PROM Elbow Flexion/Extension (Character A, Seated)
+    a7: {
+        title: 'PROM Elbow Flexion/Extension',
+        steps: [
+            {
+                image: require('../assets/exercises/a7_step1.png'),
+                instruction: 'Begin with your arm straight. Grasp your arm at the wrist with a firm, yet soft grip.',
+                lillyTip: 'Don\'t squeeze over bony areas. Use your other hand to guide the motion.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a7_step2.png'),
+                instruction: 'Move your elbow through available range (bend and straighten).',
+                lillyTip: 'Perform 3 sets of 10 reps, three times a day.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a7_step3.png'),
+                instruction: 'Return to start position.',
+                lillyTip: 'Full range both ways builds mobility and strength.',
+                holdSeconds: null,
+            },
+        ],
+    },
+    // a8 – Shoulder Girdle Retraction (Character B, Seated)
+    a8: {
+        title: 'Shoulder Girdle Retraction',
+        steps: [
+            {
+                image: require('../assets/exercises/a8_step1.png'),
+                instruction: 'Sit or stand with good posture.',
+                lillyTip: 'Feet flat, spine tall. You\'re setting up for a great exercise.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a8_step2.png'),
+                instruction: 'Squeeze your shoulder blades together and down (retract and depress). Hold for 3-5 seconds.',
+                lillyTip: 'Imagine holding a pencil between your shoulder blades. Then relax.',
+                holdSeconds: 5,
+            },
+            {
+                image: require('../assets/exercises/a8_step3.png'),
+                instruction: 'Relax. Repeat 10 times.',
+                lillyTip: 'This helps normalize upper quarter posture. Nice work.',
+                holdSeconds: null,
+            },
+        ],
+    },
+    // a9 – Seated Push Up (Character C, Seated)
+    a9: {
+        title: 'Seated Push Up',
+        steps: [
+            {
+                image: require('../assets/exercises/a9_step1.png'),
+                instruction: 'Sit in a sturdy chair with your hands on the armrests or seat beside your thighs.',
+                lillyTip: 'Use a chair that won\'t slide. Keep your feet flat for stability.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a9_step2.png'),
+                instruction: 'Press down through your hands and lift your body slightly off the seat.',
+                lillyTip: 'Hold briefly at the top, then lower slowly. Repeat 10 times.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a9_step3.png'),
+                instruction: 'Lower slowly. Repeat 10 times.',
+                lillyTip: 'This strengthens your arms and trunk. Great for transfers.',
+                holdSeconds: null,
+            },
+        ],
+    },
+    // a10 – PROM Shoulder Abduction (Partner) (Character D, Lying, Partner)
+    a10: {
+        title: 'PROM Shoulder Abduction (Partner)',
+        steps: [
+            {
+                image: require('../assets/exercises/a10_step1.png'),
+                instruction: 'Lie on your back with your arm at your side and elbow straight. Your partner grasps your wrist and supports your elbow.',
+                lillyTip: 'Stay relaxed. Your partner will move your arm only through your available range.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a10_step2.png'),
+                instruction: 'Partner gently moves your arm away from your body (abduction) through available range.',
+                lillyTip: 'Do not force past comfortable range. Perform 3 sets of 10 reps, three times a day.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a10_step3.png'),
+                instruction: 'Return to side. Repeat.',
+                lillyTip: 'Consistent practice helps restore range. You\'re doing great.',
+                holdSeconds: null,
+            },
+        ],
+    },
+    // a11 – PROM Shoulder Flexion (Partner) (Character E, Lying, Partner)
+    a11: {
+        title: 'PROM Shoulder Flexion (Partner)',
+        steps: [
+            {
+                image: require('../assets/exercises/a11_step1.png'),
+                instruction: 'Lie on your back with your arm at your side. Partner grasps your wrist and supports your elbow.',
+                lillyTip: 'Use a firm yet soft grip. Communicate if anything hurts.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a11_step2.png'),
+                instruction: 'Partner gently moves your arm upward and downward through available range.',
+                lillyTip: 'Perform 3 sets of 10 reps, three times a day. Do not force.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a11_step3.png'),
+                instruction: 'Return. Repeat.',
+                lillyTip: 'Partner-assisted motion helps maintain and improve range.',
+                holdSeconds: null,
+            },
+        ],
+    },
+    // a12 – PROM Elbow Flex/Ext (Partner) (Character F, Partner)
+    a12: {
+        title: 'PROM Elbow Flex/Ext (Partner)',
+        steps: [
+            {
+                image: require('../assets/exercises/a12_step1.png'),
+                instruction: 'Begin with your arm straight. Partner places one hand above your elbow and the other at your wrist or hand.',
+                lillyTip: 'Partner avoids squeezing over bony areas. Relax your arm.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a12_step2.png'),
+                instruction: 'Partner moves your elbow through available range (flexion and extension).',
+                lillyTip: 'Perform 3 sets of 10 reps, three times a day.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a12_step3.png'),
+                instruction: 'Return. Repeat.',
+                lillyTip: 'Full elbow motion supports daily activities like eating and grooming.',
+                holdSeconds: null,
+            },
+        ],
+    },
+    // a13 – Resistance Band Chest Press (Character D, Floor)
+    a13: {
+        title: 'Resistance Band Chest Press',
+        steps: [
+            {
+                image: require('../assets/exercises/a13_step1.png'),
+                instruction: 'Sit on the floor with knees bent. Place the band behind your back, just below shoulder blades. Hold the band with both hands in front of your shoulders, palms facing in.',
+                lillyTip: 'Keep the band secure. Start with light tension.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a13_step2.png'),
+                instruction: 'Press both arms forward, rotating shoulders inward until palms face down. Keep shoulder blades together.',
+                lillyTip: 'Hold 1-2 seconds, slowly return. Repeat as directed.',
+                holdSeconds: 2,
+            },
+            {
+                image: require('../assets/exercises/a13_step3.png'),
+                instruction: 'Slowly return. Repeat.',
+                lillyTip: 'This strengthens your pectorals. Great for pushing and reaching.',
+                holdSeconds: null,
+            },
+        ],
+    },
+    // a14 – Resistance Band Arm Curl (Character E, Floor)
+    a14: {
+        title: 'Resistance Band Arm Curl',
+        steps: [
+            {
+                image: require('../assets/exercises/a14_step1.png'),
+                instruction: 'Sit on the floor with knees bent. Place the band around your feet (or one foot for more resistance). Grasp each end, palms facing in, arms extended toward your legs.',
+                lillyTip: 'Elbows stay stationary — only the lower arm moves.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a14_step2.png'),
+                instruction: 'Keeping elbows stationary, bend arms and pull hands toward shoulders, turning palms up.',
+                lillyTip: 'Hold 1-2 seconds, slowly return. Repeat as directed.',
+                holdSeconds: 2,
+            },
+            {
+                image: require('../assets/exercises/a14_step3.png'),
+                instruction: 'Slowly return. Repeat.',
+                lillyTip: 'Bicep strength helps with lifting and carrying.',
+                holdSeconds: null,
+            },
+        ],
+    },
+    // a15 – Resistance Band Arm Extension (Character F, Floor)
+    a15: {
+        title: 'Resistance Band Arm Extension',
+        steps: [
+            {
+                image: require('../assets/exercises/a15_step1.png'),
+                instruction: 'Sit on the floor with knees bent. Hold the band with both hands, arms bent at 90 degrees, elbows at shoulder height, palms down.',
+                lillyTip: 'Keep elbows up and stationary throughout.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a15_step2.png'),
+                instruction: 'Keeping elbows stationary, straighten arms until hands align with shoulders (do not lock elbows).',
+                lillyTip: 'Hold 1-2 seconds, slowly return. Repeat as directed.',
+                holdSeconds: 2,
+            },
+            {
+                image: require('../assets/exercises/a15_step3.png'),
+                instruction: 'Slowly return. Repeat.',
+                lillyTip: 'Tricep strength helps with pushing and extending your arm.',
+                holdSeconds: null,
+            },
+        ],
+    },
+    // a16 – Resistance Band Shoulder Press (Character A, Floor)
+    a16: {
+        title: 'Resistance Band Shoulder Press',
+        steps: [
+            {
+                image: require('../assets/exercises/a16_step1.png'),
+                instruction: 'Sit on the floor with knees bent. Place the band under your buttocks. Hold the band with both hands just above your shoulders, palms forward.',
+                lillyTip: 'Band along inside of upper arms. Start with light tension.',
+                holdSeconds: null,
+            },
+            {
+                image: require('../assets/exercises/a16_step2.png'),
+                instruction: 'Press arms up and back overhead, turning palms toward each other, until arms are over shoulders.',
+                lillyTip: 'Hold 1-2 seconds, slowly return. Repeat as directed.',
+                holdSeconds: 2,
+            },
+            {
+                image: require('../assets/exercises/a16_step3.png'),
+                instruction: 'Slowly return. Repeat.',
+                lillyTip: 'Deltoid strength supports reaching and lifting overhead.',
+                holdSeconds: null,
+            },
+        ],
+    },
+};
+
+export function getExerciseHasVisualGuide(exerciseId) {
+    return false;
+}
+
+export { EXERCISE_VISUAL_GUIDES };

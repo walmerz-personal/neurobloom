@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert, Modal } from 'react-native';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import * as Haptics from 'expo-haptics';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
 import { Colors } from '../../constants/Colors';
@@ -11,6 +11,7 @@ import { MedicalStaffService } from '../../services/MedicalStaffService';
 import { CustomExerciseModal } from '../../components/CustomExerciseModal';
 import { ConfettiBurst } from '../../components/ConfettiBurst';
 import { getRecommendedExercises } from '../../services/RecommendationService';
+import { ExerciseVisualGuide, getExerciseHasVisualGuide } from '../../components/ExerciseVisualGuide';
 
 const CATEGORIES = ['All', 'Arms', 'Legs', 'Core', 'Hands', 'Head & Neck'];
 const MODE_TYPES = ['All', 'Solo', 'Partner'];
@@ -1100,7 +1101,11 @@ export default function Exercises() {
     const [recommendedExercises, setRecommendedExercises] = useState([]);
     const [recommendedIds, setRecommendedIds] = useState(new Set());
     const [showInfoModal, setShowInfoModal] = useState(false);
+    const [visualGuideExerciseId, setVisualGuideExerciseId] = useState(null);
     const [recommendationFilter, setRecommendationFilter] = useState('all'); // 'all' | 'ai_recommended' | 'staff_assigned'
+
+    const scrollViewRef = useRef(null);
+    const cardPositions = useRef({});
 
     useEffect(() => {
         if (user) {
@@ -1306,6 +1311,20 @@ export default function Exercises() {
         setExpandedCardId(expandedCardId === id ? null : id);
     };
 
+    const handleRecommendedPress = (exerciseId) => {
+        setSelectedCategory('All');
+        setSelectedMode('All');
+        setRecommendationFilter('all');
+        setExpandedCardId(exerciseId);
+
+        setTimeout(() => {
+            const yPosition = cardPositions.current[exerciseId];
+            if (scrollViewRef.current && yPosition !== undefined) {
+                scrollViewRef.current.scrollTo({ y: yPosition - 20, animated: true });
+            }
+        }, 100);
+    };
+
     return (
         <ScreenWrapper>
             <View style={styles.header}>
@@ -1402,7 +1421,7 @@ export default function Exercises() {
                 </ScrollView>
             </View>
 
-            <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <ScrollView ref={scrollViewRef} style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {recommendedExercises.length > 0 && (
                     <View style={styles.recommendedSection}>
                         <View style={styles.recommendedHeader}>
@@ -1415,7 +1434,7 @@ export default function Exercises() {
                             <TouchableOpacity
                                 key={`rec-${exercise.id}`}
                                 style={styles.recommendedCard}
-                                onPress={() => toggleExpand(exercise.id)}
+                                onPress={() => handleRecommendedPress(exercise.id)}
                                 activeOpacity={0.8}
                             >
                                 <View style={[styles.recommendedDot, { backgroundColor: exercise.thumbnailColor }]} />
@@ -1424,7 +1443,10 @@ export default function Exercises() {
                                     <Text style={styles.recommendedCardReason}>{exercise.recommendationReason}</Text>
                                 </View>
                                 <TouchableOpacity
-                                    onPress={() => toggleCompletion(exercise.id)}
+                                    onPress={(e) => {
+                                        e.stopPropagation();
+                                        toggleCompletion(exercise.id);
+                                    }}
                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                 >
                                     {completedExercises.includes(exercise.id) ? (
@@ -1446,21 +1468,28 @@ export default function Exercises() {
                     const assignmentDetails = assignedExercises.get(exercise.id);
                     const isShared = exercise.isCustom && exercise.userId !== user?.id;
                     return (
-                        <ExerciseCard
+                        <View
                             key={exercise.id}
-                            data={exercise}
-                            isExpanded={expandedCardId === exercise.id}
-                            isCompleted={completedExercises.includes(exercise.id)}
-                            isCustom={exercise.isCustom}
-                            isAssigned={isAssigned}
-                            isRecommended={recommendedIds.has(exercise.id)}
-                            assignmentDetails={assignmentDetails}
-                            isShared={isShared}
-                            onPress={() => toggleExpand(exercise.id)}
-                            onToggleComplete={() => toggleCompletion(exercise.id)}
-                            onEdit={exercise.isCustom && !isShared ? () => handleEditExercise(exercise) : undefined}
-                            onDelete={exercise.isCustom && !isShared ? () => handleDeleteExercise(exercise.id) : undefined}
-                        />
+                            onLayout={(e) => {
+                                cardPositions.current[exercise.id] = e.nativeEvent.layout.y;
+                            }}
+                        >
+                            <ExerciseCard
+                                data={exercise}
+                                isExpanded={expandedCardId === exercise.id}
+                                isCompleted={completedExercises.includes(exercise.id)}
+                                isCustom={exercise.isCustom}
+                                isAssigned={isAssigned}
+                                isRecommended={recommendedIds.has(exercise.id)}
+                                assignmentDetails={assignmentDetails}
+                                isShared={isShared}
+                                onPress={() => toggleExpand(exercise.id)}
+                                onToggleComplete={() => toggleCompletion(exercise.id)}
+                                onEdit={exercise.isCustom && !isShared ? () => handleEditExercise(exercise) : undefined}
+                                onDelete={exercise.isCustom && !isShared ? () => handleDeleteExercise(exercise.id) : undefined}
+                                onShowGuide={getExerciseHasVisualGuide(exercise.id) ? () => setVisualGuideExerciseId(exercise.id) : undefined}
+                            />
+                        </View>
                     );
                 })}
                 <View style={styles.footerSpacer} />
@@ -1473,6 +1502,12 @@ export default function Exercises() {
                 onSave={handleSaveExercise}
                 userId={user?.id}
                 userRole={userData?.role || 'survivor'}
+            />
+
+            <ExerciseVisualGuide
+                visible={!!visualGuideExerciseId}
+                exerciseId={visualGuideExerciseId}
+                onClose={() => setVisualGuideExerciseId(null)}
             />
 
             <Modal
@@ -1511,7 +1546,7 @@ export default function Exercises() {
     );
 }
 
-function ExerciseCard({ data, isExpanded, isCompleted, isCustom, isAssigned, isRecommended, assignmentDetails, isShared, onPress, onToggleComplete, onEdit, onDelete }) {
+function ExerciseCard({ data, isExpanded, isCompleted, isCustom, isAssigned, isRecommended, assignmentDetails, isShared, onPress, onToggleComplete, onEdit, onDelete, onShowGuide }) {
     const [showConfetti, setShowConfetti] = useState(false);
 
     const handleToggleComplete = (e) => {
@@ -1653,6 +1688,15 @@ function ExerciseCard({ data, isExpanded, isCompleted, isCustom, isAssigned, isR
                 {isExpanded && (
                     <View style={styles.instructionsContainer}>
                         <View style={styles.divider} />
+                        {onShowGuide && (
+                            <TouchableOpacity
+                                style={styles.watchDemoButton}
+                                onPress={(e) => { e.stopPropagation(); onShowGuide(); }}
+                            >
+                                <PlayCircle size={18} color="white" />
+                                <Text style={styles.watchDemoText}>Watch Visual Guide</Text>
+                            </TouchableOpacity>
+                        )}
                         <Text style={styles.instructionsTitle}>How to do it:</Text>
                         {data.instructions.map((step, index) => (
                             <View key={index} style={styles.stepRow}>
@@ -1965,6 +2009,21 @@ const styles = StyleSheet.create({
         height: 1,
         backgroundColor: Colors.border,
         marginBottom: 20,
+    },
+    watchDemoButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        backgroundColor: Colors.primary,
+        borderRadius: 12,
+        paddingVertical: 12,
+        marginBottom: 16,
+    },
+    watchDemoText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 15,
+        color: 'white',
     },
     instructionsTitle: {
         fontFamily: 'Inter_600SemiBold',

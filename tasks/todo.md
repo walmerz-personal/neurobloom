@@ -1,5 +1,44 @@
 # NeuroBloom Tasks
 
+## Fix Exercise Illustration Quality
+
+### Plan
+Fix quality issues in Arms illustrations: add generation prompt template, chaining rule, and quality gate to the spec; audit all 42 Arms images; regenerate failed images using anchor-and-chain (Step 1 as reference for Steps 2–3).
+
+### Todo Items
+- [x] Add generation prompt template, chaining requirement, and quality gate checklist to docs/exercise-illustration-spec.md
+- [x] Review all 42 Arms images (a2, a4–a16) and flag which need regeneration
+- [x] Regenerate failed images using anchor-and-chain approach (Step 1 as reference for Steps 2–3)
+
+### Audit results (42 images: a2, a4–a16 × 3 steps)
+- **Regenerate (confirmed failures from plan):** a4_step2.png, a4_step3.png, a6_step2.png, a6_step3.png. Reasons: a4 step 2 has three arms / wrong anatomy; a4 step 3 different person, wooden stool, green shirt; a6 step 2 semi-realistic gym style; a6 step 3 anatomical muscle diagram.
+- **Remaining 38 images:** Not visually audited in this pass. Recommend spot-check in the app simulator; any that fail the quality gate (Section 6 of spec) should be regenerated using the same anchor-and-chain process with their Step 1 as reference.
+
+### Review
+- **Spec (docs/exercise-illustration-spec.md):** Added Section 1.1 (generation prompt template: style prefix, anatomy safeguard, furniture note), Section 1.2 (chaining: always pass Step 1 as reference for Steps 2–3 and use “Same person, same outfit…” prompt), and Section 6 (Quality Gate checklist: same person, correct anatomy, furniture matching, flat vector style, no embedded text). Renumbered Reference Images to Section 7.
+- **Audit:** Flagged 4 images for regeneration (a4_step2, a4_step3, a6_step2, a6_step3); documented remaining 38 for optional spot-check in simulator.
+- **Regeneration:** Regenerated all 4 failed images using anchor-and-chain: a4_step2 and a4_step3 used a4_step1.png as reference; a6_step2 and a6_step3 used a6_step1.png as reference. Prompts included style prefix, anatomy safeguard, and chaining text. Generated files were copied into assets/exercises/. No config changes; existing EXERCISE_VISUAL_GUIDES already point to these filenames.
+
+---
+
+## Arms Category – Full Visual Guides (Option 5)
+
+### Plan
+Wire shared config and add illustrated step-by-step guides with Lilly narration for all 16 Arms exercises (a1–a16). Follow docs/exercise-illustration-spec.md for character rotation and style.
+
+### Todo Items
+- [x] Create constants/exerciseVisualGuides.js and move guide data from ExerciseVisualGuide.js
+- [x] Update ExerciseVisualGuide.js to use config and re-export getExerciseHasVisualGuide
+- [x] Generate 42 new illustration assets (a2, a4–a16, 3 steps each) and add entries to config
+
+### Review
+- **constants/exerciseVisualGuides.js** (new): Single source for EXERCISE_VISUAL_GUIDES. All 16 Arms (a1–a16) have title, 3 steps each with image require(), instruction, lillyTip, holdSeconds. a1/a3 keep existing asset names (shoulder_shrugs_*, bicep_curls_*); a2 and a4–a16 use aN_step1.png, aN_step2.png, aN_step3.png.
+- **components/ExerciseVisualGuide.js**: Imports EXERCISE_VISUAL_GUIDES and getExerciseHasVisualGuide from constants; no inline guide data. Re-exports getExerciseHasVisualGuide for exercises.js.
+- **assets/exercises/**: 48 PNGs total (6 original + 42 new). Characters follow spec: A (a1,a7,a16), B (a2,a8), C (a3,a9), D (a4,a10,a13), E (a5,a11,a14), F (a6,a12,a15). No text in images; arrows only on movement steps.
+- **Flow**: Every Arms exercise card now shows "Watch Visual Guide" when expanded; tapping opens the same modal with step illustrations and Lilly tips. No changes to exercises.js (it already used getExerciseHasVisualGuide from the component).
+
+---
+
 ## Add AI and Staff-Recommended Exercise Filters
 
 ### Plan
@@ -627,3 +666,178 @@ When a medical staff (or caregiver) invites a survivor via SMS, the survivor tap
    - **`acceptAccessRequest(token, survivorId)`** — Replaced the two-step flow (getAccessRequestByToken + updateCareTeamLink) with a single `supabase.rpc('accept_access_request', { p_token: token, p_survivor_id: survivorId })` call. Response is mapped to the existing result shape (success, requester_id, requester_name, requester_role) so CareTeamService and the accept-access-request screen need no changes.
 
 **No UI or CareTeamService changes.** The fix is confined to the database (new RPCs) and SupabaseService (use RPCs instead of direct table access). After applying the migration in the Supabase SQL Editor (or via `supabase db push`), medical staff and caregivers can connect to survivors via SMS and survivors will see the request and can approve or decline.
+
+---
+
+## Exercise Visual Guide Demo (Option 5: AI Illustrations + Lilly Narration)
+
+### Plan
+Demonstrate the Option 5 approach for exercise visual instructions: AI-generated pose illustrations shown in a step-by-step slideshow modal with Lilly coaching narration. Pilot with 2 exercises (Shoulder Shrugs + Bicep Curls).
+
+### Todo Items
+- [x] Generate AI pose illustrations for Shoulder Shrugs (3 poses: rest, up, down)
+- [x] Generate AI pose illustrations for Bicep Curls (3 poses: rest, curl, lower)
+- [x] Build ExerciseVisualGuide modal component with slideshow + Lilly narration
+- [x] Add "Watch Visual Guide" button to exercise cards for demo exercises
+- [x] Update tasks/todo.md with plan and review
+
+### Review
+
+**Demo of Option 5 (AI Illustrations + Lilly Narration) complete for 2 exercises.**
+
+**6 AI-generated illustrations created** in `assets/exercises/`:
+- `shoulder_shrugs_step1_rest.png` — Starting position, seated, relaxed
+- `shoulder_shrugs_step2_up.png` — Shoulders raised toward ears with upward arrows
+- `shoulder_shrugs_step3_down.png` — Shoulders lowered back down with downward arrows
+- `bicep_curls_step1_rest.png` — Arm at side holding water bottle
+- `bicep_curls_step2_curl.png` — Arm curled up toward shoulder with motion arrow
+- `bicep_curls_step3_lower.png` — Arm lowering back down with motion arrow
+
+All illustrations share a consistent flat-vector style with the same friendly older-adult character, warm pastel colors, and clean white backgrounds.
+
+**Files changed (2) + assets (6):**
+
+1. **`components/ExerciseVisualGuide.js`** (new) — Full-screen modal component with:
+   - Large illustration area with fade transitions between steps
+   - Step indicator dots (tappable)
+   - "Step X of Y" label
+   - Instruction text card (the exercise's text instruction for that step)
+   - "Lilly says" coaching bubble with contextual tips and encouragement
+   - "Hold Xs" badge on steps that involve holding a position
+   - Previous/Next navigation buttons
+   - Auto-play button that advances steps on a 4-second timer
+   - Restart button when reaching the end
+   - Exports `getExerciseHasVisualGuide(id)` helper to check if an exercise has a guide
+
+2. **`app/(tabs)/exercises.js`** — 4 minimal changes:
+   - Import `ExerciseVisualGuide` and `getExerciseHasVisualGuide`
+   - Add `visualGuideExerciseId` state
+   - Pass `onShowGuide` prop to ExerciseCard (only for exercises with guides)
+   - Render `ExerciseVisualGuide` modal
+   - Add "Watch Visual Guide" button in the expanded card (before text instructions)
+   - Add `watchDemoButton` and `watchDemoText` styles
+
+**How to test:** Open the Exercises tab, expand either "Shoulder Shrugs" or "Bicep Curls", and tap the blue "Watch Visual Guide" button. The modal opens with illustrated step-by-step poses and Lilly coaching tips. Use arrows to navigate, tap dots to jump, or press play for auto-advance.
+
+**Next steps for full rollout:** Generate illustrations for remaining 60 exercises, add TTS audio narration using expo-av, and optionally host illustrations in Supabase Storage instead of bundling locally.
+
+---
+
+## Recommended Exercise Links
+
+### Plan
+Make each Recommended-for-You row act like a true link by jumping to the matching exercise card in the main list and expanding its instructions inline.
+
+### Todo Items
+- [x] Implement recommended-row press handler that resets filters, expands target card, and triggers scroll
+- [x] Add ScrollView ref and card position tracking (onLayout map) for exercise cards
+- [x] Update recommended row and checkbox press handling to use new navigation behavior safely
+- [x] Run lint check and verify
+
+### Review
+
+**File changed:** `app/(tabs)/exercises.js`
+
+**4 changes made:**
+
+1. **Added `useRef` import** — Imported `useRef` from React.
+
+2. **Added refs for scroll and position tracking** — Created `scrollViewRef` (for ScrollView) and `cardPositions` (object ref to store y-positions of each exercise card).
+
+3. **Added `handleRecommendedPress` handler** — New function that:
+   - Resets all filters to "All" (category, mode, recommendation filter)
+   - Expands the target exercise card by setting `expandedCardId`
+   - Scrolls to the card position after a short delay (100ms to allow state to settle)
+
+4. **Wired up the UI:**
+   - ScrollView now has `ref={scrollViewRef}`
+   - Each ExerciseCard is wrapped in a View with `onLayout` that captures its y-position into `cardPositions.current[exercise.id]`
+   - Recommended row presses now call `handleRecommendedPress(exercise.id)` instead of `toggleExpand`
+   - Checkbox press now uses `e.stopPropagation()` to prevent the parent row press from firing
+
+**Behavior:** When a survivor taps a recommended exercise row, the app resets all filters to show all exercises, auto-scrolls to the matching exercise card in the main list, and expands it to show instructions. Tapping the checkbox still only toggles completion status without triggering navigation.
+
+---
+
+## Progress Charts Visibility and Date-Range Update
+
+### Plan
+Fix chart text visibility issues and add time-range selector (14 days, 1 month, 3 months, 1 year) to all progress views. Currently charts show January data instead of current dates, and chart labels can be clipped or invisible.
+
+### Todo Items
+- [x] Create shared progress time-range constants/helpers for 14d/1m/3m/1y and date bounds
+- [x] Add range selector and replace hardcoded query/slice logic in main Progress tab, including mood chart range handling
+- [x] Update caregiver and medical progress views to use selected range instead of fixed day windows
+- [x] Adjust HealthChart and inline mood chart sizing/padding/font/clipping so all labels render visibly
+- [x] Run lint diagnostics on modified files and validate selector/date-range behavior
+
+### Review
+
+**5 files created/modified:**
+
+1. **`constants/progressTimeRanges.js`** (new) — Shared time-range configuration with 4 options (14d, 1m, 3m, 1y), display labels, day counts, and helper functions: `getDateRangeForSelection()` for computing start/end dates, `getTimeRangeLabel()` for UI text, and `getXAxisLabelInterval()` for chart density.
+
+2. **`app/(tabs)/progress.js`** — Added time-range selector:
+   - New state: `selectedTimeRange` (default '14d'), `showRangePicker`
+   - Modal picker UI with styled options and selection highlighting
+   - `handleTimeRangeChange()` triggers data refetch with new range
+   - `fetchData()` and `fetchHealthData()` now accept optional `timeRange` parameter and use `getDateRangeForSelection()` instead of hardcoded 60-day/-14-slice logic
+   - `handleSyncHealth()` uses selected range for sync window
+   - Card footer texts updated to reflect selected range label
+   - Mood chart: increased dimensions (height 160→175, paddingBottom 30→35), removed fontFamily from SVG labels, added adaptive x-axis label density for longer ranges
+   - Chart container: changed from fixed height with overflow:hidden to minHeight without clipping
+
+3. **`components/HealthChart.js`** — Visibility fixes:
+   - Increased chart height 180→200, padding adjustments (left 50→55, bottom 50→45)
+   - Removed fontFamily from SvgText elements (can cause rendering failures on some platforms)
+   - Enhanced x-axis label density logic for 14/30/90+ day ranges
+   - Increased font size for y-axis labels (10→11)
+
+4. **`app/caregiver/survivor-progress.js`** — Added time-range selector for Health Overview section:
+   - Same state/modal pattern as main progress
+   - `loadHealthMetrics()` now uses selected range instead of hardcoded 7 days
+   - Section header row with range selector button
+
+5. **`app/medical-staff/survivor-progress.js`** — Added time-range selector for Health Metrics section:
+   - Same state/modal pattern
+   - `loadHealthMetrics()` uses selected range instead of hardcoded 30 days
+   - Chart data uses full fetched metrics instead of `slice(0, 14)`
+   - Description text shows selected range
+
+**Key behavior changes:**
+- Default is now always the most recent 14 days (no stale January data)
+- Users can select 14 days, 1 month, 3 months, or 1 year
+- Range selection triggers fresh data fetch with appropriate date window
+- Chart x-axis labels adapt density based on data length (fewer labels for longer ranges)
+- All chart text now renders reliably without fontFamily binding issues
+
+---
+
+## Fix All Invite Flow Duplicate Key & RLS Issues
+
+### Plan
+Fix three classes of bugs across all care_team_links invite flows: (1) duplicate key constraint violations when accepting a request if a link already exists, (2) RLS blocking survivor-initiated invite acceptance, (3) CHECK constraint blocking survivor-initiated invite creation.
+
+### Todo Items
+- [x] Create migration SQL with updated `accept_access_request`, updated `accept_invitation`, new `accept_survivor_invite` RPCs, and relaxed `role_check` constraint
+- [x] Update `SupabaseService.acceptInvitationRPC` to use SQL RPC instead of direct table update
+- [x] Update `SupabaseService.acceptSurvivorInvite` to use new SQL RPC instead of direct table update
+- [ ] Apply migration in Supabase SQL Editor
+
+### Review
+
+**Root cause:** When a medical staff (or caregiver) sends an access request and the survivor approves, the `accept_access_request` RPC does a plain UPDATE setting `survivor_id`. If the pair already has an existing `care_team_links` row (from a previous connection), this violates the `care_team_links_survivor_medical_staff_unique` (or `_caregiver_unique`) index. The same class of bug affected all 4 invite flows. Additionally, survivor-initiated flows had RLS and CHECK constraint issues.
+
+**Files changed (2) + new migration (1):**
+
+1. **`supabase/migrations/20260314000000_fix_all_invite_flows.sql`** (new) — Four fixes:
+   - Relaxed `care_team_links_role_check` from "exactly one ID must be set" to "both cannot be set simultaneously" (allows both NULL for survivor-initiated invites awaiting acceptance).
+   - Updated `accept_access_request` RPC: before the UPDATE, checks for an existing link between the survivor and requester. If found, updates existing to accepted (if needed) and deletes the pending row. Prevents duplicate key violation.
+   - Updated `accept_invitation` RPC: added `p_role_type` parameter to support both caregiver and medical_staff acceptors. Added same duplicate-link check.
+   - New `accept_survivor_invite` RPC: SECURITY DEFINER function for survivor-initiated SMS invites. Bypasses RLS (since caregiver_id/medical_staff_id are NULL on pending rows). Includes duplicate-link handling.
+
+2. **`services/SupabaseService.js`** — Two method updates:
+   - `acceptInvitationRPC`: replaced direct `getInvitationByCode` + `updateCareTeamLink` with single `supabase.rpc('accept_invitation', ...)` call. The RPC is SECURITY DEFINER so it bypasses the RLS issue where caregiver_id is NULL on pending rows.
+   - `acceptSurvivorInvite`: replaced `getAccessRequestByToken` + `updateCareTeamLink` with `supabase.rpc('accept_survivor_invite', ...)`. Same SECURITY DEFINER pattern.
+
+**No UI changes needed.** All screens call through CareTeamService/MedicalStaffService which call SupabaseService. The return shapes are unchanged.

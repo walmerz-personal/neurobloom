@@ -1376,35 +1376,26 @@ export const SupabaseService = {
         }
 
         try {
-            // For now, use direct update since RPC may not support medical_staff
-            // First, get the invitation
-            const { data: invitation, error: lookupError } = await this.getInvitationByCode(invitationCode);
-            
-            if (lookupError || !invitation) {
-                return { data: null, error: lookupError || new Error('Invitation not found') };
-            }
+            const { data: rows, error } = await supabase.rpc('accept_invitation', {
+                p_invitation_code: invitationCode,
+                p_acceptor_id: caregiverId,
+                p_role_type: roleType,
+            });
 
-            // Update the link
-            const updateData = { status: 'accepted', accepted_at: new Date().toISOString() };
-            if (roleType === 'medical_staff') {
-                updateData.medical_staff_id = caregiverId;
-            } else {
-                updateData.caregiver_id = caregiverId;
-            }
-
-            const { data: updatedLink, error } = await this.updateCareTeamLink(invitation.id, updateData);
-
-            if (error || !updatedLink) {
+            if (error) {
                 console.error('❌ Accept invitation RPC error:', error);
-                return { data: null, error: error || new Error('Failed to accept invitation') };
+                return { data: null, error };
             }
 
-            // Get survivor name for response
-            const { user: survivorData } = await this.getUserData(invitation.survivor_id);
+            const row = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+            if (!row || !row.success) {
+                return { data: null, error: new Error(row?.error_message || 'Failed to accept invitation') };
+            }
+
             const result = {
                 success: true,
-                survivor_id: invitation.survivor_id,
-                survivor_name: survivorData?.name || 'Unknown'
+                survivor_id: row.survivor_id,
+                survivor_name: row.survivor_name || 'Unknown',
             };
 
             console.log('✅ Invitation accepted:', result.survivor_name);
@@ -1749,48 +1740,26 @@ export const SupabaseService = {
         }
 
         try {
-            // Get the access request
-            const { data: request, error: lookupError } = await this.getAccessRequestByToken(token);
+            const { data: rows, error: rpcError } = await supabase.rpc('accept_survivor_invite', {
+                p_token: token,
+                p_acceptor_id: acceptorId,
+                p_role_type: roleType,
+            });
 
-            if (lookupError || !request) {
-                return { data: null, error: lookupError || new Error('Access request not found') };
+            if (rpcError) {
+                console.error('❌ Accept survivor invite error:', rpcError);
+                return { data: null, error: rpcError };
             }
 
-            // Verify this is a survivor-initiated invite
-            if (!request.survivor_id || request.caregiver_id || request.medical_staff_id) {
-                return { data: null, error: new Error('Invalid invite type') };
+            const row = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+            if (!row || !row.success) {
+                return { data: null, error: new Error(row?.error_message || 'Failed to accept invite') };
             }
 
-            // Update the link to accept it
-            const updateData = {
-                status: 'accepted',
-                accepted_at: new Date().toISOString(),
-                // Clear access request fields
-                access_request_token: null,
-                access_request_phone: null,
-                access_request_expires_at: null,
-            };
-
-            // Set acceptor ID based on role type
-            if (roleType === 'medical_staff') {
-                updateData.medical_staff_id = acceptorId;
-            } else {
-                updateData.caregiver_id = acceptorId;
-            }
-
-            const { data: updatedLink, error: updateError } = await this.updateCareTeamLink(request.id, updateData);
-
-            if (updateError || !updatedLink) {
-                console.error('❌ Accept survivor invite error:', updateError);
-                return { data: null, error: updateError || new Error('Failed to accept invite') };
-            }
-
-            // Get survivor info for response (from requester field set by getAccessRequestByToken)
-            const survivor = request.requester;
             const result = {
                 success: true,
-                survivor_id: request.survivor_id,
-                survivor_name: survivor?.name || 'Unknown',
+                survivor_id: row.survivor_id,
+                survivor_name: row.survivor_name || 'Unknown',
             };
 
             console.log('✅ Survivor invite accepted:', result.survivor_name);
