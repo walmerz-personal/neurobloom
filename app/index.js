@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Image, Text, StyleSheet } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { Colors } from '../constants/Colors';
 
@@ -81,10 +81,18 @@ export default function Index() {
         };
     }, [user, userData, loading, router]);
 
-    // Show loading while checking auth state
+    // Branded loading screen (matches splash: logo + white background)
     return (
         <View style={styles.container}>
-            <ActivityIndicator size="large" color={Colors.primary} />
+            <View style={styles.logoWrap}>
+                <Image
+                    source={require('../assets/splash-icon.png')}
+                    style={styles.logo}
+                    resizeMode="contain"
+                    accessibilityLabel="NeuroBloom"
+                />
+            </View>
+            <Text style={styles.loadingText}>Loading…</Text>
         </View>
     );
 }
@@ -94,6 +102,17 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: Colors.background,
+        backgroundColor: '#ffffff',
+    },
+    logoWrap: {
+        marginBottom: 16,
+    },
+    logo: {
+        width: 120,
+        height: 120,
+    },
+    loadingText: {
+        fontSize: 16,
+        color: Colors.textSecondary,
     },
 });

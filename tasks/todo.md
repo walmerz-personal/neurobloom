@@ -841,3 +841,57 @@ Fix three classes of bugs across all care_team_links invite flows: (1) duplicate
    - `acceptSurvivorInvite`: replaced `getAccessRequestByToken` + `updateCareTeamLink` with `supabase.rpc('accept_survivor_invite', ...)`. Same SECURITY DEFINER pattern.
 
 **No UI changes needed.** All screens call through CareTeamService/MedicalStaffService which call SupabaseService. The return shapes are unchanged.
+
+---
+
+## Care Team Profile Popups
+
+### Plan
+Fix survivor's "My Caregivers" section to show both caregivers and medical staff under "My Care Team", and add a tappable profile popup (name, email, role) for non-patient connections.
+
+### Todo Items
+- [x] Fix getLinkedCaregivers to filter out medical staff links (add caregiver_id != null check)
+- [x] Add getLinkedMedicalStaff method to CareTeamService.js
+- [x] Update CareTeamSection.js: rename to 'My Care Team', load and display medical staff, add tappable profile modal
+
+### Review
+
+**Root cause:** The `getLinkedCaregivers` function was returning all accepted `care_team_links` for a survivor without filtering by `caregiver_id != null`. This caused medical staff links (where `caregiver_id` is null but `medical_staff_id` is set) to leak into the caregivers list, displaying as "Unknown" since `link.caregiver?.name` was null.
+
+**Files changed (2):**
+
+1. **`services/CareTeamService.js`** — Two changes:
+   - Fixed `getLinkedCaregivers`: Added `&& link.caregiver_id != null` to the filter to exclude medical staff links.
+   - Added `getLinkedMedicalStaff(survivorId)`: New function that mirrors `getLinkedCaregivers` but filters for `link.medical_staff_id != null` and maps from `link.medical_staff?.name/email`. Exported in the `CareTeamService` object.
+
+2. **`components/CareTeamSection.js`** — Four changes:
+   - Added `Modal` import and new state: `medicalStaff` array and `profileMember` (for modal).
+   - Updated `loadCareTeam` to also call `CareTeamService.getLinkedMedicalStaff(userId)`.
+   - Renamed section title from "My Caregivers" to "My Care Team".
+   - Updated survivor view: caregivers and medical staff rows are now wrapped in `TouchableOpacity` that opens a profile modal on tap. Modal displays name, role label, and email. Added `handleRemoveMedicalStaff` function. Added styles for modal and medical staff avatar (indigo color to differentiate from caregiver primary color).
+
+**Behavior:** Survivors now see all care team members (caregivers + medical staff) in one "My Care Team" section. Tapping any member opens a profile popup showing their name, role, and email. The remove (X) button still works independently. Caregivers and medical staff viewing patients still navigate to the existing survivor-progress screen (unchanged).
+
+---
+
+## App load: reduce wait and improve loading UX
+
+### Plan
+
+Reduce the ~5 second spinner on app open by (A) not blocking navigation on the DB user fetch—use fallback userData from auth metadata and load full userData in background—and improve the loading experience with (B1) keeping the native splash visible until fonts are ready and (B2) a branded loading screen (logo + "Loading…") instead of a generic ActivityIndicator.
+
+### Todo Items
+
+- [x] Option A: Navigate with fallback userData, load full userData in background (AuthContext)
+- [x] Option B1: Keep native splash visible until app ready (expo-splash-screen in _layout)
+- [x] Option B2: Branded loading screen on index (logo, white background, "Loading…")
+
+### Review
+
+**Option A — AuthContext:** When a session exists, we now set fallback userData from auth metadata immediately and set `loading = false`, then load full userData from the `users` table in the background (fire-and-forget). Navigation to home or login happens as soon as `getSession()` returns, instead of waiting for the DB fetch. Full userData (and kudos subscription) is applied when the background load completes. No change to `app/index.js` navigation logic; home already handles userData.
+
+**Option B1 — Splash:** Added `expo-splash-screen` dependency. In `app/_layout.js`, call `SplashScreen.preventAutoHideAsync()` at module scope and `SplashScreen.hideAsync()` in a `useEffect` when fonts are loaded (`loaded || error`). The native splash (from app.config) stays visible until the root layout is ready, avoiding a blank screen during font load. Added mock for `expo-splash-screen` in `__tests__/setup.js`.
+
+**Option B2 — Branded loading screen:** Replaced the plain `ActivityIndicator` on `app/index.js` with a white screen, the app logo (`assets/splash-icon.png`), and "Loading…" text so the brief load after splash matches the app brand. Updated `__tests__/app/index.test.js` to assert on "Loading…" instead of ActivityIndicator.
+
+**Files changed:** `contexts/AuthContext.js`, `app/_layout.js`, `app/index.js`, `package.json`, `__tests__/setup.js`, `__tests__/app/index.test.js`, `tasks/todo.md`.

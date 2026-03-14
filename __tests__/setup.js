@@ -356,6 +356,11 @@ jest.mock('expo-status-bar', () => ({
     StatusBar: 'StatusBar',
 }));
 
+jest.mock('expo-splash-screen', () => ({
+    preventAutoHideAsync: jest.fn(() => Promise.resolve()),
+    hideAsync: jest.fn(() => Promise.resolve()),
+}));
+
 // Mock lottie-react-native
 jest.mock('lottie-react-native', () => 'LottieView');
 

@@ -31,11 +31,10 @@ describe('Index (Root Router)', () => {
         expect(toJSON()).toBeTruthy();
     });
 
-    it('shows loading indicator while auth is loading', () => {
+    it('shows branded loading screen while auth is loading', () => {
         useAuth.mockReturnValue({ user: null, userData: null, loading: true });
-        const { UNSAFE_getByType } = render(<Index />);
-        const { ActivityIndicator } = require('react-native');
-        expect(UNSAFE_getByType(ActivityIndicator)).toBeTruthy();
+        const { getByText } = render(<Index />);
+        expect(getByText('Loading…')).toBeTruthy();
     });
 
     it('navigates to login when not authenticated', async () => {
