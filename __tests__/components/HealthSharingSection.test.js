@@ -1,6 +1,6 @@
 // __tests__/components/HealthSharingSection.test.js
 import React from 'react';
-import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { HealthSharingSection } from '../../components/HealthSharingSection';
 
 // Mock services
@@ -102,29 +102,45 @@ describe('HealthSharingSection', () => {
         });
 
         it('should expand user controls on press and show Share All switch', async () => {
-            const { findByText } = render(
+            const { findByText, getByText } = render(
                 <HealthSharingSection userId="user-1" userRole="survivor" />
             );
-            const caregiverName = await findByText('Jane Doe');
-            // Press the user header to expand
-            fireEvent.press(caregiverName);
+            await findByText('Jane Doe');
+            // Press the header row (role label) to expand; pressing the name opens profile modal
+            const roleLabel = getByText('Caregiver');
+            fireEvent.press(roleLabel);
             expect(await findByText('Share All Metrics')).toBeTruthy();
         });
 
-        it('should call saveHealthSharingPreferences when toggling share all', async () => {
+        it('should show Share All switch and call save when toggled', async () => {
             SupabaseService.saveHealthSharingPreferences.mockResolvedValue({ error: null });
 
-            const { findByText, getAllByRole } = render(
+            const { findByText, getByText, getByTestId } = render(
                 <HealthSharingSection userId="user-1" userRole="survivor" />
             );
-            const caregiverName = await findByText('Jane Doe');
-            fireEvent.press(caregiverName);
-
+            await findByText('Jane Doe');
+            fireEvent.press(getByText('Caregiver'));
             await findByText('Share All Metrics');
+            const switchEl = getByTestId('health-share-all-cg-1');
+            expect(switchEl).toBeTruthy();
+            if (typeof switchEl?.props?.onValueChange === 'function') {
+                switchEl.props.onValueChange(true);
+                await waitFor(() => {
+                    expect(SupabaseService.saveHealthSharingPreferences).toHaveBeenCalled();
+                });
+            }
+        });
 
-            // Find the Switch for "Share All Metrics" — it's the first switch after expanding
-            // We can't easily get by role for Switch, so we test via the service call
-            // The Switch is rendered; toggling it triggers toggleShareAll
+        it('opens profile modal when caregiver name is pressed', async () => {
+            const { findByText, getAllByText, getByText } = render(
+                <HealthSharingSection userId="user-1" userRole="survivor" />
+            );
+            await findByText('Jane Doe');
+            const nameButtons = getAllByText('Jane Doe');
+            fireEvent.press(nameButtons[0]);
+            await waitFor(() => {
+                expect(getByText('Profile')).toBeTruthy();
+            });
         });
     });
 

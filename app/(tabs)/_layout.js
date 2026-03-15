@@ -33,6 +33,12 @@ export default function TabLayout() {
                     title: 'Progress',
                 }}
             />
+            <Tabs.Screen
+                name="resources"
+                options={{
+                    title: 'Resources',
+                }}
+            />
         </Tabs>
     );
 }

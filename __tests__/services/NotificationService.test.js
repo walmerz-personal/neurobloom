@@ -114,6 +114,30 @@ describe('NotificationService', () => {
 
             expect(identifier).toBeNull();
         });
+
+        it('should schedule multiple reminders when given array of times', async () => {
+            Notifications.cancelAllScheduledNotificationsAsync.mockResolvedValue();
+            Notifications.scheduleNotificationAsync
+                .mockResolvedValueOnce('id-1')
+                .mockResolvedValueOnce('id-2');
+
+            const result = await NotificationService.scheduleDailyReminder([
+                { hour: 8, minute: 30 },
+                { hour: 18, minute: 0 },
+            ]);
+
+            expect(Array.isArray(result)).toBe(true);
+            expect(result).toHaveLength(2);
+            expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledTimes(2);
+        });
+
+        it('should return null for invalid times array', async () => {
+            Notifications.cancelAllScheduledNotificationsAsync.mockResolvedValue();
+
+            const result = await NotificationService.scheduleDailyReminder([]);
+
+            expect(result).toBeNull();
+        });
     });
 
     describe('cancelAllReminders', () => {

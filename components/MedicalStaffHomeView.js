@@ -6,8 +6,6 @@ import { Colors } from '../constants/Colors';
 import { Quote, User, ChevronRight, Heart, ClipboardList } from 'lucide-react-native';
 import { MedicalStaffService } from '../services/MedicalStaffService';
 import { SupabaseService } from '../services/SupabaseService';
-import { ResourceCard } from './ResourceCard';
-import { ResourceDetailModal } from './ResourceDetailModal';
 import Svg, { Circle } from 'react-native-svg';
 
 // Tips from Lilly for Medical Staff
@@ -18,56 +16,6 @@ const LILLY_TIPS = [
     "Tracking progress helps you adjust treatment plans effectively. Use the app to monitor results. 📊",
     "Clear communication with survivors and their families strengthens recovery. 💙",
     "Every exercise assigned is a step toward better recovery. Your patience matters. ✨",
-];
-
-// Resource content for medical staff
-const RESOURCES = [
-    {
-        id: 'assignment',
-        title: 'Effective Exercise Assignment',
-        snippet: "Tips for assigning exercises that drive results.",
-        content: `Assigning the right exercises at the right time can significantly improve recovery outcomes.
-
-Best Practices:
-• Start with foundational exercises that build strength progressively.
-• Assign exercises that match the survivor's current ability level.
-• Set realistic due dates that encourage consistency without overwhelming.
-• Use notes to provide specific instructions or modifications.
-• Review completion status regularly to adjust assignments.
-
-Pro Tip: Use custom exercises for patient-specific needs. Create exercises tailored to individual impairments and goals.`
-    },
-    {
-        id: 'tracking',
-        title: 'Tracking Patient Progress',
-        snippet: 'How to use progress data to inform treatment.',
-        content: `The app provides comprehensive progress tracking to help you make data-driven decisions.
-
-Key Metrics:
-• Exercise completion rates show engagement and adherence.
-• Daily check-ins reveal mood, pain, and energy patterns.
-• Progress trends help identify when to increase difficulty or introduce new exercises.
-
-Action Steps:
-• Check survivor progress regularly in the app.
-• Adjust assignments based on completion data.
-• Use notes to communicate with caregivers about progress.
-• Celebrate milestones with survivors and families.`
-    },
-    {
-        id: 'collaboration',
-        title: 'Collaborating with Care Teams',
-        snippet: 'Working together with caregivers for better outcomes.',
-        content: `Effective recovery requires collaboration between medical staff, caregivers, and survivors.
-
-Collaboration Tips:
-• Keep caregivers informed about exercise goals and progress.
-• Use notes in assignments to explain rationale or modifications.
-• Encourage caregivers to support consistent exercise completion.
-• Share progress insights with the care team during check-ins.
-
-Remember: When everyone is aligned on goals and progress, recovery outcomes improve significantly.`
-    },
 ];
 
 // Circular progress component
@@ -113,7 +61,6 @@ export function MedicalStaffHomeView({ userData, user, onLogout, onNavigateToMed
     const [survivors, setSurvivors] = useState([]);
     const [survivorProgress, setSurvivorProgress] = useState({});
     const [loading, setLoading] = useState(true);
-    const [selectedResource, setSelectedResource] = useState(null);
 
     useEffect(() => {
         // Set random Lilly tip
@@ -251,17 +198,6 @@ export function MedicalStaffHomeView({ userData, user, onLogout, onNavigateToMed
                 </>
             )}
 
-            {/* Helpful Resources Section */}
-            <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Helpful Resources</Text>
-            {RESOURCES.map((resource) => (
-                <ResourceCard
-                    key={resource.id}
-                    title={resource.title}
-                    snippet={resource.snippet}
-                    onPress={() => setSelectedResource(resource)}
-                />
-            ))}
-
             {/* About Me Row */}
             <TouchableOpacity style={styles.aboutMeRow} onPress={() => router.push('/profile')}>
                 <View style={styles.aboutMeIcon}>
@@ -273,14 +209,6 @@ export function MedicalStaffHomeView({ userData, user, onLogout, onNavigateToMed
                 </View>
                 <ChevronRight size={20} color={Colors.textTertiary} />
             </TouchableOpacity>
-
-            {/* Resource Detail Modal */}
-            <ResourceDetailModal
-                visible={selectedResource !== null}
-                onClose={() => setSelectedResource(null)}
-                title={selectedResource?.title || ''}
-                content={selectedResource?.content || ''}
-            />
         </ScrollView>
     );
 }

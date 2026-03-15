@@ -1,11 +1,23 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Colors } from '../constants/Colors';
-import { Home, Dumbbell, MessageCircle, TrendingUp } from 'lucide-react-native';
+import { Home, Dumbbell, MessageCircle, TrendingUp, BookOpen } from 'lucide-react-native';
+import { useAuth } from '../contexts/AuthContext';
 
 export function TabBar({ state, descriptors, navigation }) {
+    const { userData } = useAuth();
+    const role = userData?.role;
+    const isCareTeam = role === 'caregiver' || role === 'medical_staff';
+
+    const visibleRoutes = state.routes.filter((r) => {
+        if (r.name === 'progress') return !isCareTeam;
+        if (r.name === 'resources') return isCareTeam;
+        return true;
+    });
+
     return (
         <View style={styles.tabBar} testID="tab-bar">
-            {state.routes.map((route, index) => {
+            {visibleRoutes.map((route) => {
+                const fullIndex = state.routes.findIndex((r) => r.key === route.key);
                 const { options } = descriptors[route.key];
                 const label =
                     options.tabBarLabel !== undefined
@@ -14,7 +26,7 @@ export function TabBar({ state, descriptors, navigation }) {
                             ? options.title
                             : route.name;
 
-                const isFocused = state.index === index;
+                const isFocused = state.index === fullIndex;
 
                 const onPress = () => {
                     const event = navigation.emit({
@@ -40,12 +52,13 @@ export function TabBar({ state, descriptors, navigation }) {
                 else if (route.name === 'exercises') IconComponent = Dumbbell;
                 else if (route.name === 'lilly') IconComponent = MessageCircle;
                 else if (route.name === 'progress') IconComponent = TrendingUp;
+                else if (route.name === 'resources') IconComponent = BookOpen;
 
                 const color = isFocused ? Colors.primary : Colors.textSecondary;
 
                 return (
                     <TouchableOpacity
-                        key={index}
+                        key={route.key}
                         accessibilityRole="button"
                         accessibilityState={isFocused ? { selected: true } : {}}
                         accessibilityLabel={options.tabBarAccessibilityLabel}

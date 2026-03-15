@@ -1,6 +1,6 @@
 // __tests__/app/caregiver/survivor-progress.test.js
 import React from 'react';
-import { render, waitFor, act } from '@testing-library/react-native';
+import { render, waitFor, fireEvent } from '@testing-library/react-native';
 import SurvivorProgress from '../../../app/caregiver/survivor-progress';
 
 const mockBack = jest.fn();
@@ -190,5 +190,36 @@ describe('Caregiver SurvivorProgress', () => {
 
         const { findByText } = render(<SurvivorProgress />);
         expect(await findByText('Recent Check-ins')).toBeTruthy();
+    });
+
+    it('retry button calls getSurvivorProgress again', async () => {
+        CareTeamService.getSurvivorProgress
+            .mockResolvedValueOnce({ progress: null, error: { message: 'Access denied' } })
+            .mockResolvedValueOnce({
+                progress: { survivor: { name: 'Jane' }, recentLogs: [], stats: {} },
+                error: null,
+            });
+
+        const { findByText } = render(<SurvivorProgress />);
+        const retry = await findByText('Try Again');
+        fireEvent.press(retry);
+        await waitFor(() => {
+            expect(CareTeamService.getSurvivorProgress).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    it('loads health metrics via getHealthMetricsForViewer', async () => {
+        CareTeamService.getSurvivorProgress.mockResolvedValue({
+            progress: { survivor: { name: 'Jane' }, recentLogs: [], stats: {} },
+            error: null,
+        });
+        SupabaseService.getHealthMetricsForViewer.mockResolvedValue({
+            data: [{ date: '2026-03-01', steps: 500 }],
+            error: null,
+        });
+
+        const { findByText } = render(<SurvivorProgress />);
+        await findByText('Send Nudge');
+        expect(SupabaseService.getHealthMetricsForViewer).toHaveBeenCalled();
     });
 });

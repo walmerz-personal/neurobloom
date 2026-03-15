@@ -169,22 +169,6 @@ describe('CaregiverHomeView', () => {
         });
     });
 
-    it('should display Helpful Resources section', async () => {
-        const { getByText } = render(<CaregiverHomeView {...defaultProps} />);
-        await waitFor(() => {
-            expect(getByText('Helpful Resources')).toBeTruthy();
-        });
-    });
-
-    it('should display resource cards', async () => {
-        const { getByText } = render(<CaregiverHomeView {...defaultProps} />);
-        await waitFor(() => {
-            expect(getByText('Caregiver Burnout: Signs to Watch')).toBeTruthy();
-            expect(getByText('Celebrating Small Wins')).toBeTruthy();
-            expect(getByText('Understanding Neuroplasticity')).toBeTruthy();
-        });
-    });
-
     it('should display About Me row', async () => {
         const { getByText } = render(<CaregiverHomeView {...defaultProps} />);
         await waitFor(() => {

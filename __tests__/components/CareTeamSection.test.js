@@ -3,11 +3,13 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { CareTeamSection } from '../../components/CareTeamSection';
 import { CareTeamService } from '../../services/CareTeamService';
+import * as Clipboard from 'expo-clipboard';
 
 // Mock CareTeamService
 jest.mock('../../services/CareTeamService', () => ({
     CareTeamService: {
         getLinkedCaregivers: jest.fn(),
+        getLinkedMedicalStaff: jest.fn(),
         getLinkedSurvivors: jest.fn(),
         getPendingInvitations: jest.fn(),
         createInvitation: jest.fn(),
@@ -45,11 +47,12 @@ describe('CareTeamSection', () => {
     // --- Loading state ---
 
     it('shows loading state while data is being fetched', () => {
-        // Make the service call hang (never resolve) so loading stays true
+        // Make the service calls hang (never resolve) so loading stays true
         CareTeamService.getLinkedCaregivers.mockReturnValue(new Promise(() => {}));
+        CareTeamService.getLinkedMedicalStaff.mockReturnValue(new Promise(() => {}));
         CareTeamService.getPendingInvitations.mockReturnValue(new Promise(() => {}));
 
-        const { getByText, UNSAFE_getByType } = render(
+        const { getByText } = render(
             <CareTeamSection {...defaultSurvivorProps} />
         );
 
@@ -64,29 +67,33 @@ describe('CareTeamSection', () => {
                 caregivers: [],
                 error: null,
             });
+            CareTeamService.getLinkedMedicalStaff.mockResolvedValue({
+                medicalStaff: [],
+                error: null,
+            });
             CareTeamService.getPendingInvitations.mockResolvedValue({
                 invitations: [],
                 error: null,
             });
         });
 
-        it('renders the "My Caregivers" title for survivor role', async () => {
+        it('renders the "My Care Team" title for survivor role', async () => {
             const { getByText } = render(
                 <CareTeamSection {...defaultSurvivorProps} />
             );
 
             await waitFor(() => {
-                expect(getByText('My Caregivers')).toBeTruthy();
+                expect(getByText('My Care Team')).toBeTruthy();
             });
         });
 
-        it('shows empty state when no caregivers are connected', async () => {
+        it('shows empty state when no care team members are connected', async () => {
             const { getByText } = render(
                 <CareTeamSection {...defaultSurvivorProps} />
             );
 
             await waitFor(() => {
-                expect(getByText('No caregivers connected, invite them below')).toBeTruthy();
+                expect(getByText('No care team members connected yet')).toBeTruthy();
             });
         });
 
@@ -115,6 +122,7 @@ describe('CareTeamSection', () => {
         });
 
         it('renders connected caregivers', async () => {
+            CareTeamService.getLinkedMedicalStaff.mockResolvedValue({ medicalStaff: [], error: null });
             CareTeamService.getLinkedCaregivers.mockResolvedValue({
                 caregivers: [
                     { id: 'cg-1', name: 'Alice Smith', relationship: 'Spouse', linkId: 'link-1' },
@@ -137,6 +145,7 @@ describe('CareTeamSection', () => {
         });
 
         it('renders pending invitations', async () => {
+            CareTeamService.getLinkedMedicalStaff.mockResolvedValue({ medicalStaff: [], error: null });
             CareTeamService.getPendingInvitations.mockResolvedValue({
                 invitations: [
                     { linkId: 'inv-1', code: 'ABC123' },
@@ -155,6 +164,7 @@ describe('CareTeamSection', () => {
         });
 
         it('displays avatar initial from caregiver name', async () => {
+            CareTeamService.getLinkedMedicalStaff.mockResolvedValue({ medicalStaff: [], error: null });
             CareTeamService.getLinkedCaregivers.mockResolvedValue({
                 caregivers: [
                     { id: 'cg-1', name: 'Diana Prince', relationship: 'Friend', linkId: 'link-1' },
@@ -168,6 +178,117 @@ describe('CareTeamSection', () => {
 
             await waitFor(() => {
                 expect(getByText('D')).toBeTruthy();
+            });
+        });
+
+        it('opens profile modal when caregiver row is pressed', async () => {
+            CareTeamService.getLinkedMedicalStaff.mockResolvedValue({ medicalStaff: [], error: null });
+            CareTeamService.getLinkedCaregivers.mockResolvedValue({
+                caregivers: [
+                    { id: 'cg-1', name: 'Alice Smith', email: 'alice@example.com', relationship: 'Spouse', linkId: 'link-1' },
+                ],
+                error: null,
+            });
+
+            const { getByText } = render(
+                <CareTeamSection {...defaultSurvivorProps} />
+            );
+
+            await waitFor(() => expect(getByText('Alice Smith')).toBeTruthy());
+            fireEvent.press(getByText('Alice Smith'));
+            await waitFor(() => {
+                expect(getByText('Profile')).toBeTruthy();
+                expect(getByText('alice@example.com')).toBeTruthy();
+            });
+        });
+
+        it('closes profile modal when close is pressed', async () => {
+            CareTeamService.getLinkedMedicalStaff.mockResolvedValue({ medicalStaff: [], error: null });
+            CareTeamService.getLinkedCaregivers.mockResolvedValue({
+                caregivers: [
+                    { id: 'cg-1', name: 'Bob', relationship: 'Friend', linkId: 'link-1' },
+                ],
+                error: null,
+            });
+
+            const { getByText, getByTestId, queryByText } = render(
+                <CareTeamSection {...defaultSurvivorProps} />
+            );
+            await waitFor(() => expect(getByText('Bob')).toBeTruthy());
+            fireEvent.press(getByText('Bob'));
+            await waitFor(() => expect(getByText('Profile')).toBeTruthy());
+            fireEvent.press(getByTestId('care-team-profile-close'));
+            await waitFor(() => {
+                expect(queryByText('Profile')).toBeNull();
+            });
+        });
+
+        it('calls removeCareTeamLink when Remove is confirmed for caregiver', async () => {
+            CareTeamService.getLinkedMedicalStaff.mockResolvedValue({ medicalStaff: [], error: null });
+            CareTeamService.getLinkedCaregivers.mockResolvedValue({
+                caregivers: [
+                    { id: 'cg-1', name: 'Alice', relationship: 'Spouse', linkId: 'link-1' },
+                ],
+                error: null,
+            });
+            CareTeamService.removeCareTeamLink.mockResolvedValue({ error: null });
+            const alertSpy = jest.spyOn(require('react-native').Alert, 'alert').mockImplementation((title, msg, buttons) => {
+                const removeBtn = buttons?.find((b) => b.text === 'Remove');
+                if (removeBtn?.onPress) removeBtn.onPress();
+            });
+
+            const { getByText, getByTestId } = render(
+                <CareTeamSection {...defaultSurvivorProps} />
+            );
+            await waitFor(() => expect(getByText('Alice')).toBeTruthy());
+            fireEvent.press(getByTestId('care-team-remove-caregiver-link-1'));
+            await waitFor(() => {
+                expect(CareTeamService.removeCareTeamLink).toHaveBeenCalledWith('user-123', 'link-1');
+            });
+            alertSpy.mockRestore();
+        });
+
+        it('calls removeCareTeamLink when Yes Cancel is confirmed for pending invitation', async () => {
+            CareTeamService.getLinkedMedicalStaff.mockResolvedValue({ medicalStaff: [], error: null });
+            CareTeamService.getLinkedCaregivers.mockResolvedValue({ caregivers: [], error: null });
+            CareTeamService.getPendingInvitations.mockResolvedValue({
+                invitations: [{ linkId: 'inv-1', code: 'XYZ789' }],
+                error: null,
+            });
+            CareTeamService.removeCareTeamLink.mockResolvedValue({ error: null });
+            jest.spyOn(require('react-native').Alert, 'alert').mockImplementation((title, msg, buttons) => {
+                const yesBtn = buttons?.find((b) => b.text === 'Yes, Cancel');
+                if (yesBtn?.onPress) yesBtn.onPress();
+            });
+
+            const { getByText, getByTestId } = render(
+                <CareTeamSection {...defaultSurvivorProps} />
+            );
+            await waitFor(() => expect(getByText('Pending Invitation')).toBeTruthy());
+            fireEvent.press(getByTestId('care-team-cancel-invitation-inv-1'));
+            await waitFor(() => {
+                expect(CareTeamService.removeCareTeamLink).toHaveBeenCalledWith('user-123', 'inv-1');
+            });
+            require('react-native').Alert.alert.mockRestore();
+        });
+
+        it('copies invitation code to clipboard when Copy is pressed on pending row', async () => {
+            jest.spyOn(Clipboard, 'setStringAsync').mockResolvedValue();
+            CareTeamService.getLinkedMedicalStaff.mockResolvedValue({ medicalStaff: [], error: null });
+            CareTeamService.getLinkedCaregivers.mockResolvedValue({ caregivers: [], error: null });
+            CareTeamService.getPendingInvitations.mockResolvedValue({
+                invitations: [{ linkId: 'inv-1', code: 'ABC123' }],
+                error: null,
+            });
+            jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(() => {});
+
+            const { getByText, getByTestId } = render(
+                <CareTeamSection {...defaultSurvivorProps} />
+            );
+            await waitFor(() => expect(getByText('ABC123')).toBeTruthy());
+            fireEvent.press(getByTestId('care-team-copy-code'));
+            await waitFor(() => {
+                expect(Clipboard.setStringAsync).toHaveBeenCalledWith('ABC123');
             });
         });
     });
@@ -318,6 +439,10 @@ describe('CareTeamSection', () => {
                 caregivers: [],
                 error: 'Some error',
             });
+            CareTeamService.getLinkedMedicalStaff.mockResolvedValue({
+                medicalStaff: [],
+                error: 'Some error',
+            });
             CareTeamService.getPendingInvitations.mockResolvedValue({
                 invitations: [],
                 error: 'Some error',
@@ -329,7 +454,7 @@ describe('CareTeamSection', () => {
 
             // Should still render without crashing
             await waitFor(() => {
-                expect(getByText('My Caregivers')).toBeTruthy();
+                expect(getByText('My Care Team')).toBeTruthy();
             });
         });
 
@@ -358,7 +483,7 @@ describe('CareTeamSection', () => {
 
             // Should still render without crashing (loading finishes)
             await waitFor(() => {
-                expect(getByText('My Caregivers')).toBeTruthy();
+                expect(getByText('My Care Team')).toBeTruthy();
             });
         });
     });

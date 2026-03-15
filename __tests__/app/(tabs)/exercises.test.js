@@ -64,10 +64,10 @@ describe('Exercises Screen', () => {
         });
 
         it('renders mode filter chips', () => {
-            const { getByText } = render(<Exercises />);
-            // Mode chips have emoji prefixes for Solo and Partner
-            expect(getByText(/Solo/)).toBeTruthy();
-            expect(getByText(/Partner/)).toBeTruthy();
+            const { getAllByText } = render(<Exercises />);
+            // Mode chips have emoji prefixes for Solo and Partner; multiple elements may contain "Partner"
+            expect(getAllByText(/Solo/).length).toBeGreaterThan(0);
+            expect(getAllByText(/Partner/).length).toBeGreaterThan(0);
         });
 
         it('renders exercise cards from built-in data', async () => {
@@ -273,6 +273,68 @@ describe('Exercises Screen', () => {
             await waitFor(() => {
                 expect(getByText('Recommended for You')).toBeTruthy();
             });
+        });
+    });
+
+    describe('Recommendation filter', () => {
+        it('renders recommendation filter chips', async () => {
+            const { getByText } = render(<Exercises />);
+            await waitFor(() => expect(getByText('Shoulder Shrugs')).toBeTruthy());
+            expect(getByText('AI recommended')).toBeTruthy();
+            expect(getByText('Staff assigned')).toBeTruthy();
+        });
+
+        it('filters to AI recommended when chip pressed', async () => {
+            SupabaseService.getUserProfile.mockResolvedValue({ profile: { impairments: ['arm_weakness'] }, error: null });
+            getRecommendedExercises.mockReturnValue({
+                recommended: [{ id: 'a1', title: 'Shoulder Shrugs', thumbnailColor: '#E0F2FE', recommendationReason: 'For arms' }],
+            });
+            const { getByText, getAllByText } = render(<Exercises />);
+            await waitFor(() => expect(getByText('Recommended for You')).toBeTruthy());
+            fireEvent.press(getByText('AI recommended'));
+            await waitFor(() => expect(getAllByText('Shoulder Shrugs').length).toBeGreaterThan(0));
+        });
+
+        it('filters to Staff assigned when chip pressed', async () => {
+            MedicalStaffService.getAssignedExercises.mockResolvedValue({
+                assignments: [{ exercise_id: 'a1', status: 'assigned', notes: '', assigned_by: { name: 'Dr. Smith' }, due_date: null, id: 'asn1' }],
+                error: null,
+            });
+            const { getByText } = render(<Exercises />);
+            await waitFor(() => expect(getByText('Shoulder Shrugs')).toBeTruthy());
+            fireEvent.press(getByText('Staff assigned'));
+            await waitFor(() => expect(getByText('Shoulder Shrugs')).toBeTruthy());
+        });
+    });
+
+    describe('Visual Guide', () => {
+        it('expands exercise card when pressed', async () => {
+            const { getAllByText } = render(<Exercises />);
+            await waitFor(() => expect(getAllByText('Shoulder Shrugs').length).toBeGreaterThan(0));
+            const cards = getAllByText('Shoulder Shrugs');
+            fireEvent.press(cards[0]);
+            await waitFor(() => {
+                expect(getAllByText('Shoulder Shrugs').length).toBeGreaterThan(0);
+            });
+        });
+    });
+
+    describe('Assigned exercise info', () => {
+        it('loads and displays assigned exercises', async () => {
+            MedicalStaffService.getAssignedExercises.mockResolvedValue({
+                assignments: [{
+                    exercise_id: 'a1',
+                    status: 'assigned',
+                    notes: 'Do 10 reps',
+                    assigned_by: { name: 'Dr. Smith' },
+                    due_date: '2026-03-20',
+                    id: 'asn1',
+                }],
+                error: null,
+            });
+            const { getAllByText } = render(<Exercises />);
+            await waitFor(() => expect(MedicalStaffService.getAssignedExercises).toHaveBeenCalledWith('test-user-id'));
+            await waitFor(() => expect(getAllByText('Shoulder Shrugs').length).toBeGreaterThan(0));
         });
     });
 });

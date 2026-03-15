@@ -195,22 +195,6 @@ describe('MedicalStaffHomeView', () => {
         });
     });
 
-    it('should display Helpful Resources section', async () => {
-        const { getByText } = render(<MedicalStaffHomeView {...defaultProps} />);
-        await waitFor(() => {
-            expect(getByText('Helpful Resources')).toBeTruthy();
-        });
-    });
-
-    it('should display medical staff resource cards', async () => {
-        const { getByText } = render(<MedicalStaffHomeView {...defaultProps} />);
-        await waitFor(() => {
-            expect(getByText('Effective Exercise Assignment')).toBeTruthy();
-            expect(getByText('Tracking Patient Progress')).toBeTruthy();
-            expect(getByText('Collaborating with Care Teams')).toBeTruthy();
-        });
-    });
-
     it('should display About Me row', async () => {
         const { getByText } = render(<MedicalStaffHomeView {...defaultProps} />);
         await waitFor(() => {

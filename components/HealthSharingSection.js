@@ -225,6 +225,7 @@ export function HealthSharingSection({ userId, userRole }) {
                                 onValueChange={(value) => toggleShareAll(relationshipType, user.id, value)}
                                 trackColor={{ false: Colors.border, true: Colors.primaryLight }}
                                 thumbColor={shareAll ? Colors.primary : '#f4f3f4'}
+                                testID={`health-share-all-${user.id}`}
                             />
                         </View>
 

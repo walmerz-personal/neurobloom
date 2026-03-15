@@ -81,6 +81,7 @@ export function CustomSlider({
             style={[styles.container, style]}
             onLayout={(e) => setSliderWidth(e.nativeEvent.layout.width)}
             {...panResponder.panHandlers}
+            testID="custom-slider"
         >
             {/* Background track */}
             <View style={[styles.track, { backgroundColor: maximumTrackTintColor }]}>

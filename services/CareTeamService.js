@@ -195,9 +195,9 @@ export async function getLinkedCaregivers(survivorId) {
             return { caregivers: [], error };
         }
 
-        // Filter to accepted links only and format response
+        // Filter to accepted caregiver links only (exclude medical staff links)
         const caregivers = (data || [])
-            .filter(link => link.status === 'accepted')
+            .filter(link => link.status === 'accepted' && link.caregiver_id != null)
             .map(link => ({
                 linkId: link.id,
                 id: link.caregiver_id,
@@ -211,6 +211,38 @@ export async function getLinkedCaregivers(survivorId) {
         return { caregivers, error: null };
     } catch (error) {
         return { caregivers: [], error };
+    }
+}
+
+/**
+ * Get all medical staff linked to a survivor
+ * @param {string} survivorId - The survivor's user ID
+ * @returns {Promise<{medicalStaff: Array, error: Error|null}>}
+ */
+export async function getLinkedMedicalStaff(survivorId) {
+    try {
+        const { data, error } = await SupabaseService.getCareTeamLinks(survivorId, 'survivor');
+
+        if (error) {
+            return { medicalStaff: [], error };
+        }
+
+        // Filter to accepted medical staff links only (exclude caregiver links)
+        const medicalStaff = (data || [])
+            .filter(link => link.status === 'accepted' && link.medical_staff_id != null)
+            .map(link => ({
+                linkId: link.id,
+                id: link.medical_staff_id,
+                name: link.medical_staff?.name || 'Unknown',
+                email: link.medical_staff?.email,
+                relationship: link.relationship,
+                permissions: link.permissions,
+                linkedAt: link.accepted_at,
+            }));
+
+        return { medicalStaff, error: null };
+    } catch (error) {
+        return { medicalStaff: [], error };
     }
 }
 
@@ -498,6 +530,7 @@ export const CareTeamService = {
     createSurvivorInvite,
     acceptSurvivorInvite,
     getLinkedCaregivers,
+    getLinkedMedicalStaff,
     getLinkedSurvivors,
     getPendingInvitations,
     getSurvivorProgress,

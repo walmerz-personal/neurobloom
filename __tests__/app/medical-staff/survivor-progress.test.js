@@ -61,6 +61,13 @@ jest.mock('../../../components/HealthChart', () => {
     return { HealthChart: () => <View testID="health-chart" /> };
 });
 
+jest.mock('../../../constants/progressTimeRanges', () => ({
+    TIME_RANGE_OPTIONS: ['14d', '1m', '3m', '1y'],
+    DEFAULT_TIME_RANGE: '14d',
+    getDateRangeForSelection: jest.fn(() => ({ startDate: new Date(), endDate: new Date() })),
+    getTimeRangeLabel: jest.fn((key) => key === '14d' ? '14 days' : key),
+}));
+
 const { MedicalStaffService } = require('../../../services/MedicalStaffService');
 const { SupabaseService } = require('../../../services/SupabaseService');
 
@@ -207,5 +214,41 @@ describe('Medical Staff SurvivorProgress', () => {
         const { findByText } = render(<SurvivorProgress />);
         expect(await findByText('Recovery Goals')).toBeTruthy();
         expect(await findByText('Improve arm strength')).toBeTruthy();
+    });
+
+    it('loads health metrics and shows Health Metrics section when data returned', async () => {
+        MedicalStaffService.getSurvivorProgress.mockResolvedValue({
+            progress: {
+                survivor: { name: 'Jane' },
+                recentLogs: [],
+                stats: {},
+            },
+            error: null,
+        });
+        SupabaseService.getHealthMetricsForViewer.mockResolvedValue({
+            data: [{ date: '2025-03-01', steps: 1000 }],
+            error: null,
+        });
+
+        const { findByText, getByTestId } = render(<SurvivorProgress />);
+        await findByText('Exercise Assignments');
+        expect(SupabaseService.getHealthMetricsForViewer).toHaveBeenCalled();
+        expect(getByTestId('health-chart')).toBeTruthy();
+    });
+
+    it('retry button calls loadProgress again', async () => {
+        MedicalStaffService.getSurvivorProgress
+            .mockRejectedValueOnce(new Error('Network error'))
+            .mockResolvedValueOnce({
+                progress: { survivor: { name: 'Jane' }, recentLogs: [], stats: {} },
+                error: null,
+            });
+
+        const { findByText } = render(<SurvivorProgress />);
+        const retry = await findByText('Try Again');
+        fireEvent.press(retry);
+        await waitFor(() => {
+            expect(MedicalStaffService.getSurvivorProgress).toHaveBeenCalledTimes(2);
+        });
     });
 });

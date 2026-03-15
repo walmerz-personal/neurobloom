@@ -6,8 +6,6 @@ import { Colors } from '../constants/Colors';
 import { Quote, User, ChevronRight, Heart } from 'lucide-react-native';
 import { CareTeamService } from '../services/CareTeamService';
 import { SupabaseService } from '../services/SupabaseService';
-import { ResourceCard } from './ResourceCard';
-import { ResourceDetailModal } from './ResourceDetailModal';
 import Svg, { Circle } from 'react-native-svg';
 
 // Tips from Lilly for Caregivers
@@ -18,63 +16,6 @@ const LILLY_TIPS = [
     "Rest is not a reward—it's a requirement. Be kind to yourself. 🌸",
     "Progress isn't always visible. Trust the process and keep showing up. ✨",
     "Your patience and love are making a real difference, even on the hard days. 💙",
-];
-
-// Resource content
-const RESOURCES = [
-    {
-        id: 'burnout',
-        title: 'Caregiver Burnout: Signs to Watch',
-        snippet: "Learn to recognize the signs of burnout before it's too late.",
-        content: `It's easy to get lost in the care of others and forget about yourself. Burnout doesn't happen overnight; it creeps up on you.
-
-Signs to watch for:
-• Physical Fatigue: Feeling tired even after sleeping.
-• Irritability: Shorter patience than usual with your loved one.
-• Withdrawal: Pulling away from friends or activities you used to enjoy.
-• Changes in sleep or appetite.
-• Feeling hopeless or helpless.
-
-Quick Tip: Take 5 minutes every day just for you. Sit with your coffee, breathe, or step outside. You can't pour from an empty cup.
-
-If you're experiencing several of these signs, consider reaching out to a support group or healthcare provider. You matter too.`
-    },
-    {
-        id: 'wins',
-        title: 'Celebrating Small Wins',
-        snippet: 'Why the "small" things are actually the big things.',
-        content: `Recovery is a marathon, not a sprint. The "small" things are actually the big things.
-
-Wins worth celebrating:
-• Did they finish their exercises today? That's a win.
-• Did they smile at a joke? That's a win.
-• Did they eat a full meal? That's a win.
-• Did you manage to get some rest? That's a huge win.
-
-Action: Use the "Kudos" button in the app to celebrate these moments instantly. It boosts their dopamine and yours!
-
-Remember: Every small step forward is still a step forward. Acknowledge the progress, no matter how small it seems.`
-    },
-    {
-        id: 'neuroplasticity',
-        title: 'Understanding Neuroplasticity',
-        snippet: "Your survivor's brain is rewiring itself every day.",
-        content: `Your survivor's brain is amazing. It creates new pathways every time they practice a skill.
-
-Key points:
-• Repetition is key: Doing the same exercise helps the brain "map" the action.
-• Patience is power: Rewiring takes time. Plateaus are normal.
-• Rest is work: The brain solidifies connections during sleep.
-• Encouragement matters: Positive reinforcement strengthens new pathways.
-
-What you can do:
-• Encourage consistent practice, even on hard days.
-• Celebrate attempts, not just successes.
-• Ensure they're getting adequate rest.
-• Be patient with yourself and with them.
-
-Remember: Every effort counts, even on the hard days. The brain is always learning.`
-    },
 ];
 
 // Circular progress component
@@ -120,7 +61,6 @@ export function CaregiverHomeView({ userData, user, onLogout, onNavigateToCaregi
     const [survivors, setSurvivors] = useState([]);
     const [survivorProgress, setSurvivorProgress] = useState({});
     const [loading, setLoading] = useState(true);
-    const [selectedResource, setSelectedResource] = useState(null);
 
     useEffect(() => {
         // Set random Lilly tip
@@ -249,17 +189,6 @@ export function CaregiverHomeView({ userData, user, onLogout, onNavigateToCaregi
                 </TouchableOpacity>
             )}
 
-            {/* Helpful Resources Section */}
-            <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Helpful Resources</Text>
-            {RESOURCES.map((resource) => (
-                <ResourceCard
-                    key={resource.id}
-                    title={resource.title}
-                    snippet={resource.snippet}
-                    onPress={() => setSelectedResource(resource)}
-                />
-            ))}
-
             {/* About Me Row */}
             <TouchableOpacity style={styles.aboutMeRow} onPress={() => router.push('/profile')}>
                 <View style={styles.aboutMeIcon}>
@@ -271,14 +200,6 @@ export function CaregiverHomeView({ userData, user, onLogout, onNavigateToCaregi
                 </View>
                 <ChevronRight size={20} color={Colors.textTertiary} />
             </TouchableOpacity>
-
-            {/* Resource Detail Modal */}
-            <ResourceDetailModal
-                visible={selectedResource !== null}
-                onClose={() => setSelectedResource(null)}
-                title={selectedResource?.title || ''}
-                content={selectedResource?.content || ''}
-            />
         </ScrollView>
     );
 }

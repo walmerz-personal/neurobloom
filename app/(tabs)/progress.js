@@ -34,8 +34,19 @@ const REVERSE_MOOD_MAP = {
 };
 
 export default function Progress() {
-    const { user } = useAuth();
+    const { user, userData } = useAuth();
     const router = useRouter();
+
+    const isCareTeam = userData?.role === 'caregiver' || userData?.role === 'medical_staff';
+    useEffect(() => {
+        if (userData != null && isCareTeam) {
+            router.replace('/(tabs)/home');
+        }
+    }, [userData, isCareTeam, router]);
+
+    if (userData != null && isCareTeam) {
+        return null;
+    }
     const [moodData, setMoodData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [streak, setStreak] = useState({ current: 0, longest: 0, total: 0 });

@@ -1,6 +1,6 @@
 // components/CareTeamSection.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Share } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Share, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '../constants/Colors';
 import { Users, UserPlus, Copy, X, ChevronRight } from 'lucide-react-native';
@@ -15,9 +15,11 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [caregivers, setCaregivers] = useState([]);
+    const [medicalStaff, setMedicalStaff] = useState([]);
     const [survivors, setSurvivors] = useState([]);
     const [pendingInvitations, setPendingInvitations] = useState([]);
     const [creatingInvitation, setCreatingInvitation] = useState(false);
+    const [profileMember, setProfileMember] = useState(null);
 
     useEffect(() => {
         loadCareTeam();
@@ -29,6 +31,9 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
             if (userRole === 'survivor') {
                 const { caregivers: linkedCaregivers, error: cgError } = await CareTeamService.getLinkedCaregivers(userId);
                 if (!cgError) setCaregivers(linkedCaregivers);
+
+                const { medicalStaff: linkedMedicalStaff, error: msError } = await CareTeamService.getLinkedMedicalStaff(userId);
+                if (!msError) setMedicalStaff(linkedMedicalStaff);
 
                 const { invitations, error: invError } = await CareTeamService.getPendingInvitations(userId);
                 if (!invError) setPendingInvitations(invitations);
@@ -111,6 +116,28 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
         );
     };
 
+    const handleRemoveMedicalStaff = (staff) => {
+        Alert.alert(
+            'Remove Medical Staff',
+            `Are you sure you want to remove ${staff.name} from your care team? They will no longer be able to see your progress.`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Remove',
+                    style: 'destructive',
+                    onPress: async () => {
+                        const { error } = await CareTeamService.removeCareTeamLink(userId, staff.linkId);
+                        if (error) {
+                            Alert.alert('Error', 'Could not remove medical staff. Please try again.');
+                        } else {
+                            loadCareTeam();
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
     const handleCancelInvitation = async (invitation) => {
         Alert.alert(
             'Cancel Invitation',
@@ -140,12 +167,14 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
 
     // Survivor view
     if (userRole === 'survivor') {
+        const hasTeamMembers = caregivers.length > 0 || medicalStaff.length > 0 || pendingInvitations.length > 0;
+
         return (
             <View style={styles.section}>
                 <View style={styles.sectionHeader}>
                     <View style={styles.titleRow}>
                         <Users size={20} color={Colors.primary} />
-                        <Text style={styles.sectionTitle}>My Caregivers</Text>
+                        <Text style={styles.sectionTitle}>My Care Team</Text>
                     </View>
                     <TouchableOpacity
                         style={styles.addButton}
@@ -156,37 +185,90 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
                     </TouchableOpacity>
                 </View>
 
-                {caregivers.length === 0 && pendingInvitations.length === 0 ? (
+                {!hasTeamMembers ? (
                     <View style={styles.emptyState}>
                         <Text style={styles.emptyText}>
-                            No caregivers connected, invite them below
+                            No care team members connected yet
                         </Text>
                     </View>
                 ) : (
                     <>
                         {/* Connected Caregivers */}
                         {caregivers.map((caregiver) => (
-                            <View key={caregiver.id} style={styles.memberRow}>
+                            <TouchableOpacity
+                                key={caregiver.id}
+                                style={styles.memberRow}
+                                onPress={() => setProfileMember({
+                                    name: caregiver.name,
+                                    email: caregiver.email,
+                                    roleLabel: caregiver.relationship || 'Caregiver',
+                                })}
+                                activeOpacity={0.7}
+                            >
                                 <View style={styles.memberInfo}>
                                     <View style={styles.avatarCircle}>
                                         <Text style={styles.avatarText}>
                                             {caregiver.name?.charAt(0)?.toUpperCase() || '?'}
                                         </Text>
                                     </View>
-                                    <View>
+                                    <View style={styles.memberTextContainer}>
                                         <Text style={styles.memberName}>{caregiver.name}</Text>
                                         <Text style={styles.memberRole}>
-                                            {caregiver.relationship || 'Caregiver'} • Connected
+                                            {caregiver.relationship || 'caregiver'} • Connected
                                         </Text>
                                     </View>
                                 </View>
                                 <TouchableOpacity
                                     style={styles.removeButton}
-                                    onPress={() => handleRemoveCaregiver(caregiver)}
+                                    onPress={(e) => {
+                                        e?.stopPropagation?.();
+                                        handleRemoveCaregiver(caregiver);
+                                    }}
+                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                    testID={`care-team-remove-caregiver-${caregiver.linkId}`}
                                 >
                                     <X size={18} color={Colors.error} />
                                 </TouchableOpacity>
-                            </View>
+                            </TouchableOpacity>
+                        ))}
+
+                        {/* Connected Medical Staff */}
+                        {medicalStaff.map((staff) => (
+                            <TouchableOpacity
+                                key={staff.id}
+                                style={styles.memberRow}
+                                onPress={() => setProfileMember({
+                                    name: staff.name,
+                                    email: staff.email,
+                                    roleLabel: staff.relationship || 'Medical Staff',
+                                })}
+                                activeOpacity={0.7}
+                            >
+                                <View style={styles.memberInfo}>
+                                    <View style={[styles.avatarCircle, styles.medicalStaffAvatar]}>
+                                        <Text style={styles.avatarText}>
+                                            {staff.name?.charAt(0)?.toUpperCase() || '?'}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.memberTextContainer}>
+                                        <Text style={styles.memberName}>{staff.name}</Text>
+                                        <Text style={styles.memberRole}>
+                                            {staff.relationship || 'professional'} • Connected
+                                        </Text>
+                                    </View>
+                                </View>
+                                <TouchableOpacity
+                                    style={styles.removeButton}
+                                    onPress={(e) => {
+                                        e?.stopPropagation?.();
+                                        handleRemoveMedicalStaff(staff);
+                                    }}
+                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                    testID={`care-team-remove-staff-${staff.linkId}`}
+                                >
+                                    <X size={18} color={Colors.error} />
+                                </TouchableOpacity>
+                            </TouchableOpacity>
                         ))}
 
                         {/* Pending Invitations */}
@@ -205,6 +287,7 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
                                                     await Clipboard.setStringAsync(invitation.code);
                                                     Alert.alert('Copied!', 'Code copied to clipboard');
                                                 }}
+                                                testID="care-team-copy-code"
                                             >
                                                 <Copy size={14} color={Colors.textSecondary} />
                                             </TouchableOpacity>
@@ -214,6 +297,7 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
                                 <TouchableOpacity
                                     style={styles.removeButton}
                                     onPress={() => handleCancelInvitation(invitation)}
+                                    testID={`care-team-cancel-invitation-${invitation.linkId}`}
                                 >
                                     <X size={18} color={Colors.textSecondary} />
                                 </TouchableOpacity>
@@ -221,6 +305,46 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
                         ))}
                     </>
                 )}
+
+                {/* Profile Modal */}
+                <Modal
+                    visible={profileMember !== null}
+                    animationType="fade"
+                    transparent
+                    onRequestClose={() => setProfileMember(null)}
+                >
+                    <TouchableOpacity
+                        style={styles.modalOverlay}
+                        activeOpacity={1}
+                        onPress={() => setProfileMember(null)}
+                    >
+                        <TouchableOpacity
+                            style={styles.profileModalContent}
+                            activeOpacity={1}
+                            onPress={(e) => e.stopPropagation()}
+                        >
+                            <View style={styles.profileModalHeader}>
+                                <Text style={styles.profileModalTitle}>Profile</Text>
+<TouchableOpacity
+                                style={styles.profileModalClose}
+                                onPress={() => setProfileMember(null)}
+                                testID="care-team-profile-close"
+                            >
+                                <X size={24} color={Colors.text} />
+                            </TouchableOpacity>
+                            </View>
+                            {profileMember && (
+                                <View style={styles.profileModalBody}>
+                                    <Text style={styles.profileModalName}>{profileMember.name}</Text>
+                                    <Text style={styles.profileModalRole}>{profileMember.roleLabel}</Text>
+                                    {profileMember.email ? (
+                                        <Text style={styles.profileModalEmail}>{profileMember.email}</Text>
+                                    ) : null}
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                    </TouchableOpacity>
+                </Modal>
             </View>
         );
     }
@@ -424,6 +548,68 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter_600SemiBold',
         fontSize: 14,
         color: Colors.primary,
+    },
+    memberTextContainer: {
+        flex: 1,
+    },
+    medicalStaffAvatar: {
+        backgroundColor: '#6366F1',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24,
+    },
+    profileModalContent: {
+        backgroundColor: 'white',
+        borderRadius: 12,
+        width: '100%',
+        maxWidth: 340,
+        overflow: 'hidden',
+    },
+    profileModalHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.border,
+    },
+    profileModalTitle: {
+        fontFamily: 'Inter_700Bold',
+        fontSize: 18,
+        color: Colors.text,
+    },
+    profileModalClose: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: Colors.surfaceHighlight,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    profileModalBody: {
+        padding: 20,
+    },
+    profileModalName: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 18,
+        color: Colors.text,
+        marginBottom: 4,
+    },
+    profileModalRole: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 14,
+        color: Colors.textSecondary,
+        marginBottom: 8,
+    },
+    profileModalEmail: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 14,
+        color: Colors.text,
     },
 });
 

@@ -96,4 +96,5 @@ describe('CustomSlider', () => {
         });
         expect(toJSON()).toBeTruthy();
     });
+
 });

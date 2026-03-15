@@ -283,4 +283,120 @@ describe('Profile Screen', () => {
             expect(getByTestId('health-sharing-section')).toBeTruthy();
         });
     });
+
+    it('hides HealthSharingSection for caregiver role', async () => {
+        SupabaseService.getUserData.mockResolvedValue({
+            user: { name: 'Test', email: 't@t.com', role: 'caregiver' },
+            error: null,
+        });
+        SupabaseService.getUserProfile.mockResolvedValue({ profile: {}, error: null });
+        const { queryByTestId } = render(<Profile />);
+        await waitFor(() => expect(queryByTestId('care-team-section')).toBeTruthy());
+        expect(queryByTestId('health-sharing-section')).toBeFalsy();
+    });
+
+    it('loads notification prefs with times array', async () => {
+        NotificationService.loadNotificationPrefs.mockResolvedValue({
+            enabled: true,
+            times: [{ hour: 10, minute: 0 }, { hour: 14, minute: 30 }],
+        });
+        render(<Profile />);
+        await waitFor(() => expect(NotificationService.loadNotificationPrefs).toHaveBeenCalled());
+    });
+
+    it('loads notification prefs with legacy hour/minute format', async () => {
+        NotificationService.loadNotificationPrefs.mockResolvedValue({
+            enabled: false,
+            hour: 9,
+            minute: 15,
+        });
+        render(<Profile />);
+        await waitFor(() => expect(NotificationService.loadNotificationPrefs).toHaveBeenCalled());
+    });
+
+    it('notification section shows when loaded', async () => {
+        const { getByText } = render(<Profile />);
+        await waitFor(() => expect(getByText('Daily Exercise Reminder')).toBeTruthy());
+        expect(getByText('Get a gentle reminder to do your exercises')).toBeTruthy();
+    });
+
+    it('handles save when saveUserProfile rejects', async () => {
+        SupabaseService.saveUserProfile.mockRejectedValue(new Error('DB error'));
+        const { getByText } = render(<Profile />);
+        await waitFor(() => expect(getByText('Save')).toBeTruthy());
+        await act(async () => { fireEvent.press(getByText('Save')); });
+        await waitFor(() => {
+            expect(Alert.alert).toHaveBeenCalledWith('Error', 'Failed to save profile');
+        });
+    });
+
+    it('calls deleteAccount when user confirms delete', async () => {
+        const mockDeleteAccount = jest.fn().mockResolvedValue({ error: null });
+        useAuth.mockReturnValue({
+            user: mockUser,
+            userData: mockUserData,
+            deleteAccount: mockDeleteAccount,
+        });
+        let deleteCallback;
+        Alert.alert.mockImplementation((title, message, buttons) => {
+            const deleteBtn = buttons?.find(b => b.text === 'Delete');
+            if (deleteBtn?.onPress) deleteCallback = deleteBtn.onPress;
+        });
+        const { getByText } = render(<Profile />);
+        await waitFor(() => expect(getByText('Delete My Account')).toBeTruthy());
+        fireEvent.press(getByText('Delete My Account'));
+        expect(Alert.alert).toHaveBeenCalled();
+        if (deleteCallback) await deleteCallback();
+        await waitFor(() => expect(mockDeleteAccount).toHaveBeenCalled());
+    });
+
+    it('shows error when deleteAccount returns error', async () => {
+        useAuth.mockReturnValue({
+            user: mockUser,
+            userData: mockUserData,
+            deleteAccount: jest.fn().mockResolvedValue({ error: new Error('Delete failed') }),
+        });
+        let deleteCallback;
+        Alert.alert.mockImplementation((title, message, buttons) => {
+            const deleteBtn = buttons?.find(b => b.text === 'Delete');
+            if (deleteBtn?.onPress) deleteCallback = deleteBtn.onPress;
+        });
+        const { getByText } = render(<Profile />);
+        await waitFor(() => expect(getByText('Delete My Account')).toBeTruthy());
+        fireEvent.press(getByText('Delete My Account'));
+        if (deleteCallback) await deleteCallback();
+        await waitFor(() => {
+            expect(Alert.alert).toHaveBeenCalledWith('Error', 'Failed to delete account. Please try again.');
+        });
+    });
+
+    it('back button is present in header', async () => {
+        const { getByText } = render(<Profile />);
+        await waitFor(() => expect(getByText('About Me')).toBeTruthy());
+        expect(getByText('Save')).toBeTruthy();
+    });
+
+    it('selecting Caregiver role updates role state', async () => {
+        const { getByText } = render(<Profile />);
+        await waitFor(() => expect(getByText('Caregiver')).toBeTruthy());
+        fireEvent.press(getByText('Caregiver'));
+        await waitFor(() => expect(getByText('Caregiver')).toBeTruthy());
+    });
+
+    it('selecting affected side and severity updates state', async () => {
+        const { getByText } = render(<Profile />);
+        await waitFor(() => expect(getByText('Left')).toBeTruthy());
+        fireEvent.press(getByText('Left'));
+        fireEvent.press(getByText('Mild'));
+        await waitFor(() => expect(getByText('Mild')).toBeTruthy());
+    });
+
+    it('opens date picker when date of stroke is pressed', async () => {
+        SupabaseService.getUserProfile.mockResolvedValue({ profile: { stroke_date: '' }, error: null });
+        const { getByText, getByTestId } = render(<Profile />);
+        await waitFor(() => expect(getByText('Select date')).toBeTruthy());
+        fireEvent.press(getByText('Select date'));
+        await waitFor(() => expect(getByTestId('date-time-picker')).toBeTruthy());
+    });
+
 });

@@ -87,7 +87,7 @@ export function ExerciseVisualGuide({ visible, exerciseId, onClose }) {
                         <Text style={styles.headerTitle}>{guide.title}</Text>
                         <Text style={styles.headerSubtitle}>Visual Guide</Text>
                     </View>
-                    <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                    <TouchableOpacity style={styles.closeButton} onPress={onClose} testID="visual-guide-close">
                         <X size={24} color={Colors.text} />
                     </TouchableOpacity>
                 </View>
@@ -109,6 +109,7 @@ export function ExerciseVisualGuide({ visible, exerciseId, onClose }) {
                             key={i}
                             onPress={() => animateTransition(() => setCurrentStep(i))}
                             style={[styles.dot, i === currentStep && styles.dotActive]}
+                            testID={`visual-guide-dot-${i}`}
                         />
                     ))}
                 </View>
@@ -164,6 +165,7 @@ export function ExerciseVisualGuide({ visible, exerciseId, onClose }) {
                         style={[styles.navButton, isLast && styles.navButtonDisabled]}
                         onPress={goNext}
                         disabled={isLast}
+                        testID="visual-guide-next"
                     >
                         <ChevronRight size={24} color={isLast ? Colors.textTertiary : Colors.text} />
                     </TouchableOpacity>

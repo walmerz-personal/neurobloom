@@ -4,6 +4,11 @@ import { render, fireEvent } from '@testing-library/react-native';
 import { TabBar } from '../../components/TabBar';
 import { Colors } from '../../constants/Colors';
 
+const mockUseAuth = jest.fn(() => ({ userData: { role: 'survivor' } }));
+jest.mock('../../contexts/AuthContext', () => ({
+    useAuth: (...args) => mockUseAuth(...args),
+}));
+
 describe('TabBar', () => {
     const mockNavigation = {
         navigate: jest.fn(),
@@ -416,8 +421,65 @@ describe('TabBar', () => {
             const tabBar = getByTestId('tab-bar');
             const style = getStyle(tabBar);
 
-            expect(style.borderTopWidth).toBe(1);
-            expect(style.borderTopColor).toBe(Colors.border);
+        expect(style.borderTopWidth).toBe(1);
+        expect(style.borderTopColor).toBe(Colors.border);
+        });
+    });
+
+    describe('Role-based tab visibility', () => {
+        const stateWithResources = (currentIndex = 0) => ({
+            index: currentIndex,
+            routes: [
+                { key: 'home', name: 'home' },
+                { key: 'exercises', name: 'exercises' },
+                { key: 'lilly', name: 'lilly' },
+                { key: 'progress', name: 'progress' },
+                { key: 'resources', name: 'resources' },
+            ],
+        });
+
+        const descriptorsWithResources = () => ({
+            home: { options: { title: 'Home' } },
+            exercises: { options: { title: 'Exercises' } },
+            lilly: { options: { title: 'Lilly' } },
+            progress: { options: { title: 'Progress' } },
+            resources: { options: { title: 'Resources' } },
+        });
+
+        it('shows Resources and hides Progress when role is caregiver', () => {
+            mockUseAuth.mockImplementation(() => ({ userData: { role: 'caregiver' } }));
+            const state = stateWithResources(4);
+            const descriptors = descriptorsWithResources();
+
+            const { getByText, queryByText } = render(
+                <TabBar
+                    state={state}
+                    descriptors={descriptors}
+                    navigation={mockNavigation}
+                />
+            );
+
+            expect(getByText('Resources')).toBeTruthy();
+            expect(queryByText('Progress')).toBeNull();
+            mockUseAuth.mockImplementation(() => ({ userData: { role: 'survivor' } }));
+        });
+
+        it('shows Resources and hides Progress when role is medical_staff', () => {
+            mockUseAuth.mockImplementation(() => ({ userData: { role: 'medical_staff' } }));
+            const state = stateWithResources(4);
+            const descriptors = descriptorsWithResources();
+
+            const { getByText, queryByText } = render(
+                <TabBar
+                    state={state}
+                    descriptors={descriptors}
+                    navigation={mockNavigation}
+                />
+            );
+
+            expect(getByText('Resources')).toBeTruthy();
+            expect(queryByText('Progress')).toBeNull();
+            mockUseAuth.mockImplementation(() => ({ userData: { role: 'survivor' } }));
         });
     });
 });

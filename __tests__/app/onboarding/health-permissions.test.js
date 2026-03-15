@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { Platform, Alert } from 'react-native';
 import HealthPermissions from '../../../app/onboarding/health-permissions';
 import * as HealthKitService from '../../../services/HealthKitService';
 import * as HealthMetricsService from '../../../services/HealthMetricsService';
@@ -116,5 +117,76 @@ describe('Health Permissions Screen', () => {
                 expect.any(Date)
             );
         });
+    });
+
+    it('shows alert when HealthKit is not available', async () => {
+        HealthKitService.isHealthKitAvailable.mockReturnValue(false);
+        jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        const { getAllByText } = render(<HealthPermissions />);
+        const buttons = getAllByText('Connect Apple Health');
+        fireEvent.press(buttons[buttons.length - 1]);
+        await waitFor(() => {
+            expect(Alert.alert).toHaveBeenCalledWith(
+                'HealthKit Not Available',
+                expect.stringContaining('HealthKit is not available'),
+                expect.any(Array)
+            );
+        });
+        Alert.alert.mockRestore();
+    });
+
+    it('shows alert when checkHealthKitDataAvailable returns false', async () => {
+        HealthKitService.checkHealthKitDataAvailable.mockResolvedValue(false);
+        jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        const { getAllByText } = render(<HealthPermissions />);
+        const buttons = getAllByText('Connect Apple Health');
+        fireEvent.press(buttons[buttons.length - 1]);
+        await waitFor(() => {
+            expect(Alert.alert).toHaveBeenCalledWith(
+                'HealthKit Not Available',
+                expect.stringContaining('HealthKit is not available'),
+                expect.any(Array)
+            );
+        });
+        Alert.alert.mockRestore();
+    });
+
+    it('shows alert when requestHealthKitPermissions returns error', async () => {
+        HealthKitService.requestHealthKitPermissions.mockResolvedValue({
+            granted: false,
+            error: new Error('User denied'),
+        });
+        jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        const { getAllByText } = render(<HealthPermissions />);
+        const buttons = getAllByText('Connect Apple Health');
+        fireEvent.press(buttons[buttons.length - 1]);
+        await waitFor(() => {
+            expect(Alert.alert).toHaveBeenCalledWith(
+                'Permission Error',
+                'User denied',
+                expect.any(Array)
+            );
+        });
+        Alert.alert.mockRestore();
+    });
+
+    it('shows alert when sync fails after permissions granted', async () => {
+        HealthMetricsService.syncAndSaveHealthData.mockResolvedValue({
+            success: false,
+            synced: 0,
+            error: new Error('Sync failed'),
+        });
+        jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        const { getAllByText } = render(<HealthPermissions />);
+        const buttons = getAllByText('Connect Apple Health');
+        fireEvent.press(buttons[buttons.length - 1]);
+        await waitFor(() => {
+            expect(Alert.alert).toHaveBeenCalledWith(
+                'Permissions Granted',
+                expect.stringContaining('Progress tab'),
+                expect.any(Array)
+            );
+        });
+        Alert.alert.mockRestore();
     });
 });

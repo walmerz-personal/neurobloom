@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 import Reminders from '../../../app/onboarding/reminders';
 import { NotificationService } from '../../../services/NotificationService';
 
@@ -117,5 +118,40 @@ describe('Reminders Screen', () => {
         const { getByText } = render(<Reminders />);
         fireEvent.press(getByText('arrow-back'));
         expect(mockBack).toHaveBeenCalled();
+    });
+
+    it('adds a third reminder when Add Another Reminder is pressed', () => {
+        const { getByText, getAllByLabelText } = render(<Reminders />);
+        fireEvent.press(getByText('Add Another Reminder'));
+        expect(getAllByLabelText('Remove reminder').length).toBe(3);
+    });
+
+    it('hides Add Another Reminder when 3 reminders exist', () => {
+        const { getByText, queryByText } = render(<Reminders />);
+        fireEvent.press(getByText('Add Another Reminder'));
+        expect(queryByText('Add Another Reminder')).toBeNull();
+    });
+
+    it('removes a reminder when Remove is pressed', () => {
+        const { getAllByLabelText, queryAllByLabelText } = render(<Reminders />);
+        expect(getAllByLabelText('Remove reminder').length).toBe(2);
+        fireEvent.press(getAllByLabelText('Remove reminder')[0]);
+        expect(queryAllByLabelText('Remove reminder').length).toBe(0);
+    });
+
+    it('shows alert and does not navigate when requestPermissions returns false', async () => {
+        NotificationService.requestPermissions.mockResolvedValue(false);
+        jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        const { getByText } = render(<Reminders />);
+        fireEvent.press(getByText('Continue'));
+        await waitFor(() => {
+            expect(Alert.alert).toHaveBeenCalledWith(
+                'Notifications Disabled',
+                'To receive daily reminders, please enable notifications in your device Settings.',
+                expect.any(Array)
+            );
+        });
+        expect(mockReplace).not.toHaveBeenCalled();
+        Alert.alert.mockRestore();
     });
 });

@@ -157,6 +157,31 @@ describe('CareTeamService', () => {
         });
     });
 
+    describe('getLinkedMedicalStaff', () => {
+        it('should return only accepted medical staff', async () => {
+            SupabaseService.getCareTeamLinks.mockResolvedValue({
+                data: [
+                    { id: 'link-1', status: 'accepted', medical_staff_id: 'ms1', medical_staff: { name: 'Dr. Smith', email: 'dr@example.com' }, relationship: 'professional' },
+                    { id: 'link-2', status: 'pending', medical_staff_id: null },
+                ],
+                error: null,
+            });
+
+            const { medicalStaff, error } = await CareTeamService.getLinkedMedicalStaff('survivor-123');
+
+            expect(medicalStaff).toHaveLength(1);
+            expect(medicalStaff[0].name).toBe('Dr. Smith');
+            expect(error).toBeNull();
+        });
+
+        it('should return empty array on error', async () => {
+            SupabaseService.getCareTeamLinks.mockResolvedValue({ data: null, error: new Error('DB error') });
+            const { medicalStaff, error } = await CareTeamService.getLinkedMedicalStaff('survivor-123');
+            expect(medicalStaff).toEqual([]);
+            expect(error).toBeTruthy();
+        });
+    });
+
     describe('getLinkedSurvivors', () => {
         it('should return only accepted survivors for caregiver', async () => {
             SupabaseService.getCareTeamLinks.mockResolvedValue({

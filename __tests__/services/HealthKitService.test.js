@@ -232,9 +232,11 @@ describe('HealthKitService', () => {
         });
 
         it('should return false when authorization status is not granted', async () => {
-            AsyncStorage.getItem.mockResolvedValueOnce(null);
-            mockHealthKit.isHealthDataAvailable.mockResolvedValueOnce(true);
-            mockHealthKit.authorizationStatusFor.mockResolvedValueOnce(0); // notDetermined
+            AsyncStorage.getItem.mockResolvedValue(null);
+            mockHealthKit.isHealthDataAvailable.mockResolvedValue(true);
+            mockHealthKit.authorizationStatusFor.mockResolvedValue(0); // notDetermined
+            // verifyPermissionsByQuery is used as fallback; make query reject so result is not granted
+            mockHealthKit.queryQuantitySamples.mockRejectedValue(new Error('authorization denied'));
 
             const result = await checkHealthKitPermissions(true);
 
@@ -242,10 +244,14 @@ describe('HealthKitService', () => {
         });
 
         it('should handle timeout gracefully', async () => {
-            AsyncStorage.getItem.mockResolvedValueOnce(null);
-            mockHealthKit.isHealthDataAvailable.mockResolvedValueOnce(true);
+            AsyncStorage.getItem.mockResolvedValue(null);
+            mockHealthKit.isHealthDataAvailable.mockResolvedValue(true);
             mockHealthKit.authorizationStatusFor.mockImplementation(
-                () => new Promise(() => {}) // Never resolves
+                () => new Promise(() => {}) // Never resolves - triggers timeout path
+            );
+            // verifyPermissionsByQuery fallback also fails (timeout) so final result is not granted
+            mockHealthKit.queryQuantitySamples.mockImplementation(
+                () => new Promise(() => {}) // Never resolves - query times out
             );
 
             const result = await checkHealthKitPermissions(true);

@@ -1,6 +1,7 @@
 // __tests__/app/(tabs)/progress.test.js
 import React from 'react';
-import { render, waitFor, act } from '@testing-library/react-native';
+import { render, waitFor, act, fireEvent } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 import Progress from '../../../app/(tabs)/progress';
 import { useAuth } from '../../../contexts/AuthContext';
 import { SupabaseService } from '../../../services/SupabaseService';
@@ -11,9 +12,15 @@ import { validateChartPoint, safeFormatDate, validateChartData, validateMoodLog 
 jest.mock('../../../contexts/AuthContext');
 jest.mock('../../../services/SupabaseService');
 jest.mock('../../../services/HealthKitService');
+jest.mock('../../../services/HealthMetricsService', () => ({
+    syncAndSaveHealthData: jest.fn(),
+}));
+const mockReplace = jest.fn();
+const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
     useRouter: () => ({
-        push: jest.fn(),
+        push: mockPush,
+        replace: mockReplace,
     }),
 }));
 
@@ -25,10 +32,15 @@ describe('Progress Tab', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        useAuth.mockReturnValue({ user: mockUser });
+        useAuth.mockReturnValue({ user: mockUser, userData: { role: 'survivor' } });
         SupabaseService.getDailyLogs.mockResolvedValue({ logs: [], error: null });
         SupabaseService.getHealthMetrics.mockResolvedValue({ data: [], error: null });
         HealthKitService.checkHealthKitPermissions.mockResolvedValue({ granted: false, error: null });
+        HealthKitService.hasHealthPermissionsBeenGranted = jest.fn().mockResolvedValue(false);
+        HealthKitService.detectPermissionRevocation = jest.fn().mockResolvedValue({ revoked: false });
+        HealthKitService.isHealthKitAvailable = jest.fn().mockReturnValue(false);
+        HealthKitService.testHealthKitCompatibility = jest.fn().mockResolvedValue(true);
+        Platform.OS = 'ios';
     });
 
     describe('Null/Undefined Handling', () => {
@@ -245,6 +257,120 @@ describe('Progress Tab', () => {
             await waitFor(() => {
                 expect(queryByText('Your Progress')).toBeTruthy();
             });
+        });
+    });
+
+    describe('Caregiver/Medical staff redirect', () => {
+        it('redirects to home when userData role is caregiver', async () => {
+            useAuth.mockReturnValue({
+                user: mockUser,
+                userData: { role: 'caregiver' },
+            });
+            const { queryByText } = render(<Progress />);
+            await waitFor(() => {
+                expect(mockReplace).toHaveBeenCalledWith('/(tabs)/home');
+            });
+        });
+
+        it('redirects to home when userData role is medical_staff', async () => {
+            useAuth.mockReturnValue({
+                user: mockUser,
+                userData: { role: 'medical_staff' },
+            });
+            const { queryByText } = render(<Progress />);
+            await waitFor(() => {
+                expect(mockReplace).toHaveBeenCalledWith('/(tabs)/home');
+            });
+        });
+
+        it('returns null when caregiver so no Progress UI flashes', () => {
+            useAuth.mockReturnValue({
+                user: mockUser,
+                userData: { role: 'caregiver' },
+            });
+            const { queryByText } = render(<Progress />);
+            expect(queryByText('Your Progress')).toBeFalsy();
+        });
+    });
+
+    describe('Time range selector', () => {
+        it('shows time range label and opens picker on press', async () => {
+            const { getByText } = render(<Progress />);
+            await waitFor(() => {
+                expect(getByText('Your Progress')).toBeTruthy();
+            });
+            const rangeButton = getByText('14 Days');
+            expect(rangeButton).toBeTruthy();
+            fireEvent.press(rangeButton);
+            await waitFor(() => {
+                expect(getByText('Select Time Range')).toBeTruthy();
+            });
+        });
+
+        it('calls fetchData and fetchHealthData when time range changes', async () => {
+            const { getByText } = render(<Progress />);
+            await waitFor(() => expect(getByText('Your Progress')).toBeTruthy());
+            fireEvent.press(getByText('14 Days'));
+            await waitFor(() => expect(getByText('Select Time Range')).toBeTruthy());
+            fireEvent.press(getByText('1 Month'));
+            await waitFor(() => {
+                expect(SupabaseService.getDailyLogs).toHaveBeenCalled();
+                expect(SupabaseService.getHealthMetrics).toHaveBeenCalled();
+            });
+        });
+    });
+
+    describe('Health data and charts', () => {
+        it('shows health metrics when getHealthMetrics returns data and permissions granted', async () => {
+            HealthKitService.hasHealthPermissionsBeenGranted.mockResolvedValue(true);
+            const metrics = [
+                {
+                    metric_date: '2024-01-15',
+                    walking_speed_avg: 1.2,
+                    step_count: 5000,
+                    distance_walked: 3.5,
+                    walking_step_length_avg: 75,
+                    walking_steadiness: 0.8,
+                    walking_asymmetry_percentage: 5,
+                },
+            ];
+            SupabaseService.getHealthMetrics.mockResolvedValue({ data: metrics, error: null });
+            const { getByText, queryAllByText } = render(<Progress />);
+            await waitFor(() => expect(getByText('Your Progress')).toBeTruthy());
+            await waitFor(() => {
+                const hasMobility = queryAllByText('Mobility Metrics').length > 0;
+                const hasWalking = queryAllByText('Walking Speed Trend').length > 0;
+                const hasDaily = queryAllByText('Daily Steps').length > 0;
+                expect(hasMobility || hasWalking || hasDaily).toBe(true);
+            }, { timeout: 3000 });
+        });
+
+        it('shows This Weeks Goal and streak when logs have exercises', async () => {
+            const logs = [
+                { log_date: new Date().toISOString().slice(0, 10), mood: '😄', exercises_completed: ['a1'] },
+            ];
+            SupabaseService.getDailyLogs.mockResolvedValue({ logs, error: null });
+            const { getByText } = render(<Progress />);
+            await waitFor(() => expect(getByText("This Week's Goal")).toBeTruthy());
+            expect(getByText('Current streak')).toBeTruthy();
+            expect(getByText('Longest streak')).toBeTruthy();
+        });
+    });
+
+    describe('Connect Health and Sync', () => {
+        it('shows Connect Apple Health when permissions not granted on iOS', async () => {
+            HealthKitService.isHealthKitAvailable.mockReturnValue(true);
+            const { getByText, getAllByText } = render(<Progress />);
+            await waitFor(() => expect(getByText('Your Progress')).toBeTruthy());
+            await waitFor(() => {
+                expect(getAllByText('Connect Apple Health').length).toBeGreaterThan(0);
+            }, { timeout: 2000 });
+        });
+
+        it('renders Progress without crashing when user is null', async () => {
+            useAuth.mockReturnValue({ user: null, userData: null });
+            const { getByText } = render(<Progress />);
+            await waitFor(() => expect(getByText('Your Progress')).toBeTruthy());
         });
     });
 });
