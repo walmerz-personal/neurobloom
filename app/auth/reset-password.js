@@ -19,14 +19,8 @@ export default function ResetPassword() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [sessionReady, setSessionReady] = useState(false);
     const confirmPasswordInputRef = useRef(null);
-    const url = Linking.useURL();
-
-    useEffect(() => {
-        if (url) {
-            handleDeepLink(url);
-        }
-    }, [url]);
 
     const handleDeepLink = async (deepLink) => {
         try {
@@ -39,8 +33,17 @@ export default function ResetPassword() {
                     queryParams[key] = value;
                 });
                 if (queryParams.code) {
-                    const { error } = await SupabaseService.exchangeCodeForSession(queryParams.code);
-                    if (!error) return;
+                    let code = queryParams.code;
+                    try {
+                        code = decodeURIComponent(code);
+                    } catch (_) {
+                        // use raw value if decoding fails
+                    }
+                    const { error } = await SupabaseService.exchangeCodeForSession(code);
+                    if (!error) {
+                        setSessionReady(true);
+                        return;
+                    }
                 }
             }
 
@@ -55,12 +58,37 @@ export default function ResetPassword() {
             });
 
             if (params.access_token && params.refresh_token) {
-                await SupabaseService.setSession(params.access_token, params.refresh_token);
+                const { error } = await SupabaseService.setSession(params.access_token, params.refresh_token);
+                if (!error) {
+                    setSessionReady(true);
+                }
             }
         } catch (error) {
             console.error('Error handling deep link:', error);
         }
     };
+
+    useEffect(() => {
+        // Expo native URL (sync) — often available on iOS when getInitialURL() is null on cold start
+        const syncUrl = Linking.getLinkingURL?.() ?? null;
+        if (syncUrl) {
+            handleDeepLink(syncUrl);
+        }
+
+        Linking.getInitialURL().then((initialUrl) => {
+            if (initialUrl) {
+                handleDeepLink(initialUrl);
+            }
+        });
+
+        const subscription = Linking.addEventListener('url', ({ url }) => {
+            handleDeepLink(url);
+        });
+
+        return () => {
+            subscription.remove();
+        };
+    }, []);
 
     const handleUpdatePassword = async () => {
         if (!password || !confirmPassword) {
@@ -173,7 +201,7 @@ export default function ResetPassword() {
                         <PrimaryButton
                             title={loading ? "Updating..." : "Update Password"}
                             onPress={handleUpdatePassword}
-                            disabled={loading}
+                            disabled={loading || !sessionReady}
                         />
                     </View>
                 </ScrollView>

@@ -10,7 +10,11 @@ import { sendMessage } from '../../services/LillyService';
 import { transcribeAudio } from '../../services/TranscriptionService';
 import { SupabaseService } from '../../services/SupabaseService';
 import { useAuth } from '../../contexts/AuthContext';
+import { getLillyGreeting } from '../../constants/lillyGreetings';
+import { EXERCISES_DATA } from './exercises';
 import { Send, Mic, Flower2, User } from 'lucide-react-native';
+
+const builtInIdToTitle = Object.fromEntries((EXERCISES_DATA || []).map((e) => [e.id, e.title]));
 
 export default function Lilly() {
     const [messages, setMessages] = useState([]);
@@ -18,10 +22,11 @@ export default function Lilly() {
     const [isTyping, setIsTyping] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [userProfile, setUserProfile] = useState(null);
+    const [lillyContext, setLillyContext] = useState(null);
     const [permissionGranted, setPermissionGranted] = useState(false);
     const scrollViewRef = useRef(null);
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, userData } = useAuth();
 
     // Use the new expo-audio hook for recording
     const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -39,21 +44,59 @@ export default function Lilly() {
         loadProfile();
     }, [user]);
 
+    // Load rich context for Lilly (today's log, recent logs, assigned exercises with readable names)
+    useEffect(() => {
+        const loadLillyContext = async () => {
+            if (!user?.id) return;
+            try {
+                const [todayResult, logsResult, assignedResult, customResult] = await Promise.all([
+                    SupabaseService.getTodayLog(user.id),
+                    SupabaseService.getDailyLogs(user.id, 14),
+                    SupabaseService.getAssignedExercises(user.id, 'assigned'),
+                    SupabaseService.getCustomExercises(user.id),
+                ]);
+                const customList = customResult?.data ?? [];
+                const customIdToTitle = Object.fromEntries(customList.map((e) => [e.id, e.title || 'Custom exercise']));
+                const rawAssigned = assignedResult.error ? [] : (assignedResult.data ?? []);
+                const assignedExercises = rawAssigned.map((a) => ({
+                    ...a,
+                    exercise_name: a.exercise_type === 'built_in'
+                        ? (builtInIdToTitle[a.exercise_id] || a.exercise_id)
+                        : (customIdToTitle[a.exercise_id] || 'Custom exercise'),
+                }));
+                setLillyContext({
+                    userName: userData?.name ?? null,
+                    role: userData?.role ?? 'survivor',
+                    todayLog: todayResult.error ? null : todayResult.log,
+                    recentLogs: logsResult.error ? [] : (logsResult.logs ?? []),
+                    assignedExercises,
+                });
+            } catch (e) {
+                setLillyContext(null);
+            }
+        };
+        loadLillyContext();
+    }, [user?.id, userData?.name, userData?.role]);
+
     // Check if this is the user's first interaction with Lilly
     useEffect(() => {
         const checkFirstTimeUser = async () => {
             if (!user?.id) return;
 
+            const role = userData?.role ?? 'survivor';
+            const firstName = (userData?.name && typeof userData.name === 'string') ? userData.name.trim().split(/\s+/)[0] : null;
+
             try {
                 const storageKey = `LILLY_INTRO_SHOWN_${user.id}`;
                 const hasSeenIntro = await AsyncStorage.getItem(storageKey);
+                const isFirstTime = !hasSeenIntro;
 
                 if (!hasSeenIntro) {
                     // First-time user - show full introduction
                     const introMessage = {
                         id: 1,
                         isLilly: true,
-                        text: `Hi, I'm Lilly! 👋\n\nI'm here to help you with stroke rehabilitation. I can:\n• Answer questions about recovery\n• Guide you through exercises\n• Track your progress\n• Provide emotional support\n\nIMPORTANT: I'm an AI assistant, not a medical professional. I cannot provide medical advice, diagnose conditions, or replace consultations with your healthcare team.\n\nFor medical emergencies, please call 911 or contact your doctor immediately. Always consult your healthcare providers about treatment decisions.\n\nHow are you feeling today?`
+                        text: getLillyGreeting(role, true, firstName),
                     };
                     setMessages([introMessage]);
 
@@ -65,7 +108,7 @@ export default function Lilly() {
                     const simpleGreeting = {
                         id: 1,
                         isLilly: true,
-                        text: "Hi! I'm Lilly. How are you feeling today?"
+                        text: getLillyGreeting(role, false, firstName),
                     };
                     setMessages([simpleGreeting]);
                     console.log('✅ Returning user - simple greeting shown');
@@ -76,14 +119,14 @@ export default function Lilly() {
                 const fallbackMessage = {
                     id: 1,
                     isLilly: true,
-                    text: "Hi! I'm Lilly. How are you feeling today?"
+                    text: getLillyGreeting(role, false, firstName),
                 };
                 setMessages([fallbackMessage]);
             }
         };
 
         checkFirstTimeUser();
-    }, [user]);
+    }, [user, userData]);
 
     // Request permissions on mount
     useEffect(() => {
@@ -189,7 +232,7 @@ export default function Lilly() {
                 content: m.text
             }));
 
-            const response = await sendMessage(userMsgText, history, userProfile);
+            const response = await sendMessage(userMsgText, history, userProfile, lillyContext);
 
             // LillyService always returns a valid response object with helpful fallback messages
             // It never throws - it handles all errors internally and returns helpful messages

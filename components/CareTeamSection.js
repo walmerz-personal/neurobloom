@@ -201,7 +201,7 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
                                 onPress={() => setProfileMember({
                                     name: caregiver.name,
                                     email: caregiver.email,
-                                    roleLabel: caregiver.relationship || 'Caregiver',
+                                    roleLabel: 'Caregiver',
                                 })}
                                 activeOpacity={0.7}
                             >
@@ -214,7 +214,7 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
                                     <View style={styles.memberTextContainer}>
                                         <Text style={styles.memberName}>{caregiver.name}</Text>
                                         <Text style={styles.memberRole}>
-                                            {caregiver.relationship || 'caregiver'} • Connected
+                                            Caregiver • Connected
                                         </Text>
                                     </View>
                                 </View>
@@ -240,7 +240,7 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
                                 onPress={() => setProfileMember({
                                     name: staff.name,
                                     email: staff.email,
-                                    roleLabel: staff.relationship || 'Medical Staff',
+                                    roleLabel: 'Medical Staff',
                                 })}
                                 activeOpacity={0.7}
                             >
@@ -253,7 +253,7 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
                                     <View style={styles.memberTextContainer}>
                                         <Text style={styles.memberName}>{staff.name}</Text>
                                         <Text style={styles.memberRole}>
-                                            {staff.relationship || 'professional'} • Connected
+                                            Medical Staff • Connected
                                         </Text>
                                     </View>
                                 </View>

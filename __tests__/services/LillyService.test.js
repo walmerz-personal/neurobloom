@@ -62,6 +62,7 @@ describe('LillyService', () => {
                 message: 'Hello',
                 history: [],
                 userProfile: null,
+                context: null,
             });
         });
 

@@ -131,7 +131,7 @@ describe('CareTeamSection', () => {
                 error: null,
             });
 
-            const { getByText } = render(
+            const { getByText, getAllByText } = render(
                 <CareTeamSection {...defaultSurvivorProps} />
             );
 
@@ -140,8 +140,7 @@ describe('CareTeamSection', () => {
                 expect(getByText('Bob Jones')).toBeTruthy();
             });
 
-            expect(getByText(/Spouse/)).toBeTruthy();
-            expect(getByText(/Friend/)).toBeTruthy();
+            expect(getAllByText(/Caregiver/).length).toBe(2);
         });
 
         it('renders pending invitations', async () => {

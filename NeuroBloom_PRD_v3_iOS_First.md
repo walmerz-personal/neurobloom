@@ -2212,6 +2212,7 @@ tasks (
 ### Phase 4: Beyond (Year 2+)
 
 **Future Possibilities:**
+- **Care provider search (Zocdoc-like):** Let survivors search for and contact care providers (PTs, OTs, SLPs, etc.) by insurance, location, and need. Entry point could be a "Find care providers" card on Home or a dedicated tab; implementation options include link-out to trusted finder sites (APTA, ASHA, AOTA), in-app directory (own DB or curated list), or third-party API (e.g. Zocdoc API, NPI Registry for location + specialty, or payer/aggregator APIs for insurance). Profile could optionally store zip and insurance to prefill search.
 - International expansion
 - Other neurological conditions (TBI, MS, Parkinson's)
 - Research partnerships (clinical studies using our data)

@@ -13,6 +13,9 @@ jest.mock('../../../contexts/AuthContext');
 jest.mock('../../../services/SupabaseService');
 jest.mock('../../../services/LillyService');
 jest.mock('../../../services/TranscriptionService');
+jest.mock('../../../app/(tabs)/exercises', () => ({
+    EXERCISES_DATA: [{ id: 'a1', title: 'Shoulder Shrugs' }],
+}));
 
 // Mock expo-audio
 jest.mock('expo-audio', () => ({
@@ -55,8 +58,12 @@ describe('Lilly Chat Screen', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        useAuth.mockReturnValue({ user: mockUser });
+        useAuth.mockReturnValue({ user: mockUser, userData: { role: 'survivor' } });
         SupabaseService.getUserProfile.mockResolvedValue({ profile: null, error: null });
+        SupabaseService.getTodayLog.mockResolvedValue({ log: null, error: null });
+        SupabaseService.getDailyLogs.mockResolvedValue({ logs: [], error: null });
+        SupabaseService.getAssignedExercises.mockResolvedValue({ data: [], error: null });
+        SupabaseService.getCustomExercises.mockResolvedValue({ data: [], error: null });
         sendMessage.mockResolvedValue({ text: 'Hello! How can I help?', action: null });
         AsyncStorage.getItem.mockResolvedValue(null); // First-time user by default
     });
@@ -107,7 +114,35 @@ describe('Lilly Chat Screen', () => {
 
             const { getByText } = render(<Lilly />);
             await waitFor(() => {
-                expect(getByText("Hi! I'm Lilly. How are you feeling today?")).toBeTruthy();
+                expect(getByText("I'm Lilly. How are you feeling today?")).toBeTruthy();
+            });
+        });
+    });
+
+    describe('Role-based greetings', () => {
+        it('shows caregiver greeting for caregiver role (returning user)', async () => {
+            useAuth.mockReturnValue({ user: mockUser, userData: { role: 'caregiver' } });
+            AsyncStorage.getItem.mockResolvedValue('true');
+
+            const { getByText } = render(<Lilly />);
+            await waitFor(() => {
+                expect(
+                    getByText("I'm Lilly. I'm here to support you as a caregiver. How are you doing today?")
+                ).toBeTruthy();
+            });
+        });
+
+        it('shows medical staff greeting for medical_staff role (returning user)', async () => {
+            useAuth.mockReturnValue({ user: mockUser, userData: { role: 'medical_staff' } });
+            AsyncStorage.getItem.mockResolvedValue('true');
+
+            const { getByText } = render(<Lilly />);
+            await waitFor(() => {
+                expect(
+                    getByText(
+                        "I'm Lilly. I'm here to support you and your patients with stroke recovery. What can I help you with today?"
+                    )
+                ).toBeTruthy();
             });
         });
     });
@@ -128,7 +163,8 @@ describe('Lilly Chat Screen', () => {
                 expect(sendMessage).toHaveBeenCalledWith(
                     'Hello Lilly',
                     expect.any(Array),
-                    null
+                    null,
+                    expect.anything()
                 );
             });
         });
@@ -203,7 +239,7 @@ describe('Lilly Chat Screen', () => {
             const { getByText } = render(<Lilly />);
             await waitFor(() => {
                 // Falls back to simple greeting
-                expect(getByText("Hi! I'm Lilly. How are you feeling today?")).toBeTruthy();
+                expect(getByText("I'm Lilly. How are you feeling today?")).toBeTruthy();
             });
         });
 
@@ -264,7 +300,8 @@ describe('Lilly Chat Screen', () => {
                 expect(sendMessage).toHaveBeenCalledWith(
                     'Hello',
                     expect.any(Array),
-                    mockProfile
+                    mockProfile,
+                    expect.anything()
                 );
             });
         });

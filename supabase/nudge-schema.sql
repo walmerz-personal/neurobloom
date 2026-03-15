@@ -65,7 +65,9 @@ CREATE POLICY "Senders can view own nudges" ON nudges
 
 -- Survivors can mark nudges as read
 CREATE POLICY "Survivors can mark nudges as read" ON nudges
-  FOR UPDATE USING (auth.uid() = survivor_id AND read_at IS NULL);
+  FOR UPDATE
+  USING (auth.uid() = survivor_id AND read_at IS NULL)
+  WITH CHECK (auth.uid() = survivor_id);
 
 -- =============================================
 -- HELPER FUNCTION: Check Rate Limiting

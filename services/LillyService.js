@@ -6,8 +6,9 @@ import { SupabaseService } from './SupabaseService';
  * @param {string} message - The user's message
  * @param {Array} history - Conversation history
  * @param {Object} userProfile - User profile from onboarding (optional)
+ * @param {Object} context - Rich context: userName, role, todayLog, recentLogs, assignedExercises (optional)
  */
-export async function sendMessage(message, history = [], userProfile = null) {
+export async function sendMessage(message, history = [], userProfile = null, context = null) {
     console.log("\n=== New Message ===");
     console.log("User:", message.substring(0, 100));
 
@@ -39,7 +40,8 @@ export async function sendMessage(message, history = [], userProfile = null) {
         const { data, error } = await SupabaseService.callEdgeFunction('lilly-chat', {
             message,
             history,
-            userProfile
+            userProfile,
+            context
         });
 
         if (error) {

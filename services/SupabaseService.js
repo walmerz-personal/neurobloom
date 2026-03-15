@@ -600,7 +600,7 @@ export const SupabaseService = {
                 return { logs: [], error };
             }
 
-            return { logs: data, error: null };
+            return { logs: data ?? [], error: null };
         } catch (error) {
             console.error('❌ Get daily logs error:', error);
             return { logs: [], error };

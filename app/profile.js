@@ -748,8 +748,8 @@ export default function Profile() {
                 </View>
                 )}
 
-                {/* Care Team Section (hidden for caregivers; same content is on home) */}
-                {role !== 'caregiver' && (
+                {/* Care Team Section (survivors only; caregivers/medical staff see this on home) */}
+                {role === 'survivor' && (
                     <CareTeamSection
                         userId={user?.id}
                         userRole={role || 'survivor'}

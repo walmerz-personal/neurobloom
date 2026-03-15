@@ -1,5 +1,107 @@
 # NeuroBloom Tasks
 
+## Fix Care Team Role Labels (other/professional → caregiver/medical staff)
+
+### Plan
+My Care Team was showing the stored `relationship` value ("other", "professional") instead of the role. Display the role label ("Caregiver", "Medical Staff") in the list and in the profile modal.
+
+### Todo Items
+- [x] CareTeamSection: caregiver subtitle and profile modal roleLabel
+- [x] CareTeamSection: medical staff subtitle and profile modal roleLabel
+- [x] Update CareTeamSection tests for new role labels
+
+### Review
+- **components/CareTeamSection.js**: (1) Caregiver row: subtitle now always "Caregiver • Connected" and profile modal roleLabel "Caregiver". (2) Medical staff row: subtitle "Medical Staff • Connected" and roleLabel "Medical Staff". No backend or CareTeamService changes; display-only.
+- **__tests__/components/CareTeamSection.test.js**: "renders connected caregivers" now expects both rows to show "Caregiver" (getAllByText(/Caregiver/).length).toBe(2)) instead of relationship text "Spouse"/"Friend". All 24 CareTeamSection tests pass.
+
+---
+
+## Fix "Error fetching nudges for survivor" (PGRST200)
+
+### Plan
+NudgeService.getNudgesForSurvivor was joining to `user_profiles` for the sender, but the `nudges` table FKs point to `users`. PostgREST could not find a relationship (PGRST200). Fix: use `users` in the select so the relationship resolves.
+
+### Todo Items
+- [x] Change getNudgesForSurvivor select from user_profiles to users for sender join
+
+### Review
+- **services/NudgeService.js**: In `getNudgesForSurvivor`, changed the select from `sender:user_profiles!nudges_sender_id_fkey(id, name, role)` to `sender:users!nudges_sender_id_fkey(id, name, role)`. The `nudges` table has `sender_id` and `survivor_id` referencing `users(id)`; there is no FK to `user_profiles`. The `users` table has `id`, `name`, and `role`, so the response shape is unchanged. No DB migration; code-only fix. Survivor login (e.g. katie.b.adler@gmail.com) should no longer show the console error when the home tab fetches nudges.
+
+---
+
+## Make Lilly Contextually Aware of User Data
+
+### Plan
+Enrich Lilly's AI context with the user's name, role, exercise completion history, daily check-in trends, and assigned exercises so Lilly can give personalized, progress-aware guidance. No new services or tables; use existing SupabaseService methods.
+
+### Todo Items
+- [x] Add loadLillyContext() in lilly.js to fetch todayLog, recentLogs, assignedExercises and build context object
+- [x] Update LillyService.sendMessage to accept and forward context parameter
+- [x] Update Edge Function to parse context and inject structured sections into system prompt
+- [x] Update lillyGreetings.js to use user's first name in greetings
+- [x] Map exercise IDs to readable names in context using EXERCISES_DATA and getCustomExercises
+- [x] Update lilly.test.js and LillyService.test.js for new context parameter
+
+### Review
+- **app/(tabs)/lilly.js**: Added `lillyContext` state and `loadLillyContext()` effect that fetches getTodayLog, getDailyLogs(14), getAssignedExercises('assigned'), getCustomExercises in parallel; builds context with userName, role, todayLog, recentLogs, assignedExercises (enriched with exercise_name from EXERCISES_DATA and custom list). Passes `lillyContext` to sendMessage. Greeting uses getLillyGreeting(role, isFirstTime, firstName) with first name from userData.
+- **services/LillyService.js**: sendMessage now accepts optional 4th parameter `context` and forwards it in the Edge Function payload.
+- **supabase/functions/lilly-chat/index.ts**: Parses `context` from request body; injects USER CONTEXT (first name, role from context; profile fields), TODAY'S STATUS (mood, pain, energy, exercises completed), RECENT ACTIVITY (14-day active days, avg pain/energy), ASSIGNED EXERCISES (with exercise_name), and HOW TO USE THIS CONTEXT instructions into the system prompt.
+- **constants/lillyGreetings.js**: Added optional `firstName` to getLillyGreeting; new helper withGreetingPrefix prepends "Hi [Name]!" when firstName is provided. Base greetings now start with "I'm Lilly" so prefix works cleanly.
+- **__tests__/app/(tabs)/lilly.test.js**: Mock EXERCISES_DATA and new Supabase methods (getTodayLog, getDailyLogs, getAssignedExercises, getCustomExercises); updated greeting expectations (no leading "Hi!" in base text); sendMessage assertions include 4th arg expect.anything().
+- **__tests__/services/LillyService.test.js**: Expected Edge Function payload now includes context: null.
+- **Result**: Lilly can greet by name, reference today's mood/pain/energy, comment on recent consistency, and mention assigned exercises by name. All 19 Lilly tab tests and 7 LillyService tests pass.
+
+---
+
+## Role-based Lilly greetings
+
+### Plan
+Add role-specific Lilly greetings for medical staff and caregivers while keeping the current survivor greeting. Use AuthContext userData.role and a small constants module for greeting copy; update the Lilly screen and tests.
+
+### Todo Items
+- [x] Add constants/lillyGreetings.js with getLillyGreeting(role, isFirstTime)
+- [x] Update app/(tabs)/lilly.js to use userData and getLillyGreeting
+- [x] Update lilly.test.js: mock userData.role, add caregiver and medical_staff greeting tests
+
+### Review
+- **constants/lillyGreetings.js** (new): Exports `getLillyGreeting(role, isFirstTime)`. Survivor keeps existing long intro and simple "How are you feeling today?"; caregiver gets intro about supporting caregivers/self-care and simple "I'm here to support you as a caregiver. How are you doing today?"; medical_staff gets intro about supporting clinicians/patients and simple "I'm here to support you and your patients with stroke recovery. What can I help you with today?" Defaults to survivor when role is missing or invalid.
+- **app/(tabs)/lilly.js**: Import getLillyGreeting; destructure userData from useAuth(); in the greeting useEffect compute role = userData?.role ?? 'survivor' and use getLillyGreeting(role, true/false) for intro, simple, and fallback messages; dependency array now includes userData.
+- **__tests__/app/(tabs)/lilly.test.js**: beforeEach mocks useAuth with userData: { role: 'survivor' }; added "Role-based greetings" describe with tests that caregiver role sees caregiver greeting and medical_staff role sees medical staff greeting (returning user). All 19 Lilly tests pass.
+
+---
+
+## Fix connected survivor data not showing for caregivers/medical staff
+
+### Plan
+When a caregiver or medical staff views a connected survivor's progress screen, day streak, check-in rate, 14-day averages, and recent check-ins showed as zero. Root cause: RLS on `daily_logs` (and `user_profiles`) only allowed "own" rows; the policies that grant caregivers/medical staff access to linked survivors' data existed only in standalone schema files (caregiver-schema.sql, medical-staff-schema.sql), not in migrations. Add one migration that creates the missing SELECT policies so linked caregivers/medical staff can read the survivor's daily_logs and user_profiles.
+
+### Todo Items
+- [x] Add migration `supabase/migrations/20260316000000_caregiver_medical_staff_view_linked_survivor_data.sql` for daily_logs and user_profiles RLS
+- [ ] Apply migration in Supabase (Dashboard > SQL Editor or `supabase db push`) and verify survivor progress screen shows real data for Katie
+
+### Review
+- **Migration added:** `supabase/migrations/20260316000000_caregiver_medical_staff_view_linked_survivor_data.sql`. (1) **daily_logs:** Drops "Caregivers can view linked survivor logs" if present, then creates "Caregivers and medical staff can view linked survivor logs" allowing SELECT when `auth.uid() = user_id` OR an accepted care_team_links row exists linking the viewer (caregiver_id or medical_staff_id) to the log's user_id. (2) **user_profiles:** Adds "Caregivers and medical staff can view linked survivor profiles" (idempotent: DROP IF EXISTS then CREATE) allowing SELECT when an accepted care_team_links row links the viewer to the profile's user_id. Does not drop "Users can view own user_profile" or "Users can view own or linked survivor profile" so existing setups keep own + linked access. No app or service code changes.
+
+---
+
+## Fix Progress Tab Not Showing Data (survivor: mood trend, Apple Health)
+
+### Plan
+Progress tab for survivors was not showing mood trend, Apple Health data, or other progress. Root causes: (1) React Hooks violation—conditional `return null` before hooks in progress.js; (2) RLS for `daily_logs` and `health_metrics` owner SELECT only in standalone schema files, not migrations; (3) fetch errors were logged but not shown in UI.
+
+### Todo Items
+- [x] Move all hooks above the conditional return in progress.js
+- [x] Create idempotent migration ensuring daily_logs and health_metrics SELECT policies exist
+- [x] Add fetchError state and retry-able error UI to Progress tab
+- [x] Verify Supabase project status (dashboard; extension available for when project is active)
+
+### Review
+- **app/(tabs)/progress.js:** (1) Moved the care-team guard `if (userData != null && isCareTeam) return null` to after all hooks (useState, useRef, useEffect, useCallback) so hook order is consistent and Rules of Hooks are satisfied. (2) Added `fetchError` and `retryKey` state; in `loadData` clear error at start and set it on catch; in `fetchData` and `fetchHealthData` set `fetchError` when Supabase returns an error or throws; effect deps include `retryKey`. (3) When `fetchError` is set, the tab shows a single card with "Unable to load progress", the message, and a "Retry" button that clears the error and increments `retryKey` to re-run the load effect.
+- **supabase/migrations/20260317000000_ensure_progress_tab_rls.sql:** Idempotent migration that DROP IF EXISTS + CREATE POLICY for "Users can view own daily_logs" and "Users can view own health_metrics" (SELECT using `auth.uid() = user_id`) so survivors can read their own data after a DB reset. Apply via Dashboard SQL Editor or `supabase db push`.
+- **Supabase project:** SQL execution via the Supabase extension (marketplace) timed out during verification; the project may be paused. If the Progress tab still shows no data after applying the migration, check the Supabase dashboard and unpause the project if needed. The extension can be used for `execute_sql` and `list_migrations` once the project is active.
+
+---
+
 ## Fix "Unknown" Patient Name on Medical Staff / Caregiver Home Screens
 
 ### Plan
@@ -991,3 +1093,23 @@ Centralize Lilly's tips in one constant by role (survivor, caregiver, medical_st
 - **components/MedicalStaffHomeView.js**: Removed local LILLY_TIPS array. Import and use `getLillyTipsForRole('medical_staff')` to pick a random tip in useEffect.
 - **Tests**: CaregiverHomeView.test.js and MedicalStaffHomeView.test.js now import `getLillyTipsForRole` and include a test that the displayed tip is one of the role-specific tips from the constant (using queryByText over the tip list). All 34 tests in these two suites pass.
 - **Result**: Every signed-in profile type sees a "Lilly's Tip" chosen from a role-specific list defined in one place; tips stay relevant and consistent across survivor, caregiver, and medical staff homes.
+
+---
+
+## Fix Progress Tab Mobility Metrics Not Rendering
+
+### Plan
+The health/mobility metrics section on the Progress tab disappeared after today's code changes. Katie had synced HealthKit data and the section was previously visible. Two issues found:
+
+1. The `{fetchError ? (error) : (<>...all content...</>)}` ternary wrapper could hide all content on transient errors.
+2. **Root cause**: The `emptyChart` style had `height: '100%'` inside a `chartContainer` with only `minHeight: 190`. When the Mood Trend chart had no data (empty state), React Native's Yoga layout resolved `height: '100%'` against the ScrollView viewport instead of the parent's minHeight, causing the Mood Trend card to expand to fill the entire screen and push all content below it (including the health metrics section) off-screen.
+
+### Todo Items
+- [x] Remove fetchError ternary wrapper; show error as inline card above normal content
+- [x] Fix emptyChart height: '100%' layout bug that consumed entire ScrollView
+
+### Review
+- **app/(tabs)/progress.js** (2 changes):
+  1. Changed the `{fetchError ? (error card) : (<>...all cards...</>)}` ternary to `{fetchError && (error card)}` followed by all cards unconditionally. The error card now renders inline above the normal content when an error occurs, instead of replacing all content.
+  2. Changed `emptyChart` style from `height: '100%'` to `minHeight: 150`. This prevents the empty mood chart from expanding to fill the entire ScrollView viewport. The parent `chartContainer` already has `minHeight: 190` and `justifyContent: 'center'`, so the empty text remains vertically centered.
+- All other improvements from today (hooks order fix, date-range string comparison, null-safe getDailyLogs, Platform.OS ternary with non-iOS fallback, fetchError/retryKey state) are preserved. No other files changed.

@@ -44,9 +44,6 @@ export default function Progress() {
         }
     }, [userData, isCareTeam, router]);
 
-    if (userData != null && isCareTeam) {
-        return null;
-    }
     const [moodData, setMoodData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [streak, setStreak] = useState({ current: 0, longest: 0, total: 0 });
@@ -59,6 +56,8 @@ export default function Progress() {
     const [healthPermissionsGranted, setHealthPermissionsGranted] = useState(false);
     const [selectedTimeRange, setSelectedTimeRange] = useState(DEFAULT_TIME_RANGE);
     const [showRangePicker, setShowRangePicker] = useState(false);
+    const [fetchError, setFetchError] = useState(null);
+    const [retryKey, setRetryKey] = useState(0);
 
     // Use ref to track if component is mounted
     const isMountedRef = useRef(true);
@@ -86,6 +85,7 @@ export default function Progress() {
         const signal = abortControllerRef.current.signal;
 
         const loadData = async () => {
+            setFetchError(null);
             try {
                 // Load data in parallel but check abort signal
                 // NOTE: HealthKit permission checks are now user-initiated only to prevent crashes
@@ -110,6 +110,7 @@ export default function Progress() {
             } catch (error) {
                 if (!signal.aborted && isMountedRef.current) {
                     console.error('Error loading progress data:', error);
+                    setFetchError('Could not load progress data. Check your connection and try again.');
                 }
             }
         };
@@ -121,7 +122,7 @@ export default function Progress() {
                 abortControllerRef.current.abort();
             }
         };
-    }, [user?.id]);
+    }, [user?.id, retryKey]);
 
     // Listen for app state changes to detect permission revocation
     useEffect(() => {
@@ -173,10 +174,14 @@ export default function Progress() {
         }
         try {
             // Get date range based on selection
-            const { startDate, days } = getDateRangeForSelection(timeRange);
-            
+            const { startDate, endDate, days } = getDateRangeForSelection(timeRange);
+            const startDateStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}`;
+            const endDateStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+
             // Fetch logs for mood chart - get enough to cover selected range
-            const { logs, error } = await SupabaseService.getDailyLogs(user.id, Math.max(days, 30));
+            const result = await SupabaseService.getDailyLogs(user.id, Math.max(days, 30));
+            const logs = (result.logs && Array.isArray(result.logs)) ? result.logs : [];
+            const { error } = result;
 
             if (signal?.aborted || !isMountedRef.current) return;
 
@@ -186,22 +191,24 @@ export default function Progress() {
                     userId: user?.id,
                     timestamp: new Date().toISOString()
                 });
-            } else if (logs && Array.isArray(logs)) {
+                if (!signal?.aborted && isMountedRef.current) {
+                    setFetchError('Could not load progress data. Check your connection and try again.');
+                }
+            } else {
                 // Validate and filter logs
                 const validLogs = logs.filter(validateMoodLog);
 
-                // Filter logs to selected date range
+                // Filter logs to selected date range (compare YYYY-MM-DD strings for timezone-safe range)
                 const rangeFilteredLogs = validLogs.filter(log => {
-                    const logDate = new Date(log.log_date);
-                    return !isNaN(logDate.getTime()) && logDate >= startDate;
+                    const dateStr = log.log_date && typeof log.log_date === 'string' ? log.log_date.trim().split('T')[0] : '';
+                    return dateStr.length === 10 && dateStr >= startDateStr && dateStr <= endDateStr;
                 });
 
-                // Sort by date ascending
+                // Sort by date ascending (string comparison is safe for YYYY-MM-DD)
                 const sortedLogs = [...rangeFilteredLogs].sort((a, b) => {
-                    const dateA = new Date(a.log_date);
-                    const dateB = new Date(b.log_date);
-                    if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
-                    return dateA - dateB;
+                    const dateA = (a.log_date || '').split('T')[0];
+                    const dateB = (b.log_date || '').split('T')[0];
+                    return dateA.localeCompare(dateB);
                 });
 
                 // Map to chart data with validation
@@ -229,12 +236,13 @@ export default function Progress() {
                 // Calculate "This Week's Goal" (days with exercises in last 7 days)
                 const oneWeekAgo = new Date();
                 oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                const oneWeekAgoStr = `${oneWeekAgo.getFullYear()}-${String(oneWeekAgo.getMonth() + 1).padStart(2, '0')}-${String(oneWeekAgo.getDate()).padStart(2, '0')}`;
 
                 const exercisesThisWeek = validLogs.filter(log => {
                     try {
-                        const logDate = new Date(log.log_date);
-                        if (isNaN(logDate.getTime())) return false;
-                        return logDate >= oneWeekAgo &&
+                        const dateStr = log.log_date && typeof log.log_date === 'string' ? log.log_date.trim().split('T')[0] : '';
+                        if (dateStr.length !== 10) return false;
+                        return dateStr >= oneWeekAgoStr &&
                             log.exercises_completed &&
                             Array.isArray(log.exercises_completed) &&
                             log.exercises_completed.length > 0;
@@ -413,6 +421,9 @@ export default function Progress() {
                     userId: user?.id,
                     timestamp: new Date().toISOString()
                 });
+                if (!signal?.aborted && isMountedRef.current) {
+                    setFetchError('Could not load progress data. Check your connection and try again.');
+                }
             } else if (metrics && Array.isArray(metrics) && metrics.length > 0) {
                 // Get latest metrics for the card
                 const latest = metrics[0];
@@ -492,6 +503,15 @@ export default function Progress() {
                 if (!signal?.aborted && isMountedRef.current) {
                     setStepLengthChartData(stepLengthData);
                 }
+            } else {
+                // No data for selected range - clear stale chart data
+                if (!signal?.aborted && isMountedRef.current) {
+                    setHealthMetrics(null);
+                    setHealthChartData([]);
+                    setStepsChartData([]);
+                    setDistanceChartData([]);
+                    setStepLengthChartData([]);
+                }
             }
         } catch (error) {
             if (!signal?.aborted && isMountedRef.current) {
@@ -501,6 +521,7 @@ export default function Progress() {
                     userId: user?.id,
                     timestamp: new Date().toISOString()
                 });
+                setFetchError('Could not load progress data. Check your connection and try again.');
             }
         } finally {
             if (!signal?.aborted && isMountedRef.current) {
@@ -772,6 +793,10 @@ export default function Progress() {
         fetchHealthData(signal, newRange);
     }, [user?.id]);
 
+    if (userData != null && isCareTeam) {
+        return null;
+    }
+
     const TimeRangePicker = () => (
         <Modal
             visible={showRangePicker}
@@ -962,6 +987,21 @@ export default function Progress() {
                 <TimeRangePicker />
 
                 <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                {fetchError && (
+                    <View style={styles.card}>
+                        <Text style={styles.cardTitle}>Unable to load progress</Text>
+                        <Text style={styles.cardFooter}>{fetchError}</Text>
+                        <TouchableOpacity
+                            style={styles.connectButton}
+                            onPress={() => {
+                                setFetchError(null);
+                                setRetryKey(k => k + 1);
+                            }}
+                        >
+                            <Text style={styles.connectButtonText}>Retry</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
                         <View style={styles.iconContainer}>
@@ -1029,7 +1069,7 @@ export default function Progress() {
                 </View>
 
                 {/* Health Metrics Section */}
-                {Platform.OS === 'ios' && (
+                {Platform.OS === 'ios' ? (
                     <>
                         {!healthPermissionsGranted ? (
                             <View style={styles.card}>
@@ -1164,6 +1204,18 @@ export default function Progress() {
                             </>
                         )}
                     </>
+                ) : (
+                    <View style={styles.card}>
+                        <View style={styles.cardHeader}>
+                            <View style={[styles.iconContainer, { backgroundColor: Colors.primaryLight + '20' }]}>
+                                <Activity size={24} color={Colors.primary} />
+                            </View>
+                            <Text style={styles.cardTitle}>Apple Health</Text>
+                        </View>
+                        <Text style={styles.cardFooter}>
+                            Mobility metrics from Apple Health are available on iPhone.
+                        </Text>
+                    </View>
                 )}
                 </ScrollView>
             </ScreenWrapper>
@@ -1247,6 +1299,7 @@ const styles = StyleSheet.create({
     scrollContent: {
         padding: 24,
         paddingTop: 16,
+        paddingBottom: 40,
     },
     card: {
         backgroundColor: 'white',
@@ -1338,7 +1391,7 @@ const styles = StyleSheet.create({
     emptyChart: {
         alignItems: 'center',
         justifyContent: 'center',
-        height: '100%',
+        minHeight: 150,
     },
     emptyChartText: {
         fontFamily: 'Inter_500Medium',

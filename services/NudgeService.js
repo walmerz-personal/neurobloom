@@ -146,7 +146,7 @@ export async function getNudgesForSurvivor(survivorId, limit = 20) {
       .from('nudges')
       .select(`
         *,
-        sender:user_profiles!nudges_sender_id_fkey(id, name, role)
+        sender:users!nudges_sender_id_fkey(id, name, role)
       `)
       .eq('survivor_id', survivorId)
       .order('sent_at', { ascending: false })

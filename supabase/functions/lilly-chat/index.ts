@@ -234,7 +234,7 @@ Deno.serve(async (req) => {
     console.log('✅ Authenticated user:', user.id);
 
     // Parse request body
-    const { message, history = [], userProfile = null } = await req.json();
+    const { message, history = [], userProfile = null, context: contextPayload = null } = await req.json();
 
     if (!message || typeof message !== 'string') {
       return new Response(JSON.stringify({ error: 'Missing or invalid message' }), {
@@ -267,25 +267,81 @@ Deno.serve(async (req) => {
 
     let systemPromptWithContext = SYSTEM_PROMPT + `\n\nCURRENT DATE: ${dateString}`;
 
-    // Add user profile context if available
+    // Role and name from context (client) override profile; profile has stroke/recovery/impairments
+    const role = (contextPayload?.role ?? userProfile?.role) || 'survivor';
+    const userName = contextPayload?.userName ?? null;
+    const roleLabel = role === 'survivor' ? 'Stroke Survivor' : role === 'caregiver' ? 'Caregiver' : 'Medical Staff';
+
+    // Add user context (name, role, profile fields)
+    systemPromptWithContext += `\n\n=== USER CONTEXT ===\n`;
+    if (userName && typeof userName === 'string' && userName.trim()) {
+      const firstName = userName.trim().split(/\s+/)[0];
+      systemPromptWithContext += `User's first name: ${firstName}\n`;
+    }
+    systemPromptWithContext += `Role: ${roleLabel}\n`;
     if (userProfile) {
-      const role = userProfile.role || 'user';
       const strokeDate = userProfile.stroke_date || 'not specified';
       const recoveryPhase = userProfile.recovery_phase || 'not specified';
-
-      systemPromptWithContext += `\n\n=== USER CONTEXT ===\n`;
-      systemPromptWithContext += `Role: ${role === 'survivor' ? 'Stroke Survivor' : 'Caregiver'}\n`;
       systemPromptWithContext += `Stroke Date: ${strokeDate}\n`;
       systemPromptWithContext += `Recovery Phase: ${recoveryPhase}\n`;
-
+      if (userProfile.affected_side) {
+        systemPromptWithContext += `Affected side: ${userProfile.affected_side}\n`;
+      }
+      if (userProfile.impairment_severity) {
+        systemPromptWithContext += `Impairment severity: ${userProfile.impairment_severity}\n`;
+      }
       if (userProfile.impairments && userProfile.impairments.length > 0) {
         systemPromptWithContext += `Impairments: ${userProfile.impairments.join(', ')}\n`;
       }
-
       if (userProfile.goals) {
         systemPromptWithContext += `Goals: ${userProfile.goals}\n`;
       }
     }
+
+    // Today's status (from context)
+    const todayLog = contextPayload?.todayLog;
+    if (todayLog && typeof todayLog === 'object') {
+      systemPromptWithContext += `\n=== TODAY'S STATUS ===\n`;
+      if (todayLog.mood != null && todayLog.mood !== '') systemPromptWithContext += `Today's mood: ${todayLog.mood}\n`;
+      if (typeof todayLog.pain_level === 'number') systemPromptWithContext += `Today's pain level (0-10): ${todayLog.pain_level}\n`;
+      if (typeof todayLog.energy_level === 'number') systemPromptWithContext += `Today's energy level (0-10): ${todayLog.energy_level}\n`;
+      const completed = todayLog.exercises_completed;
+      const completedCount = Array.isArray(completed) ? completed.length : 0;
+      systemPromptWithContext += `Exercises completed today: ${completedCount}\n`;
+      if (todayLog.notes && todayLog.notes.trim()) systemPromptWithContext += `Notes: ${todayLog.notes.trim()}\n`;
+    }
+
+    // Recent activity (last 14 days)
+    const recentLogs = contextPayload?.recentLogs;
+    if (Array.isArray(recentLogs) && recentLogs.length > 0) {
+      const logs = recentLogs as { log_date: string; mood?: string; pain_level?: number; energy_level?: number; exercises_completed?: string[] }[];
+      const withExercises = logs.filter((l) => (l.exercises_completed?.length ?? 0) > 0);
+      const activeDays = withExercises.length;
+      const painLevels = logs.map((l) => l.pain_level).filter((p): p is number => typeof p === 'number');
+      const energyLevels = logs.map((l) => l.energy_level).filter((e): e is number => typeof e === 'number');
+      const avgPain = painLevels.length ? (painLevels.reduce((a, b) => a + b, 0) / painLevels.length).toFixed(1) : null;
+      const avgEnergy = energyLevels.length ? (energyLevels.reduce((a, b) => a + b, 0) / energyLevels.length).toFixed(1) : null;
+      systemPromptWithContext += `\n=== RECENT ACTIVITY (14 Days) ===\n`;
+      systemPromptWithContext += `Days with at least one exercise completed: ${activeDays} of ${logs.length}\n`;
+      if (avgPain != null) systemPromptWithContext += `Average pain level (when reported): ${avgPain}\n`;
+      if (avgEnergy != null) systemPromptWithContext += `Average energy level (when reported): ${avgEnergy}\n`;
+    }
+
+    // Assigned exercises (from medical staff)
+    const assignedExercises = contextPayload?.assignedExercises;
+    if (Array.isArray(assignedExercises) && assignedExercises.length > 0) {
+      systemPromptWithContext += `\n=== ASSIGNED EXERCISES ===\n`;
+      assignedExercises.forEach((a: { exercise_id?: string; exercise_name?: string; due_date?: string; notes?: string }) => {
+        const name = a.exercise_name || a.exercise_id || 'Unknown';
+        const due = a.due_date ? ` (due ${a.due_date})` : '';
+        const notes = a.notes ? ` - ${a.notes}` : '';
+        systemPromptWithContext += `- ${name}${due}${notes}\n`;
+      });
+    }
+
+    // How to use this context
+    systemPromptWithContext += `\n=== HOW TO USE THIS CONTEXT ===\n`;
+    systemPromptWithContext += `Use the above user and activity data naturally. When relevant: greet by first name, reference today's mood/pain/energy (e.g. if pain is high, suggest gentler options), acknowledge recent consistency or streaks, and mention assigned exercises if the user asks what to do. Keep responses warm and concise. Do not list raw numbers unless the user asks for specifics.\n`;
 
     // Build messages array
     const messages = [
