@@ -88,7 +88,7 @@ export function formatProfileForAI(profile) {
         : 'None specified';
 
     let context = `CURRENT USER CONTEXT:
-- Role: ${profile.role === 'survivor' ? 'Stroke Survivor' : 'Caregiver'}
+- Role: ${profile.role === 'survivor' ? 'Stroke Survivor' : profile.role === 'medical_staff' ? 'Medical Staff' : 'Caregiver'}
 - Stroke Date: ${profile.strokeDate || 'Not specified'}
 - Main Challenges: ${impairments}
 - Recovery Phase: ${phaseLabels[profile.recoveryPhase] || profile.recoveryPhase || 'Not specified'}

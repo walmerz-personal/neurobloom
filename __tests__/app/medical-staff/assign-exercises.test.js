@@ -53,6 +53,11 @@ jest.mock('../../../components/CustomExerciseModal', () => {
     return { CustomExerciseModal: () => <View testID="custom-exercise-modal" /> };
 });
 
+jest.mock('@react-native-community/datetimepicker', () => {
+    const { View } = require('react-native');
+    return { default: (props) => <View testID="date-time-picker" {...props} /> };
+});
+
 const { MedicalStaffService } = require('../../../services/MedicalStaffService');
 const { SupabaseService } = require('../../../services/SupabaseService');
 
@@ -279,7 +284,7 @@ describe('AssignExercises', () => {
         await waitFor(() => {
             expect(getByText('Assignment Details')).toBeTruthy();
         });
-        expect(getByPlaceholderText('YYYY-MM-DD (optional)')).toBeTruthy();
+        expect(getByText('Due date')).toBeTruthy();
         expect(getByPlaceholderText('Notes for patient (optional)')).toBeTruthy();
     });
 });

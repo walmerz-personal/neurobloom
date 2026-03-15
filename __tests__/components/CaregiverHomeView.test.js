@@ -2,6 +2,7 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { CaregiverHomeView } from '../../components/CaregiverHomeView';
+import { getLillyTipsForRole } from '../../constants/lillyTips';
 
 // Mock services
 jest.mock('../../services/CareTeamService', () => ({
@@ -75,6 +76,16 @@ describe('CaregiverHomeView', () => {
         await waitFor(() => {
             expect(getByText("Lilly's Tip")).toBeTruthy();
         });
+    });
+
+    it('should display a caregiver-specific Lilly tip', async () => {
+        const caregiverTips = getLillyTipsForRole('caregiver');
+        const { getByText, queryByText } = render(<CaregiverHomeView {...defaultProps} />);
+        await waitFor(() => {
+            expect(getByText("Lilly's Tip")).toBeTruthy();
+        });
+        const displayedTip = caregiverTips.find((tip) => queryByText(tip));
+        expect(displayedTip).toBeTruthy();
     });
 
     it('should display Your Survivors section title', async () => {

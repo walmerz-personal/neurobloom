@@ -32,7 +32,7 @@ export default {
         ios: {
             supportsTablet: true,
             bundleIdentifier: "com.neurobloom.app",
-            buildNumber: "49",
+            buildNumber: "50",
             infoPlist: {
                 ITSAppUsesNonExemptEncryption: false,
                 NSHealthShareUsageDescription: "NeuroBloom tracks your walking speed, steadiness, and mobility to help monitor your recovery progress.",

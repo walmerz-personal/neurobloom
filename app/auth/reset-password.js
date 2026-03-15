@@ -30,12 +30,22 @@ export default function ResetPassword() {
 
     const handleDeepLink = async (deepLink) => {
         try {
-            // Parse the URL to get the hash fragment
-            // Supabase sends: neurobloom://auth/reset-password#access_token=...&refresh_token=...&type=recovery
+            // PKCE: Supabase sends neurobloom://auth/reset-password?code=XXXXX (query param is not stripped on iOS)
+            const queryPart = deepLink.includes('?') ? deepLink.split('?')[1].split('#')[0] : '';
+            if (queryPart) {
+                const queryParams = {};
+                queryPart.split('&').forEach(param => {
+                    const [key, value] = param.split('=');
+                    queryParams[key] = value;
+                });
+                if (queryParams.code) {
+                    const { error } = await SupabaseService.exchangeCodeForSession(queryParams.code);
+                    if (!error) return;
+                }
+            }
 
-            // Handle both # and ? (just in case)
-            const fragment = deepLink.split('#')[1] || deepLink.split('?')[1];
-
+            // Fallback: hash fragment (#access_token=...&refresh_token=...) — often stripped on iOS
+            const fragment = deepLink.split('#')[1];
             if (!fragment) return;
 
             const params = {};
@@ -45,19 +55,6 @@ export default function ResetPassword() {
             });
 
             if (params.access_token && params.refresh_token) {
-                // Set the session manually
-                // We need to access the supabase client directly or add a method in SupabaseService
-                // But SupabaseService is not exposing the client directly.
-                // However, we can use setSession if we expose it, or just rely on the fact that we have the tokens.
-                // Actually, supabase-js has setSession.
-
-                // Let's assume we need to add setSession to SupabaseService or just use the tokens to update password?
-                // No, updateUser requires an active session.
-
-                // We should add setSession to SupabaseService.
-                // For now, let's try to use the public supabase client if it was exported, but it's not.
-                // I'll add setSession to SupabaseService in a moment.
-
                 await SupabaseService.setSession(params.access_token, params.refresh_token);
             }
         } catch (error) {

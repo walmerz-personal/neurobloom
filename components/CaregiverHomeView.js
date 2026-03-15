@@ -6,17 +6,8 @@ import { Colors } from '../constants/Colors';
 import { Quote, User, ChevronRight, Heart } from 'lucide-react-native';
 import { CareTeamService } from '../services/CareTeamService';
 import { SupabaseService } from '../services/SupabaseService';
+import { getLillyTipsForRole } from '../constants/lillyTips';
 import Svg, { Circle } from 'react-native-svg';
-
-// Tips from Lilly for Caregivers
-const LILLY_TIPS = [
-    "Remember to take 5 minutes for yourself today. You can't pour from an empty cup. 🌿",
-    "Celebrating small wins matters! Did your survivor smile today? That's worth celebrating. 💜",
-    "It's okay to ask for help. You're doing an incredible job, but you don't have to do it alone. 🤝",
-    "Rest is not a reward—it's a requirement. Be kind to yourself. 🌸",
-    "Progress isn't always visible. Trust the process and keep showing up. ✨",
-    "Your patience and love are making a real difference, even on the hard days. 💙",
-];
 
 // Circular progress component
 const CircularProgress = ({ progress = 0, size = 48, strokeWidth = 5, color = Colors.primary }) => {
@@ -63,8 +54,8 @@ export function CaregiverHomeView({ userData, user, onLogout, onNavigateToCaregi
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Set random Lilly tip
-        const randomTip = LILLY_TIPS[Math.floor(Math.random() * LILLY_TIPS.length)];
+        const tips = getLillyTipsForRole('caregiver');
+        const randomTip = tips[Math.floor(Math.random() * tips.length)];
         setLillyTip(randomTip);
     }, []);
 

@@ -77,10 +77,15 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - ExpoSplashScreen (0.29.24):
+    - ExpoModulesCore
   - FBLazyVector (0.81.5)
   - hermes-engine (0.81.5):
     - hermes-engine/Pre-built (= 0.81.5)
   - hermes-engine/Pre-built (0.81.5)
+  - kingstinct-react-native-healthkit (12.2.0):
+    - NitroModules
+    - React
   - lottie-ios (4.5.0)
   - lottie-react-native (7.3.5):
     - hermes-engine
@@ -1826,30 +1831,6 @@ PODS:
     - React-utils (= 0.81.5)
     - ReactNativeDependencies
   - ReactNativeDependencies (0.81.5)
-  - ReactNativeHealthkit (12.2.0):
-    - hermes-engine
-    - NitroModules
-    - RCTRequired
-    - RCTTypeSafety
-    - React-callinvoker
-    - React-Core
-    - React-Core-prebuilt
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - ReactNativeDependencies
-    - Yoga
   - rive-react-native (9.8.0):
     - React-Core
     - RiveRuntime (= 6.13.0)
@@ -2009,8 +1990,10 @@ DEPENDENCIES:
   - ExpoLinearGradient (from `../node_modules/expo-linear-gradient/ios`)
   - ExpoLinking (from `../node_modules/expo-linking/ios`)
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
+  - ExpoSplashScreen (from `../node_modules/expo-splash-screen/ios`)
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
+  - "kingstinct-react-native-healthkit (from `../node_modules/@kingstinct/react-native-healthkit`)"
   - lottie-react-native (from `../node_modules/lottie-react-native`)
   - NitroModules (from `../node_modules/react-native-nitro-modules`)
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
@@ -2079,7 +2062,6 @@ DEPENDENCIES:
   - ReactCodegen (from `build/generated/ios`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - ReactNativeDependencies (from `../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
-  - "ReactNativeHealthkit (from `../node_modules/@kingstinct/react-native-healthkit`)"
   - rive-react-native (from `../node_modules/rive-react-native`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - "RNDateTimePicker (from `../node_modules/@react-native-community/datetimepicker`)"
@@ -2125,11 +2107,15 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-linking/ios"
   ExpoModulesCore:
     :path: "../node_modules/expo-modules-core"
+  ExpoSplashScreen:
+    :path: "../node_modules/expo-splash-screen/ios"
   FBLazyVector:
     :path: "../node_modules/react-native/Libraries/FBLazyVector"
   hermes-engine:
     :podspec: "../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec"
     :tag: hermes-2025-07-07-RNv0.81.0-e0fc67142ec0763c6b6153ca2bf96df815539782
+  kingstinct-react-native-healthkit:
+    :path: "../node_modules/@kingstinct/react-native-healthkit"
   lottie-react-native:
     :path: "../node_modules/lottie-react-native"
   NitroModules:
@@ -2264,8 +2250,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   ReactNativeDependencies:
     :podspec: "../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec"
-  ReactNativeHealthkit:
-    :path: "../node_modules/@kingstinct/react-native-healthkit"
   rive-react-native:
     :path: "../node_modules/rive-react-native"
   RNCAsyncStorage:
@@ -2296,8 +2280,10 @@ SPEC CHECKSUMS:
   ExpoLinearGradient: 809102bdb979f590083af49f7fa4805cd931bd58
   ExpoLinking: 8f0aaf69aa56f832913030503b6263dc6f647f37
   ExpoModulesCore: f3da4f1ab5a8375d0beafab763739dbee8446583
+  ExpoSplashScreen: 8261985ce9778f904abc7e31bed3538dce67ed4d
   FBLazyVector: e95a291ad2dadb88e42b06e0c5fb8262de53ec12
   hermes-engine: 9f4dfe93326146a1c99eb535b1cb0b857a3cd172
+  kingstinct-react-native-healthkit: 0326d8cb1a8a068756f438e18b11f8018af9e981
   lottie-ios: a881093fab623c467d3bce374367755c272bdd59
   lottie-react-native: 8e5dd0e51847600666057d2c9b95815ac9fdb165
   NitroModules: 114b4f79e10be9b202723e721d6a54382fa4b599
@@ -2366,7 +2352,6 @@ SPEC CHECKSUMS:
   ReactCodegen: 7d4593f7591f002d137fe40cef3f6c11f13c88cc
   ReactCommon: 08810150b1206cc44aecf5f6ae19af32f29151a8
   ReactNativeDependencies: 71ce9c28beb282aa720ea7b46980fff9669f428a
-  ReactNativeHealthkit: 22e11d2698185dee51a60a1b36e8dc7cb2a9a4df
   rive-react-native: d0c2336f11b329dc0d304eda71df407f316ed7f6
   RiveRuntime: 903690a5ba698b2a7e8d462e8aa7ceeba862614c
   RNCAsyncStorage: 3a4f5e2777dae1688b781a487923a08569e27fe4

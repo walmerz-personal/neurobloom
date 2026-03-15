@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Image } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import { ScreenWrapper } from '../../components/ScreenWrapper';
@@ -8,7 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { SupabaseService } from '../../services/SupabaseService';
 import { KudosService } from '../../services/KudosService';
 import { NudgeService } from '../../services/NudgeService';
-import { MessageCircle, PlayCircle, CheckCircle, LogOut, Quote, User, Flower, Circle as CircleIcon } from 'lucide-react-native';
+import { MessageCircle, PlayCircle, CheckCircle, LogOut, User, Flower, Circle as CircleIcon } from 'lucide-react-native';
 import Svg, { Circle } from 'react-native-svg';
 import Logo from '../../components/Logo';
 import { CareTeamSection } from '../../components/CareTeamSection';
@@ -16,30 +16,9 @@ import { KudosReceivedModal } from '../../components/KudosReceivedModal';
 import { NudgeReceivedModal } from '../../components/NudgeReceivedModal';
 import { CaregiverHomeView } from '../../components/CaregiverHomeView';
 import { MedicalStaffHomeView } from '../../components/MedicalStaffHomeView';
+import { getLillyTipsForRole } from '../../constants/lillyTips';
 import { getRecommendedExercises, getDailyPlan, getBadDayPlan } from '../../services/RecommendationService';
 import { EXERCISES_DATA } from './exercises';
-
-const SURVIVOR_QUOTES = [
-    "Every small step forward is progress. You're doing great! 🌟",
-    "Recovery isn't a straight line, and that's okay. Keep going! 💪",
-    "Your brain is amazing - it's rewiring itself every day. 🧠",
-    "Consistency beats perfection. Just showing up matters! ✨",
-    "You're stronger than you think. I believe in you! 💙",
-    "Celebrate the wins, no matter how small. You've earned it! 🎉",
-    "Rest is part of recovery, not a setback. Be kind to yourself. 🌸",
-    "Progress might be slow, but you're moving forward. Keep it up! 🚀",
-];
-
-const CAREGIVER_QUOTES = [
-    "Caring for yourself is part of caring for others. 💙",
-    "Your patience and love are making a difference. ✨",
-    "Take it one day at a time. You've got this! 💪",
-    "Remember to fill your own cup too. ☕",
-    "You are doing an incredible job. Don't forget that! 🌟",
-    "It's okay to ask for help. You're not alone. 🤝",
-    "Small moments of joy matter. Find them today! 🌸",
-    "Your strength inspires everyone around you. ❤️",
-];
 
 const getGreeting = () => {
     const hour = new Date().getHours();
@@ -87,7 +66,7 @@ const CircularProgress = ({ progress = 0.75, size = 80, strokeWidth = 8, color =
 export default function Home() {
     const router = useRouter();
     const { userData, user, signOut } = useAuth();
-    const [motivationalQuote, setMotivationalQuote] = useState('');
+    const [lillyTip, setLillyTip] = useState('');
     const [dailyProgress, setDailyProgress] = useState({ completed: 0, total: 4 }); // Default goal of 4
     const [dailyPlanExercises, setDailyPlanExercises] = useState([]);
     const [isLightPlan, setIsLightPlan] = useState(false);
@@ -115,10 +94,10 @@ export default function Home() {
 
     useEffect(() => {
         if (!userData) return;
-
-        const quotes = userData.role === 'caregiver' || userData.role === 'medical_staff' ? CAREGIVER_QUOTES : SURVIVOR_QUOTES;
-        const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-        setMotivationalQuote(randomQuote);
+        if (userData.role === 'caregiver' || userData.role === 'medical_staff') return;
+        const tips = getLillyTipsForRole('survivor');
+        const randomTip = tips[Math.floor(Math.random() * tips.length)];
+        setLillyTip(randomTip);
     }, [userData]);
 
     useFocusEffect(
@@ -419,12 +398,19 @@ export default function Home() {
                     <CircularProgress progress={progressPercentage} color={Colors.primary} />
                 </View>
 
-                {motivationalQuote && (
-                    <View style={styles.quoteCard}>
-                        <Quote size={20} color={Colors.primary} style={styles.quoteIcon} />
-                        <Text style={styles.quoteText}>{motivationalQuote}</Text>
+                {lillyTip ? (
+                    <View style={styles.tipCard}>
+                        <View style={styles.tipHeader}>
+                            <Image
+                                source={require('../../assets/images/lilly-character.png')}
+                                style={styles.lillyIcon}
+                                resizeMode="cover"
+                            />
+                            <Text style={styles.tipTitle}>Lilly's Tip</Text>
+                        </View>
+                        <Text style={styles.tipText}>{lillyTip}</Text>
                     </View>
-                )}
+                ) : null}
 
                 <Text style={styles.sectionTitle}>Quick Actions</Text>
 
@@ -639,24 +625,33 @@ const styles = StyleSheet.create({
         textDecorationLine: 'line-through',
         color: Colors.textSecondary,
     },
-    quoteCard: {
+    tipCard: {
         backgroundColor: Colors.surfaceHighlight,
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 32,
+        borderRadius: 20,
+        padding: 20,
+        marginBottom: 24,
+    },
+    tipHeader: {
         flexDirection: 'row',
-        alignItems: 'flex-start',
+        alignItems: 'center',
+        marginBottom: 12,
     },
-    quoteIcon: {
-        marginRight: 12,
-        marginTop: 2,
+    lillyIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        marginRight: 10,
     },
-    quoteText: {
-        fontFamily: 'Inter_500Medium',
-        fontSize: 14,
+    tipTitle: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 16,
+        color: Colors.text,
+    },
+    tipText: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 15,
         color: Colors.textSecondary,
-        flex: 1,
-        lineHeight: 22,
+        lineHeight: 24,
         fontStyle: 'italic',
     },
     sectionTitle: {

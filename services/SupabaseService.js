@@ -26,6 +26,7 @@ try {
                 autoRefreshToken: true,
                 persistSession: true,
                 detectSessionInUrl: false,
+                flowType: 'pkce',
             },
         });
         console.log('✅ Supabase client initialized successfully with persistence');
@@ -164,6 +165,32 @@ export const SupabaseService = {
             return { data, error: null };
         } catch (error) {
             console.error('❌ Set session error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
+     * Exchange PKCE code for session (e.g. from password reset deep link)
+     * @param {string} code - Authorization code from URL query param
+     * @returns {Promise<{data, error}>}
+     */
+    async exchangeCodeForSession(code) {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+
+        try {
+            const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+            if (error) {
+                console.error('❌ Exchange code for session error:', error);
+                return { data: null, error };
+            }
+
+            console.log('✅ Session set from PKCE code');
+            return { data, error: null };
+        } catch (error) {
+            console.error('❌ Exchange code for session error:', error);
             return { data: null, error };
         }
     },

@@ -2,6 +2,7 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { MedicalStaffHomeView } from '../../components/MedicalStaffHomeView';
+import { getLillyTipsForRole } from '../../constants/lillyTips';
 
 // Mock services
 jest.mock('../../services/MedicalStaffService', () => ({
@@ -74,6 +75,16 @@ describe('MedicalStaffHomeView', () => {
         await waitFor(() => {
             expect(getByText("Lilly's Tip")).toBeTruthy();
         });
+    });
+
+    it('should display a medical-staff-specific Lilly tip', async () => {
+        const medicalStaffTips = getLillyTipsForRole('medical_staff');
+        const { getByText, queryByText } = render(<MedicalStaffHomeView {...defaultProps} />);
+        await waitFor(() => {
+            expect(getByText("Lilly's Tip")).toBeTruthy();
+        });
+        const displayedTip = medicalStaffTips.find((tip) => queryByText(tip));
+        expect(displayedTip).toBeTruthy();
     });
 
     it('should display Your Patients section title', async () => {

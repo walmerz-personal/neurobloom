@@ -7,7 +7,7 @@ import { Colors } from '../constants/Colors';
 import { Typography } from '../constants/Typography';
 import { useAuth } from '../contexts/AuthContext';
 import { SupabaseService } from '../services/SupabaseService';
-import { ArrowLeft, Save, User, Calendar, Activity, Target, Mail, Trash2, Bell, Plus, X } from 'lucide-react-native';
+import { ArrowLeft, Save, User, Calendar, Activity, Target, Mail, Trash2, Bell, Plus, X, Briefcase } from 'lucide-react-native';
 import { CareTeamSection } from '../components/CareTeamSection';
 import { HealthSharingSection } from '../components/HealthSharingSection';
 import { NotificationService } from '../services/NotificationService';
@@ -28,6 +28,11 @@ export default function Profile() {
     const [impairmentSeverity, setImpairmentSeverity] = useState('');
     const [goals, setGoals] = useState('');
     const [showDatePicker, setShowDatePicker] = useState(false);
+
+    // Medical staff
+    const [medicalStaffRole, setMedicalStaffRole] = useState('');
+    const [organization, setOrganization] = useState('');
+    const [preferences, setPreferences] = useState({});
 
     // Notification State
     const [notificationsEnabled, setNotificationsEnabled] = useState(true); // On by default
@@ -94,6 +99,9 @@ export default function Profile() {
                 setAffectedSide(profile.affected_side || '');
                 setImpairmentSeverity(profile.impairment_severity || '');
                 setGoals(profile.goals || '');
+                setMedicalStaffRole(profile.medical_staff_role || '');
+                setPreferences(profile.preferences || {});
+                setOrganization((profile.preferences && profile.preferences.organization) || '');
             }
         } catch (error) {
             console.error('Error loading profile:', error);
@@ -110,14 +118,20 @@ export default function Profile() {
             // Update User Data (Name)
             await SupabaseService.updateUserData(user.id, { name, role });
 
-            // Update Profile Data
+            // Update Profile Data (role-specific fields)
             const profileUpdates = {
-                strokeDate,
-                impairments: impairments.split(',').map(i => i.trim()).filter(i => i),
-                affectedSide: affectedSide || null,
-                impairmentSeverity: impairmentSeverity || null,
-                goals
+                preferences: role === 'medical_staff' ? { ...preferences, organization: organization || undefined } : preferences,
             };
+            if (role === 'survivor' || role === 'caregiver') {
+                profileUpdates.strokeDate = strokeDate;
+                profileUpdates.impairments = impairments.split(',').map(i => i.trim()).filter(i => i);
+                profileUpdates.affectedSide = affectedSide || null;
+                profileUpdates.impairmentSeverity = impairmentSeverity || null;
+                profileUpdates.goals = goals;
+            }
+            if (role === 'medical_staff') {
+                profileUpdates.medicalStaffRole = medicalStaffRole || null;
+            }
             await SupabaseService.saveUserProfile(user.id, profileUpdates);
 
             Alert.alert('Success', 'Profile updated successfully');
@@ -338,7 +352,7 @@ export default function Profile() {
                             <User size={18} color={Colors.primary} />
                             <Text style={styles.label}>Role</Text>
                         </View>
-                        <View style={styles.roleContainer}>
+                        <View style={styles.roleContainerVertical}>
                             <TouchableOpacity
                                 style={[
                                     styles.roleOption,
@@ -363,6 +377,18 @@ export default function Profile() {
                                     role === 'caregiver' && styles.roleTextSelected
                                 ]}>Caregiver</Text>
                             </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[
+                                    styles.roleOption,
+                                    role === 'medical_staff' && styles.roleOptionSelected
+                                ]}
+                                onPress={() => setRole('medical_staff')}
+                            >
+                                <Text style={[
+                                    styles.roleText,
+                                    role === 'medical_staff' && styles.roleTextSelected
+                                ]}>Medical Staff</Text>
+                            </TouchableOpacity>
                         </View>
                     </View>
 
@@ -380,6 +406,8 @@ export default function Profile() {
                     </View>
                 </View>
 
+                {/* Survivor: Recovery Journey */}
+                {role === 'survivor' && (
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Recovery Journey</Text>
 
@@ -519,29 +547,232 @@ export default function Profile() {
                         />
                     </View>
                 </View>
+                )}
 
-                {/* Care Team Section */}
-                <CareTeamSection
-                    userId={user?.id}
-                    userRole={role || 'survivor'}
-                    onNavigateToCaregiver={(screen, data) => {
-                        if (screen === 'accept-invitation') {
-                            router.push('/caregiver/accept-invitation');
-                        } else if (screen === 'survivor-progress' && data) {
-                            router.push({
-                                pathname: '/caregiver/survivor-progress',
-                                params: { survivorId: data.id, survivorName: data.name },
-                            });
-                        }
-                    }}
-                />
+                {/* Caregiver: Loved One's Recovery */}
+                {role === 'caregiver' && (
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Loved One&apos;s Recovery</Text>
+
+                    <View style={styles.inputGroup}>
+                        <View style={styles.labelContainer}>
+                            <Calendar size={18} color={Colors.primary} />
+                            <Text style={styles.label}>Their Date of Stroke</Text>
+                        </View>
+                        <TouchableOpacity
+                            style={styles.input}
+                            onPress={() => setShowDatePicker(true)}
+                        >
+                            <Text style={strokeDate ? styles.dateText : styles.datePlaceholder}>
+                                {strokeDate || 'Select date'}
+                            </Text>
+                        </TouchableOpacity>
+                        {showDatePicker && (
+                            <DateTimePicker
+                                value={strokeDate ? new Date(strokeDate) : new Date()}
+                                mode="date"
+                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                maximumDate={new Date()}
+                                onChange={(event, selectedDate) => {
+                                    if (Platform.OS === 'android') {
+                                        setShowDatePicker(false);
+                                    }
+                                    if (selectedDate && event.type !== 'dismissed') {
+                                        const formattedDate = selectedDate.toISOString().split('T')[0];
+                                        setStrokeDate(formattedDate);
+                                    }
+                                }}
+                            />
+                        )}
+                        {Platform.OS === 'ios' && showDatePicker && (
+                            <TouchableOpacity
+                                style={styles.datePickerDone}
+                                onPress={() => setShowDatePicker(false)}
+                            >
+                                <Text style={styles.datePickerDoneText}>Done</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <View style={styles.labelContainer}>
+                            <Activity size={18} color={Colors.primary} />
+                            <Text style={styles.label}>Their Impairments / Challenges</Text>
+                        </View>
+                        <TextInput
+                            style={[styles.input, styles.textArea]}
+                            value={impairments}
+                            onChangeText={setImpairments}
+                            placeholder="e.g. Right arm weakness, speech difficulty"
+                            placeholderTextColor={Colors.textTertiary}
+                            multiline
+                            numberOfLines={3}
+                            returnKeyType="done"
+                            textContentType="none"
+                            accessibilityLabel="Their impairments and challenges"
+                        />
+                        <Text style={styles.helperText}>Separate with commas</Text>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <View style={styles.labelContainer}>
+                            <Activity size={18} color={Colors.primary} />
+                            <Text style={styles.label}>Their Affected Side</Text>
+                        </View>
+                        <View style={styles.roleContainer}>
+                            {[
+                                { id: 'left', label: 'Left' },
+                                { id: 'right', label: 'Right' },
+                                { id: 'both', label: 'Both' },
+                                { id: 'unknown', label: 'Not sure' },
+                            ].map((option) => (
+                                <TouchableOpacity
+                                    key={option.id}
+                                    style={[
+                                        styles.roleOption,
+                                        affectedSide === option.id && styles.roleOptionSelected
+                                    ]}
+                                    onPress={() => setAffectedSide(option.id)}
+                                >
+                                    <Text style={[
+                                        styles.roleText,
+                                        affectedSide === option.id && styles.roleTextSelected
+                                    ]}>{option.label}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <View style={styles.labelContainer}>
+                            <Activity size={18} color={Colors.primary} />
+                            <Text style={styles.label}>Their Impairment Severity</Text>
+                        </View>
+                        <View style={styles.roleContainer}>
+                            {[
+                                { id: 'mild', label: 'Mild' },
+                                { id: 'moderate', label: 'Moderate' },
+                                { id: 'severe', label: 'Severe' },
+                            ].map((option) => (
+                                <TouchableOpacity
+                                    key={option.id}
+                                    style={[
+                                        styles.roleOption,
+                                        impairmentSeverity === option.id && styles.roleOptionSelected
+                                    ]}
+                                    onPress={() => setImpairmentSeverity(option.id)}
+                                >
+                                    <Text style={[
+                                        styles.roleText,
+                                        impairmentSeverity === option.id && styles.roleTextSelected
+                                    ]}>{option.label}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <View style={styles.labelContainer}>
+                            <Target size={18} color={Colors.primary} />
+                            <Text style={styles.label}>Their Recovery Goals</Text>
+                        </View>
+                        <TextInput
+                            style={[styles.input, styles.textArea]}
+                            value={goals}
+                            onChangeText={setGoals}
+                            placeholder="What do they want to achieve?"
+                            placeholderTextColor={Colors.textTertiary}
+                            multiline
+                            numberOfLines={3}
+                            returnKeyType="done"
+                            textContentType="none"
+                            accessibilityLabel="Their recovery goals"
+                        />
+                    </View>
+                </View>
+                )}
+
+                {/* Medical Staff: Professional Information */}
+                {role === 'medical_staff' && (
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Professional Information</Text>
+
+                    <View style={styles.inputGroup}>
+                        <View style={styles.labelContainer}>
+                            <Briefcase size={18} color={Colors.primary} />
+                            <Text style={styles.label}>Specialty</Text>
+                        </View>
+                        <View style={[styles.roleContainer, styles.medicalStaffRoleWrap]}>
+                            {[
+                                { id: 'occupational_therapist', label: 'Occupational Therapist (OT)' },
+                                { id: 'speech_language_pathologist', label: 'Speech Language Pathologist (SLP)' },
+                                { id: 'physical_therapist', label: 'Physical Therapist (PT)' },
+                                { id: 'psychologist', label: 'Psychologist' },
+                                { id: 'psychiatrist', label: 'Psychiatrist' },
+                                { id: 'nurse', label: 'Nurse' },
+                                { id: 'other', label: 'Other' },
+                            ].map((option) => (
+                                <TouchableOpacity
+                                    key={option.id}
+                                    style={[
+                                        styles.roleOption,
+                                        medicalStaffRole === option.id && styles.roleOptionSelected
+                                    ]}
+                                    onPress={() => setMedicalStaffRole(option.id)}
+                                >
+                                    <Text style={[
+                                        styles.roleText,
+                                        medicalStaffRole === option.id && styles.roleTextSelected
+                                    ]} numberOfLines={1}>{option.label}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <View style={styles.labelContainer}>
+                            <Briefcase size={18} color={Colors.primary} />
+                            <Text style={styles.label}>Organization / Practice</Text>
+                        </View>
+                        <TextInput
+                            style={styles.input}
+                            value={organization}
+                            onChangeText={setOrganization}
+                            placeholder="e.g. City General Hospital"
+                            placeholderTextColor={Colors.textTertiary}
+                            returnKeyType="done"
+                            textContentType="organizationName"
+                            accessibilityLabel="Organization or practice"
+                        />
+                    </View>
+                </View>
+                )}
+
+                {/* Care Team Section (hidden for caregivers; same content is on home) */}
+                {role !== 'caregiver' && (
+                    <CareTeamSection
+                        userId={user?.id}
+                        userRole={role || 'survivor'}
+                        onNavigateToCaregiver={(screen, data) => {
+                            if (screen === 'accept-invitation') {
+                                router.push('/caregiver/accept-invitation');
+                            } else if (screen === 'survivor-progress' && data) {
+                                router.push({
+                                    pathname: '/caregiver/survivor-progress',
+                                    params: { survivorId: data.id, survivorName: data.name },
+                                });
+                            }
+                        }}
+                    />
+                )}
 
                 {/* Health Data Sharing Section (Survivors only) */}
                 {role === 'survivor' && (
                     <HealthSharingSection userId={user?.id} userRole={role} />
                 )}
 
-                {/* Notifications Section */}
+                {/* Notifications Section (Survivors only) */}
+                {role === 'survivor' && (
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Notifications</Text>
 
@@ -628,6 +859,7 @@ export default function Profile() {
                         )}
                     </View>
                 </View>
+                )}
 
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Account Management</Text>
@@ -773,6 +1005,13 @@ const styles = StyleSheet.create({
     },
     roleContainer: {
         flexDirection: 'row',
+        gap: 12,
+    },
+    medicalStaffRoleWrap: {
+        flexWrap: 'wrap',
+    },
+    roleContainerVertical: {
+        flexDirection: 'column',
         gap: 12,
     },
     roleOption: {

@@ -6,17 +6,8 @@ import { Colors } from '../constants/Colors';
 import { Quote, User, ChevronRight, Heart, ClipboardList } from 'lucide-react-native';
 import { MedicalStaffService } from '../services/MedicalStaffService';
 import { SupabaseService } from '../services/SupabaseService';
+import { getLillyTipsForRole } from '../constants/lillyTips';
 import Svg, { Circle } from 'react-native-svg';
-
-// Tips from Lilly for Medical Staff
-const LILLY_TIPS = [
-    "Your expertise and guidance make all the difference. Thank you for what you do. 🌟",
-    "Remember to celebrate small wins with your patients—they matter more than you know. 💜",
-    "Consistent exercise assignment leads to better outcomes. Keep up the great work! 💪",
-    "Tracking progress helps you adjust treatment plans effectively. Use the app to monitor results. 📊",
-    "Clear communication with survivors and their families strengthens recovery. 💙",
-    "Every exercise assigned is a step toward better recovery. Your patience matters. ✨",
-];
 
 // Circular progress component
 const CircularProgress = ({ progress = 0, size = 48, strokeWidth = 5, color = Colors.primary }) => {
@@ -63,8 +54,8 @@ export function MedicalStaffHomeView({ userData, user, onLogout, onNavigateToMed
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Set random Lilly tip
-        const randomTip = LILLY_TIPS[Math.floor(Math.random() * LILLY_TIPS.length)];
+        const tips = getLillyTipsForRole('medical_staff');
+        const randomTip = tips[Math.floor(Math.random() * tips.length)];
         setLillyTip(randomTip);
     }, []);
 

@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { MedicalStaffService } from '../../services/MedicalStaffService';
 import { SupabaseService } from '../../services/SupabaseService';
 import { ArrowLeft, CheckCircle, Circle, Plus } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { CustomExerciseModal } from '../../components/CustomExerciseModal';
 
 // Import EXERCISES_DATA from exercises.js (built-in exercises)
@@ -93,6 +94,7 @@ export default function AssignExercises() {
     const [modalVisible, setModalVisible] = useState(false);
     const [assignmentNotes, setAssignmentNotes] = useState('');
     const [dueDate, setDueDate] = useState(null);
+    const [showDatePicker, setShowDatePicker] = useState(false);
     const [alreadyAssigned, setAlreadyAssigned] = useState(new Set());
 
     useEffect(() => {
@@ -356,13 +358,38 @@ export default function AssignExercises() {
                 {selectedExercises.size > 0 && (
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Assignment Details</Text>
-                        <TextInput
+                        <TouchableOpacity
                             style={styles.textInput}
-                            placeholder="YYYY-MM-DD (optional)"
-                            placeholderTextColor={Colors.textSecondary}
-                            value={dueDate || ''}
-                            onChangeText={(text) => setDueDate(text || null)}
-                        />
+                            onPress={() => setShowDatePicker(true)}
+                        >
+                            <Text style={dueDate ? styles.dateText : styles.datePlaceholder}>
+                                {dueDate || 'Due date'}
+                            </Text>
+                        </TouchableOpacity>
+                        {showDatePicker && (
+                            <DateTimePicker
+                                value={dueDate ? new Date(dueDate) : new Date()}
+                                mode="date"
+                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                minimumDate={new Date()}
+                                onChange={(event, selectedDate) => {
+                                    if (Platform.OS === 'android') {
+                                        setShowDatePicker(false);
+                                    }
+                                    if (selectedDate && event.type !== 'dismissed') {
+                                        setDueDate(selectedDate.toISOString().split('T')[0]);
+                                    }
+                                }}
+                            />
+                        )}
+                        {Platform.OS === 'ios' && showDatePicker && (
+                            <TouchableOpacity
+                                style={styles.datePickerDone}
+                                onPress={() => setShowDatePicker(false)}
+                            >
+                                <Text style={styles.datePickerDoneText}>Done</Text>
+                            </TouchableOpacity>
+                        )}
                         <TextInput
                             style={[styles.textInput, styles.notesInput]}
                             placeholder="Notes for patient (optional)"
@@ -567,6 +594,25 @@ const styles = StyleSheet.create({
     },
     notesInput: {
         minHeight: 80,
+    },
+    dateText: {
+        fontSize: 15,
+        color: Colors.text,
+    },
+    datePlaceholder: {
+        fontSize: 15,
+        color: Colors.textSecondary,
+    },
+    datePickerDone: {
+        alignSelf: 'flex-end',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        marginTop: 8,
+    },
+    datePickerDoneText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 16,
+        color: Colors.primary,
     },
     saveButton: {
         backgroundColor: Colors.primary,

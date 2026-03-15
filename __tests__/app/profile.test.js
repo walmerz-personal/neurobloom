@@ -217,6 +217,28 @@ describe('Profile Screen', () => {
         });
     });
 
+    it('hides notifications section for caregiver role', async () => {
+        SupabaseService.getUserData.mockResolvedValue({
+            user: { name: 'Test', email: 't@t.com', role: 'caregiver' },
+            error: null,
+        });
+        SupabaseService.getUserProfile.mockResolvedValue({ profile: {}, error: null });
+        const { queryByText } = render(<Profile />);
+        await waitFor(() => expect(queryByText('Account Management')).toBeTruthy());
+        expect(queryByText('Notifications')).toBeNull();
+    });
+
+    it('hides notifications section for medical_staff role', async () => {
+        SupabaseService.getUserData.mockResolvedValue({
+            user: { name: 'Test', email: 't@t.com', role: 'medical_staff' },
+            error: null,
+        });
+        SupabaseService.getUserProfile.mockResolvedValue({ profile: {}, error: null });
+        const { queryByText } = render(<Profile />);
+        await waitFor(() => expect(queryByText('Account Management')).toBeTruthy());
+        expect(queryByText('Notifications')).toBeNull();
+    });
+
     it('shows account management section with delete button', async () => {
         const { getByText } = render(<Profile />);
         await waitFor(() => {
@@ -291,7 +313,7 @@ describe('Profile Screen', () => {
         });
         SupabaseService.getUserProfile.mockResolvedValue({ profile: {}, error: null });
         const { queryByTestId } = render(<Profile />);
-        await waitFor(() => expect(queryByTestId('care-team-section')).toBeTruthy());
+        await waitFor(() => expect(queryByTestId('care-team-section')).toBeNull());
         expect(queryByTestId('health-sharing-section')).toBeFalsy();
     });
 
