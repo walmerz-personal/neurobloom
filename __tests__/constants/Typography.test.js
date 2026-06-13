@@ -48,7 +48,7 @@ describe('Typography', () => {
             expect(Typography.title2.fontSize).toBe(28);
             expect(Typography.title3.fontSize).toBe(22);
             expect(Typography.body.fontSize).toBe(17);
-            expect(Typography.caption2.fontSize).toBe(11);
+            expect(Typography.caption2.fontSize).toBe(13);
         });
     });
 
@@ -144,8 +144,8 @@ describe('Typography', () => {
     describe('Accessibility', () => {
         it('should have minimum readable font size', () => {
             Object.values(Typography).forEach(style => {
-                // Even smallest text should be at least 11px
-                expect(style.fontSize).toBeGreaterThanOrEqual(11);
+                // Accessibility floor: even the smallest text should be at least 13px
+                expect(style.fontSize).toBeGreaterThanOrEqual(13);
             });
         });
 

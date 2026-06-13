@@ -371,6 +371,13 @@ jest.mock('lucide-react-native', () => {
     });
 });
 
+// Mock expo-speech
+jest.mock('expo-speech', () => ({
+    speak: jest.fn(),
+    stop: jest.fn(),
+    isSpeakingAsync: jest.fn(() => Promise.resolve(false)),
+}));
+
 // Mock rive-react-native
 jest.mock('rive-react-native', () => ({
     default: 'RiveView',

@@ -12,7 +12,7 @@ const { width, height } = Dimensions.get('window');
 const BRAND = {
     deepNavy: '#1a237e',
     navyBlue: '#283593',
-    bloomMagenta: '#e040fb',
+    bloomMagenta: '#c2009a',
     bloomPink: '#f06292',
     bloomViolet: '#9c27b0',
     leafTeal: '#00bcd4',

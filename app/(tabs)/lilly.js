@@ -12,7 +12,8 @@ import { SupabaseService } from '../../services/SupabaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import { getLillyGreeting } from '../../constants/lillyGreetings';
 import { EXERCISES_DATA } from './exercises';
-import { Send, Mic, Flower2, User } from 'lucide-react-native';
+import { Send, Mic, Flower2, User, Volume2 } from 'lucide-react-native';
+import * as Speech from 'expo-speech';
 
 const builtInIdToTitle = Object.fromEntries((EXERCISES_DATA || []).map((e) => [e.id, e.title]));
 
@@ -326,6 +327,8 @@ export default function Lilly() {
                             ]}
                             onPress={handleVoicePress}
                             disabled={isTranscribing}
+                            accessibilityRole="button"
+                            accessibilityLabel={recorderState.isRecording ? 'Stop recording' : 'Record a voice message'}
                         >
                             {recorderState.isRecording ? (
                                 <View style={styles.recordingIndicator} />
@@ -351,6 +354,8 @@ export default function Lilly() {
                             style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
                             onPress={handleSend}
                             disabled={!inputText.trim() || recorderState.isRecording || isTranscribing}
+                            accessibilityRole="button"
+                            accessibilityLabel="Send message"
                         >
                             <Send size={20} color="white" />
                         </TouchableOpacity>
@@ -377,6 +382,17 @@ function Message({ isLilly, text, action, onActionPress }) {
                 <Text style={[styles.messageText, isLilly ? styles.lillyText : styles.userText]}>
                     {text}
                 </Text>
+                {isLilly && !!text && (
+                    <TouchableOpacity
+                        style={styles.speakButton}
+                        onPress={() => Speech.speak(text)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Read this message aloud"
+                    >
+                        <Volume2 size={16} color={Colors.textSecondary} />
+                        <Text style={styles.speakButtonText}>Listen</Text>
+                    </TouchableOpacity>
+                )}
                 {action && action.type === 'navigate' && (
                     <TouchableOpacity style={styles.actionButton} onPress={onActionPress}>
                         <Text style={styles.actionButtonText}>
@@ -589,6 +605,19 @@ const styles = StyleSheet.create({
     actionButtonText: {
         fontFamily: 'Inter_600SemiBold',
         color: Colors.primary,
+        fontSize: 14,
+    },
+    speakButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 8,
+        alignSelf: 'flex-start',
+        paddingVertical: 4,
+    },
+    speakButtonText: {
+        fontFamily: 'SourceSans3_600SemiBold',
+        color: Colors.textSecondary,
         fontSize: 14,
     }
 });

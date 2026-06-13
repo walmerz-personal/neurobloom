@@ -29,6 +29,15 @@ const CATEGORY_EMOJI = {
     'Head & Neck': '🧠',
 };
 
+// Spoken labels for the mood emojis (screen readers can't read emoji meaning).
+const MOOD_LABELS = {
+    '😄': 'Very happy',
+    '🙂': 'Happy',
+    '😐': 'Neutral',
+    '😞': 'Sad',
+    '😢': 'Very sad',
+};
+
 // Build the day's check-in list from the user's real plan: medical-staff
 // assignments first, then AI recommendations. Deduped, real exercise IDs.
 function buildPlanExercises(profile, assignments) {
@@ -178,6 +187,9 @@ export default function CheckIn() {
                                 key={emoji}
                                 style={[styles.emojiOption, mood === emoji && styles.emojiSelected]}
                                 onPress={() => setMood(emoji)}
+                                accessibilityRole="radio"
+                                accessibilityState={{ selected: mood === emoji }}
+                                accessibilityLabel={MOOD_LABELS[emoji] || 'Mood'}
                             >
                                 <Text style={styles.emojiText}>{emoji}</Text>
                             </TouchableOpacity>
@@ -197,6 +209,9 @@ export default function CheckIn() {
                                     completedExercises.includes(exercise.id) && styles.exerciseCompleted
                                 ]}
                                 onPress={() => toggleExercise(exercise.id)}
+                                accessibilityRole="checkbox"
+                                accessibilityState={{ checked: completedExercises.includes(exercise.id) }}
+                                accessibilityLabel={exercise.label}
                             >
                                 <View style={styles.exerciseCheckbox}>
                                     {completedExercises.includes(exercise.id) && (
