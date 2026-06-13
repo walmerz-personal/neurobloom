@@ -1060,18 +1060,18 @@ describe('SupabaseService', () => {
     // =============================================
 
     describe('deleteUserAccount', () => {
-        it('should delete via admin API when available', async () => {
-            mockSupabase.auth.admin.deleteUser.mockResolvedValue({ error: null });
+        it('should delete via the delete-account edge function when available', async () => {
+            mockSupabase.functions.invoke.mockResolvedValue({ data: { success: true }, error: null });
 
             const { success, error } = await SupabaseService.deleteUserAccount('user-1');
 
             expect(success).toBe(true);
             expect(error).toBeNull();
-            expect(mockSupabase.auth.admin.deleteUser).toHaveBeenCalledWith('user-1');
+            expect(mockSupabase.functions.invoke).toHaveBeenCalledWith('delete-account', { body: {} });
         });
 
-        it('should delete manually when admin API fails', async () => {
-            mockSupabase.auth.admin.deleteUser.mockResolvedValue({ error: new Error('No admin') });
+        it('should fall back to manual deletion when the edge function is unavailable', async () => {
+            mockSupabase.functions.invoke.mockResolvedValue({ data: null, error: new Error('not deployed') });
             // Each .delete().eq() chain resolves
             mockSupabase.eq.mockResolvedValue({ error: null });
 
@@ -1079,17 +1079,24 @@ describe('SupabaseService', () => {
 
             expect(success).toBe(true);
             expect(error).toBeNull();
-            // Should have called from() for each table
+            // Should have deleted from every table that references the user
             expect(mockSupabase.from).toHaveBeenCalledWith('user_inventory');
             expect(mockSupabase.from).toHaveBeenCalledWith('garden_plants');
             expect(mockSupabase.from).toHaveBeenCalledWith('conversations');
             expect(mockSupabase.from).toHaveBeenCalledWith('daily_logs');
+            expect(mockSupabase.from).toHaveBeenCalledWith('health_metrics');
+            expect(mockSupabase.from).toHaveBeenCalledWith('health_sharing_preferences');
+            expect(mockSupabase.from).toHaveBeenCalledWith('exercise_assignments');
+            expect(mockSupabase.from).toHaveBeenCalledWith('kudos');
+            expect(mockSupabase.from).toHaveBeenCalledWith('nudges');
+            expect(mockSupabase.from).toHaveBeenCalledWith('care_team_links');
             expect(mockSupabase.from).toHaveBeenCalledWith('user_profiles');
             expect(mockSupabase.from).toHaveBeenCalledWith('users');
         });
 
         it('should handle thrown exceptions', async () => {
-            mockSupabase.auth.admin.deleteUser.mockRejectedValue(new Error('Network error'));
+            mockSupabase.functions.invoke.mockResolvedValue({ data: null, error: new Error('not deployed') });
+            mockSupabase.from.mockImplementationOnce(() => { throw new Error('Network error'); });
 
             const { success, error } = await SupabaseService.deleteUserAccount('user-1');
 
