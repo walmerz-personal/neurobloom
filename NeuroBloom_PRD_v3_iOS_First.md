@@ -24,6 +24,12 @@
 13. [Success Metrics](#success-metrics)
 14. [Development Phases](#development-phases)
 15. [Risk Management](#risk-management)
+16. [Go-to-Market Strategy](#16-go-to-market-strategy-brief)
+17. [Team & Resources Needed](#17-team--resources-needed)
+18. [Budget Estimate](#18-budget-estimate-phase-1)
+19. [Immediate Next Steps](#19-immediate-next-steps-week-1)
+20. [V1.1 Post-Build Product Review — Recommendations & Updated Roadmap](#20-v11-post-build-product-review--recommendations--updated-roadmap) *(added v3.1)*
+21. [Appendix](#21-appendix)
 
 ---
 
@@ -2220,6 +2226,8 @@ tasks (
 - VR/AR rehabilitation exercises
 - Predictive models for recovery trajectories
 
+**Device & app integrations (see §20.6 for full strategy):** Build a generic `external_sessions` integration layer and broaden Apple HealthKit reads first; pursue **Vivistim (MicroTransponder)** paired-VNS adherence companion as the priority partnership; treat **MindMotion GO** and clinical gloves (Neofect/Rapael, etc.) as connectors onto that layer once partnerships land. Keep data presentation descriptive to stay clear of FDA SaMD classification.
+
 ---
 
 ## 15. Risk Management
@@ -2278,12 +2286,11 @@ tasks (
 - Focus on superior accessibility (hard to copy)
 - Build community moat (network effects)
 
-**Risk:** Stroke survivors can't afford $9-29/month
-**Mitigation:**
-- Offer generous free tier
-- Financial assistance program
-- Partner with insurance for coverage
-- Apply for grants to subsidize for low-income users
+**Risk:** Stroke survivors can't afford a consumer subscription (population skews 65+, fixed income)
+**Mitigation (revised v3.1):**
+- **Primary fix: don't charge the survivor.** Route monetization through clinics via RTM (§20.5); the survivor/caregiver app stays free.
+- Keep core features (exercises, Lilly, check-in) free forever; cosmetic-only purchases at most
+- Hospital discharge & insurance partnerships; grants for non-clinic-attached users
 
 **Risk:** Insurance reimbursement doesn't materialize
 **Mitigation:**
@@ -2326,10 +2333,9 @@ tasks (
   - Therapist referrals
   - Social media (TikTok/Instagram for younger survivors, Facebook for older)
   - Paid ads (Google, Facebook) targeting caregivers
-- **Pricing:** Freemium model
-  - Free: Basic Lilly chat, limited exercises
-  - Premium: $9.99/month - Full exercise library, unlimited Lilly, caregiver coordination
-  - Premium Plus: $19.99/month - Advanced analytics, telehealth ready, priority support
+- **Pricing — RTM-first (revised v3.1; see §20.5):** The primary model is **clinic-billed Remote Therapeutic Monitoring**, not a consumer subscription. The survivor/caregiver app stays **free** (optional cosmetic garden purchases only — never paywall exercises or Lilly's core support). Clinics pay a per-active-patient/month platform fee and bill insurance via RTM CPT codes (98975/98977/98980/98981). The legacy consumer tiers below are retained only as a fallback for non-clinic users and are **deprioritized**:
+  - Free: full exercise library, Lilly, check-in, garden, care-team coordination
+  - (Legacy, optional) Premium $9.99/mo and Premium Plus $19.99/mo — superseded by the RTM model for the clinic-attached population
 
 ### 16.3 Enterprise Expansion (Phase 3)
 - Hospital/clinic licensing: $5,000-20,000/year
@@ -2458,7 +2464,130 @@ tasks (
 
 ---
 
-## 20. Appendix
+## 20. V1.1 Post-Build Product Review — Recommendations & Updated Roadmap
+
+> **Added in Version 3.1 (June 13, 2026).** This section reconciles the PRD with the app as actually built and shipped to TestFlight (build 51+), and folds in the recommendations from the June 2026 expert review. Where this section conflicts with earlier sections, **this section governs.** Items are tagged **P0** (must-fix before broad release / clinical pilot), **P1** (high value, next), **P2** (polish). A consolidated, sequenced rollout plan appears in §20.10.
+
+### 20.0 What Changed Since v3.0 (PRD-vs-Built Reconciliation)
+
+The product pivoted during implementation and the doc had drifted. The authoritative current state is:
+
+- **Tech stack:** Built in **React Native + Expo (expo-router)**, not SwiftUI/Swift. Backend is Supabase (Postgres + Edge Functions). This is the supported stack going forward; ignore SwiftUI references in §8/§11.
+- **AI model:** Lilly currently runs on **OpenAI GPT-4o-mini** via a Supabase Edge Function, with voice input transcribed by **OpenAI Whisper**. The v3.0 plan named Claude 3.5 Sonnet. The model choice must be made deliberately on a **BAA-backed provider** (see §20.3); until then, treat the LLM provider as a compliance decision, not just a quality one.
+- **Built and working:** 3 roles (survivor / caregiver / medical staff), 62-exercise library with phase/impairment metadata and a client-side recommendation engine, daily check-in, progress tab with Apple HealthKit gait metrics, the garden gamification loop, Lilly with client-side emergency keyword detection, care-team linking with kudos/nudges and granular per-metric health sharing, and a medical-staff exercise-assignment workflow.
+- **~1,824 tests / ~72% coverage**, 51 TestFlight builds. The engineering foundation is real; the gaps below are product/clinical/compliance, not "does it run."
+
+### 20.1 Accessibility Overhaul (P0) — *the existential requirement*
+
+Our users have hemiparesis, visual-field cuts, aphasia, and cognitive fatigue. Principle #1 (§7.1) says accessibility is not optional; the built app does not yet meet it. The "David" persona (severe aphasia + hemiparesis) is currently **not served**. Requirements:
+
+- **Dynamic Type / font scaling:** Adopt OS text-scaling (`allowFontScaling`, scaled values in `constants/Typography.js`). Raise minimum body text from the current 11–13px to **≥16px**; no interactive text below 15px.
+- **Color contrast (WCAG AA, AAA where feasible):** The brand magenta `#e040fb` on white is **3.8:1 and fails AA**. Darken to a `#c000e0`-range tone for text/icons while preserving brand identity. Audit all accent-on-white pairings; teal `#00bcd4` is borderline.
+- **Screen-reader support:** Add `accessibilityLabel`/`accessibilityRole` to every interactive and data element — charts, garden plant slots, exercise cards, modal close buttons. One full VoiceOver pass is a release gate each cycle.
+- **Text-to-speech for Lilly:** Survivors who can't read comfortably must be able to **listen** to Lilly's replies (and ideally exercise instructions). Add TTS playback.
+- **Aphasia-friendly input:** Offer **icon/picture-based quick replies** in Lilly and symbol-supported check-in options, so composing text or clear speech is not required to use the core loop.
+- **One-handed operation:** Re-lay the mood/emoji selectors and primary actions so the daily loop is completable with one hand (thumb-reach zone). Hemiparesis makes two-handed UI a hard blocker.
+- **Reduced motion:** Honor the OS reduce-motion setting; make onboarding pulse/carousel animations opt-out.
+
+*Acceptance:* App passes an external accessibility audit at WCAG 2.1 AA; the David persona can complete onboarding, a check-in, and a Lilly exchange end-to-end without typing or reading dense text.
+
+### 20.2 Close the Personalization ↔ Check-In Loop (P0) — *highest functional leverage*
+
+Today the recommendation engine and staff-assignment system exist, but the daily check-in shows **five hardcoded exercises** (`app/check-in.js`) and the daily goal is **hardcoded to 4** in two places (`home.js`, `CaregiverHomeView.js`). Adherence — our North Star — is only meaningful if measured against the *actual prescribed plan*.
+
+- Render the check-in from the user's **personalized daily plan**: medical-staff assignments first, then AI recommendations; remove the hardcoded list.
+- Make the daily goal **configurable** (medical-staff-set, or derived from the plan), not a magic number.
+- **Couple the garden to the plan:** award growth/bloom for completing *prescribed* sets, so the gamification reinforces the clinically meaningful behavior rather than generic check-ins.
+
+*Acceptance:* A survivor whose PT assigned specific exercises sees exactly those in the check-in; adherence reporting reflects assigned-vs-completed.
+
+### 20.3 Privacy, Consent & Compliance Hardening (P0) — *gate to every clinical partnership*
+
+These block hospital/clinic/payer relationships and RTM billing (§20.5):
+
+- **BAA-backed AI + explicit consent:** Lilly context (stroke date, impairments, daily logs) and raw **voice audio** are sent to OpenAI today with no consent screen and no evident BAA. Move to a BAA-backed, zero-retention LLM/transcription arrangement (OpenAI, Anthropic, and Azure OpenAI all offer BAAs) and add an **explicit opt-in** during onboarding with a plain-language explanation. Make AI features opt-out-able.
+- **Complete the account-deletion cascade:** `deleteUserAccount()` currently orphans `health_metrics`, `health_sharing_preferences`, `care_team_links`, `exercise_assignments`, kudos, and nudges. Extend the cascade to all tables; add a confirmation step.
+- **Audit logging:** Add an access-log table/trigger recording who viewed a survivor's health data and when — both a compliance need and a trust feature ("your caregiver viewed your progress"). This is **revenue-critical** for RTM documentation/audit defense.
+- **Secrets hygiene:** Remove `credentials.json` (committed iOS signing-cert password) from the repo, **rotate the credential**, and move to EAS Secrets. Purge bulky/stale artifacts from version control (76MB `hermes-engine/`, the simulator recording, `build_output*.log`, `coverage/`).
+- **Data lifecycle:** Define and publish a **retention schedule** (e.g., conversations, audio, logs) and ship **data export** (the PRD already promises both). Choose an export format (CSV now; FHIR/HL7 when integrating clinically).
+
+### 20.4 Clinical Credibility & Safety (P1)
+
+- **Add one validated outcome instrument:** A monthly self-administrable PRO — **PROMIS Global-10** or the **Stroke Impact Scale (SIS) short form** — gives real outcome data for pilots, publications, and payer conversations. Mood emojis and 0–10 sliders alone won't earn clinician trust.
+- **Safety affordances on exercises:** Surface **fall-risk callouts** on balance / sit-to-stand exercises ("have someone nearby" — make the existing "partner" mode explicit), and a **"stop if pain increases"** rule in exercise detail. Add gentle exertion guidance.
+- **Named clinical advisors:** Recruit one PT and one stroke neurologist as named advisors. Low cost, materially changes how clinics and grant reviewers receive the product.
+- **Regulatory posture:** Keep language **descriptive, not prescriptive** (display adherence/data = wellness). Recovery prediction or therapy adjustment crosses into FDA SaMD territory — pursue that only deliberately. Reaffirm "wellness tool, not diagnostic/treatment."
+
+### 20.5 Business Model — RTM-First Monetization (supersedes §16.2 consumer pricing)
+
+The v3.0 consumer subscription ($9.99 / $19.99) targets the population *least* able to pay (survivors skew 65+, often on fixed incomes post-stroke) and fights our retention mission. **Route the money through clinics, keep the survivor experience free.**
+
+- **Primary model — Remote Therapeutic Monitoring (RTM):** CPT **98975** (setup), **98977** (device-supplied monitoring/30 days), **98980/98981** (monthly management time) reimburse clinicians for exactly what NeuroBloom produces. We already have ~70% of an RTM product (staff portal + assignment + adherence). Sell to outpatient PT/OT clinics and stroke programs (per-clinician or per-active-patient/month); **the clinic bills insurance; the survivor pays $0.**
+- **Survivor/caregiver app stays free** (optional cosmetic garden purchases only — never paywall exercises or Lilly's core support).
+- **Other lines:** hospital discharge partnerships ("every stroke discharge leaves with NeuroBloom"); the Vivistim companion contract (§20.6); white-label/enterprise (existing Phase 4).
+
+**Market sizing (US, estimates; reimbursement varies by MAC/region/payer):**
+
+- **Supply:** ~38,000–45,000 outpatient rehab clinic establishments; ~8,000–15,000 carry meaningful stroke/neuro caseload. ~240k–250k PTs, ~145k OTs.
+- **Demand:** ~795k strokes/yr; ~7M+ survivors; ~500k–750k patients/yr in active outpatient stroke rehab.
+- **RTM economics:** ~$110/patient-month billed; ~3–6 month episodes. NeuroBloom platform fee modeled at $30–50/active patient/month.
+
+| Scenario | Patients/yr | Billable mo. | NB fee/pt-mo | **NB platform TAM** |
+|---|---|---|---|---|
+| Conservative | 300,000 | 3 | $30 | **~$27M/yr** |
+| Base | 500,000 | 4 | $40 | **~$80M/yr** |
+| Aggressive | 750,000 | 5 | $50 | **~$190M/yr** |
+
+- **Stroke RTM reimbursement pool (ecosystem value we enable):** ~**$220M/yr** base.
+- **Expansion TAM (all neuro + MSK RTM — TBI, PD, MS, ortho/post-surgical):** **low single-digit billions/yr**; stroke is the beachhead, not the ceiling.
+- **Realistic 3-yr SOM:** a few hundred clinics / a few thousand active patients → ~**$5–15M ARR** trajectory. Capture rate (RTM adoption maturity, clinician management-time burden, audit/documentation rigor) is the binding constraint — which is why §20.3 audit logging and the "make the 20 minutes trivial" auto-summary product wedge are revenue features, not nice-to-haves.
+
+### 20.6 Device & App Integration Strategy (P1–P2) — *the "be the hub" thesis*
+
+No MindMotion GO / glove / Vivistim code exists today (only Apple HealthKit). Strategy:
+
+- **Build one internal integration layer first.** Add a generic **`external_sessions`** table (`source_device`, `session_type`, `duration`, `intensity`, `metrics` JSONB, `recorded_at`) so future device/therapy data lands as a connector, not a re-architecture. Don't build speculative per-device adapters.
+- **Lean on Apple HealthKit as the interoperability bus.** Many devices already write to Health; broaden what we read (heart rate, exercise minutes, sleep) to get integration "for free."
+- **Vivistim (MicroTransponder) is the best strategic fit (P1 BD, P2 build):** paired-VNS therapy *requires* pairing stimulation with structured rehab exercise — adherence is literally part of the protocol, and our staff-assignment workflow already exists. Pursue being the home-exercise adherence layer for Vivistim patients. Even pre-API, ship a **"Vivistim mode"** (log magnet swipes alongside exercises; surface paired-session adherence to the clinic).
+- **MindMotion GO and clinical gloves (Neofect/Rapael, etc.)** are clinic-prescribed, closed ecosystems — partnership-gated, slow. Treat as connectors onto `external_sessions` once a partnership lands; do not block the roadmap on them.
+- **Regulatory caution:** the more device/therapy data we ingest and present as clinician decision support, the closer we drift to SaMD. Keep it descriptive (§20.4).
+
+### 20.7 UX & Aesthetic Polish (P1/P2)
+
+- Fix the **keyboard-covering-buttons** issues catalogued in `UX_ISSUES_AND_FIXES.md` (worst-possible bug class for motor-impaired users) — P1.
+- Replace **alert-based validation with inline field errors** (cognitive-load) — P1.
+- Add gentle **screen transitions**; either use or remove the dead `lottie-react-native` / `rive-react-native` deps and the unintegrated `ConfettiBurst` — a bloom-celebration confetti moment is exactly where it belongs — P2.
+- Add an optional **"Simple Mode" home** — one large "Start today's exercises" button with progressive disclosure of the rest — realizing the §7.7 "start simple, grow complex" principle for acute-phase / cognitively fatigued users — P1.
+
+### 20.8 Engineering Housekeeping & Platform Hygiene (P2, continuous)
+
+- Split the ~1,300-line monolithic `SupabaseService` into domain services.
+- **Consolidate the RLS story:** squash months of policy firefighting into one canonical baseline migration; add **RLS integration tests** so cross-role access regressions are caught before TestFlight.
+- **Deduplicate the exercise catalog** (defined in both `exercises.js` and `assign-exercises.js`) and fix the DB CHECK constraint that still rejects the **Head & Neck** category for custom exercises.
+- Add **CI** (no GitHub Actions exist today — at minimum run `jest` on PR).
+- Keep this PRD in sync with reality going forward (the SwiftUI/Claude drift is the cautionary tale).
+
+### 20.9 Reaffirmed Principles (unchanged, now load-bearing)
+
+The emotional-design thesis — streaks that don't reset, celebrating attempts, the garden-not-leaderboard metaphor, "guide not replacement" Lilly — remains the core differentiator and should be **protected** through all of the above. The work is making that warmth *accessible* (§20.1) and routing the money through clinics (§20.5), not changing the heart of the product.
+
+### 20.10 Recommended Sequencing (Waves)
+
+Ordered for **risk-burndown and unlock value**, not just effort. Earlier waves remove blockers for later ones (e.g., compliance gates the clinical pilot that the RTM revenue depends on).
+
+**Wave 0 — Safety/Hygiene quick wins (days, do immediately):** purge & rotate `credentials.json` (§20.3); repo cleanup; add CI running the existing tests (§20.8). *Why first: trivial effort, removes a live security exposure and protects everything downstream.*
+
+**Wave 1 — Make the core loop honest & usable (P0, weeks 1–6):** (a) close the personalization↔check-in loop and configurable goal (§20.2); (b) accessibility overhaul — Dynamic Type, contrast fix, VoiceOver labels, Lilly TTS (§20.1). *Why: §20.2 makes adherence data real (the thing we sell and study); §20.1 makes the app usable by the actual population. These are the two highest-leverage P0s and are mostly independent, so they can run in parallel.*
+
+**Wave 2 — Compliance & clinical credibility (P0/P1, weeks 4–10, overlaps Wave 1):** BAA-backed AI + consent, deletion cascade, audit logging, retention/export (§20.3); add PROMIS-10/SIS and exercise safety affordances (§20.4); recruit clinical advisors. *Why: this is the gate to the RTM pilot; audit logging + outcome data are prerequisites for billing and for proving value.*
+
+**Wave 3 — Monetization pilot (weeks 8–16):** stand up the RTM workflow (auto-generated adherence summaries that make the clinician's 20 min trivial), run a paid pilot with 1–3 outpatient clinics (§20.5). *Why: needs Waves 1–2 done to be credible and compliant; this is where revenue starts and the SOM thesis gets tested.*
+
+**Wave 4 — Integration moat & polish (P1/P2, parallel from ~week 10):** build the `external_sessions` layer + broaden HealthKit; open the Vivistim/MicroTransponder BD conversation and ship "Vivistim mode" (§20.6); UX polish and Simple Mode (§20.7); engineering housekeeping (§20.8). *Why: differentiators and expansion, valuable but not blockers — they compound best once the core loop, accessibility, and compliance are solid.*
+
+---
+
+## 21. Appendix
 
 ### A. Glossary of Stroke Terms
 
@@ -2543,6 +2672,15 @@ tasks (
 - Updated Phase 2 to web companion app (not mobile)
 - Added XcodeBuildMCP integration for Claude Code development
 - Comprehensive iOS technical architecture and database schema
+
+**Version 3.1** (June 13, 2026)
+- Added **Section 20: V1.1 Post-Build Product Review — Recommendations & Updated Roadmap**, reconciling the PRD with the shipped React Native/Expo + Supabase app and folding in the June 2026 expert review
+- Reconciled stack drift (SwiftUI→React Native/Expo; LLM provider is now a BAA-backed compliance decision)
+- **Strategic pivot: RTM-first monetization** (clinic-billed; survivor app free) supersedes consumer subscription pricing in §16.2; updated affordability risk mitigation in §15.3
+- Added device & app integration strategy (generic `external_sessions` layer, HealthKit bus, Vivistim/MindMotion/gloves) to §14 Phase 4 and §20.6
+- Elevated accessibility, personalization↔check-in loop closure, and privacy/consent/audit hardening to P0
+- Added market sizing (RTM TAM/SAM/SOM) and a sequenced 5-wave rollout plan (§20.10)
+- Renumbered Appendix from 20 to 21; expanded Table of Contents to cover §16–21
 
 ---
 
