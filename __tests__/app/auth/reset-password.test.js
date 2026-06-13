@@ -10,6 +10,9 @@ jest.mock('../../../components/Logo', () => 'Logo');
 jest.mock('../../../services/SupabaseService');
 jest.mock('expo-linking', () => ({
     useURL: () => null,
+    getLinkingURL: () => null,
+    getInitialURL: jest.fn(() => Promise.resolve(null)),
+    addEventListener: jest.fn(() => ({ remove: jest.fn() })),
 }));
 
 const mockReplace = jest.fn();
