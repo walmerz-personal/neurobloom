@@ -39,7 +39,7 @@ const CircularProgress = ({ progress = 0, size = 48, strokeWidth = 5, color = Co
                     transform={`rotate(-90 ${size / 2} ${size / 2})`}
                 />
             </Svg>
-            <Text style={{ position: 'absolute', fontFamily: 'Inter_600SemiBold', fontSize: 11, color: Colors.text }}>
+            <Text style={{ position: 'absolute', fontFamily: 'Inter_600SemiBold', fontSize: 13, color: Colors.text }}>
                 {Math.round(progress * 100)}%
             </Text>
         </View>
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     },
     statusText: {
         fontFamily: 'Inter_500Medium',
-        fontSize: 12,
+        fontSize: 13,
     },
     survivorRight: {
         flexDirection: 'row',

@@ -138,6 +138,8 @@ export function CustomExerciseModal({
                             onPress={handleClose} 
                             style={styles.closeButton}
                             disabled={saving}
+                            accessibilityRole="button"
+                            accessibilityLabel="Close exercise editor"
                         >
                             <X size={24} color={Colors.textSecondary} />
                         </TouchableOpacity>
@@ -417,7 +419,7 @@ const styles = StyleSheet.create({
     },
     hint: {
         fontFamily: 'Inter_400Regular',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.textSecondary,
         marginBottom: 8,
     },

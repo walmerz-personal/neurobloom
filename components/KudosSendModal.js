@@ -59,7 +59,7 @@ export function KudosSendModal({
                 <View style={styles.modal}>
                     {!sent ? (
                         <>
-                            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+                            <TouchableOpacity onPress={handleClose} style={styles.closeButton} accessibilityRole="button" accessibilityLabel="Close">
                                 <X size={24} color={Colors.textSecondary} />
                             </TouchableOpacity>
 

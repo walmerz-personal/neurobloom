@@ -173,7 +173,7 @@ export default function SurvivorProgress() {
         return (
             <ScreenWrapper>
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
                         <ArrowLeft size={24} color={Colors.text} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>{survivorName || 'Progress'}</Text>
@@ -190,7 +190,7 @@ export default function SurvivorProgress() {
         return (
             <ScreenWrapper>
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
                         <ArrowLeft size={24} color={Colors.text} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>{survivorName || 'Progress'}</Text>
@@ -211,7 +211,7 @@ export default function SurvivorProgress() {
     return (
         <ScreenWrapper>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
                     <ArrowLeft size={24} color={Colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{survivor?.name || 'Progress'}</Text>
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
     },
     statLabel: {
         fontFamily: 'Inter_400Regular',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.textSecondary,
         marginTop: 4,
         textAlign: 'center',
@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
     },
     rangeSelectorText: {
         fontFamily: 'Inter_600SemiBold',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.primary,
     },
     pickerOverlay: {
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
     },
     averageLabel: {
         fontFamily: 'Inter_400Regular',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.textSecondary,
         marginTop: 4,
     },

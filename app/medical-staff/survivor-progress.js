@@ -177,7 +177,7 @@ export default function SurvivorProgress() {
         return (
             <ScreenWrapper>
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
                         <ArrowLeft size={24} color={Colors.text} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>{survivorName || 'Progress'}</Text>
@@ -194,7 +194,7 @@ export default function SurvivorProgress() {
         return (
             <ScreenWrapper>
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
                         <ArrowLeft size={24} color={Colors.text} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>{survivorName || 'Progress'}</Text>
@@ -215,7 +215,7 @@ export default function SurvivorProgress() {
     return (
         <ScreenWrapper>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
                     <ArrowLeft size={24} color={Colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{survivor?.name || 'Progress'}</Text>
@@ -230,6 +230,8 @@ export default function SurvivorProgress() {
                     <TouchableOpacity
                         onPress={() => router.push(`/medical-staff/manage-assignments?survivorId=${survivorId}&survivorName=${encodeURIComponent(survivor?.name || survivorName || '')}`)}
                         style={styles.settingsButton}
+                        accessibilityRole="button"
+                        accessibilityLabel="Manage assignments"
                     >
                         <Settings size={20} color={Colors.primary} />
                     </TouchableOpacity>
@@ -649,7 +651,7 @@ const styles = StyleSheet.create({
     },
     statLabel: {
         fontFamily: 'Inter_400Regular',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.textSecondary,
         marginTop: 4,
         textAlign: 'center',
@@ -681,7 +683,7 @@ const styles = StyleSheet.create({
     },
     rangeSelectorText: {
         fontFamily: 'Inter_600SemiBold',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.primary,
     },
     pickerOverlay: {
@@ -748,7 +750,7 @@ const styles = StyleSheet.create({
     },
     averageLabel: {
         fontFamily: 'Inter_400Regular',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.textSecondary,
         marginTop: 4,
     },
@@ -892,7 +894,7 @@ const styles = StyleSheet.create({
     },
     assignmentStatusText: {
         fontFamily: 'Inter_600SemiBold',
-        fontSize: 11,
+        fontSize: 13,
     },
     assignmentMeta: {
         flexDirection: 'row',
@@ -901,12 +903,12 @@ const styles = StyleSheet.create({
     },
     assignmentDate: {
         fontFamily: 'Inter_400Regular',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.textSecondary,
     },
     assignmentDueDate: {
         fontFamily: 'Inter_400Regular',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.textSecondary,
     },
     assignmentNotes: {

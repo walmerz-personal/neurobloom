@@ -233,7 +233,7 @@ export default function AssignExercises() {
         return (
             <ScreenWrapper>
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
                         <ArrowLeft size={24} color={Colors.text} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Assign Exercises</Text>
@@ -253,7 +253,7 @@ export default function AssignExercises() {
                     <ArrowLeft size={24} color={Colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Assign Exercises</Text>
-                <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.createButton}>
+                <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.createButton} accessibilityRole="button" accessibilityLabel="Create custom exercise">
                     <Plus size={20} color={Colors.primary} />
                 </TouchableOpacity>
             </View>
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
     },
     exerciseCategory: {
         fontFamily: 'Inter_500Medium',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.textSecondary,
         marginBottom: 4,
     },
@@ -578,7 +578,7 @@ const styles = StyleSheet.create({
     },
     assignedBadgeText: {
         fontFamily: 'Inter_500Medium',
-        fontSize: 11,
+        fontSize: 13,
         color: Colors.primary,
     },
     textInput: {
