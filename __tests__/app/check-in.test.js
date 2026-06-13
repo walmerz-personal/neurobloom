@@ -9,6 +9,19 @@ import { SupabaseService } from '../../services/SupabaseService';
 jest.mock('../../contexts/AuthContext');
 jest.mock('../../services/SupabaseService');
 
+// Avoid pulling the heavy (tabs)/exercises route (and its native deps) into
+// this test; provide a small real-shaped EXERCISES_DATA for plan building.
+jest.mock('../../app/(tabs)/exercises', () => ({
+    EXERCISES_DATA: [
+        { id: 'a1', category: 'Arms', title: 'Shoulder Shrugs', difficulty: 'Beginner' },
+        { id: 'a3', category: 'Arms', title: 'Bicep Curls', difficulty: 'Intermediate' },
+        { id: 'l1', category: 'Legs', title: 'Ankle Pumps', difficulty: 'Beginner' },
+        { id: 'l2', category: 'Legs', title: 'Seated Marching', difficulty: 'Beginner' },
+        { id: 'c1', category: 'Core', title: 'Trunk Rotations', difficulty: 'Beginner' },
+        { id: 'h1', category: 'Hands', title: 'Fist Clenches', difficulty: 'Beginner' },
+    ],
+}));
+
 const mockBack = jest.fn();
 jest.mock('expo-router', () => ({
     useRouter: () => ({
@@ -30,6 +43,10 @@ describe('CheckIn Screen', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         useAuth.mockReturnValue({ user: { id: 'user-1' } });
+        // Default to "no plan" so the check-in shows DEFAULT_EXERCISES;
+        // individual tests override these to exercise plan-driven behavior.
+        SupabaseService.getUserProfile.mockResolvedValue({ profile: null });
+        SupabaseService.getAssignedExercises.mockResolvedValue({ data: [] });
         SupabaseService.getTodayLog.mockResolvedValue({ log: null });
         SupabaseService.saveDailyLog.mockResolvedValue({ data: {}, error: null });
         SupabaseService.getUserPoints.mockResolvedValue({ points: 50 });
@@ -66,6 +83,20 @@ describe('CheckIn Screen', () => {
         expect(getByText('Trunk Rotations')).toBeTruthy();
         expect(getByText('Fist Clenches')).toBeTruthy();
         expect(getByText('Seated Marching')).toBeTruthy();
+    });
+
+    it('shows staff-assigned exercises from the daily plan', async () => {
+        SupabaseService.getUserProfile.mockResolvedValue({
+            profile: { impairments: ['motor'], recovery_phase: 'chronic' },
+        });
+        SupabaseService.getAssignedExercises.mockResolvedValue({ data: [{ exercise_id: 'a3' }] });
+
+        const { findByText } = render(<CheckIn />);
+
+        // a3 (Bicep Curls) is staff-assigned and not in the default list,
+        // so its presence proves the check-in is plan-driven.
+        expect(await findByText('Bicep Curls')).toBeTruthy();
+        expect(SupabaseService.getAssignedExercises).toHaveBeenCalledWith('user-1', 'assigned');
     });
 
     it('shows pain and energy sections', () => {

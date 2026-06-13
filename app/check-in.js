@@ -4,18 +4,51 @@ import { ScreenWrapper } from '../components/ScreenWrapper';
 import { PrimaryButton } from '../components/Button';
 import { Colors } from '../constants/Colors';
 import { Typography } from '../constants/Typography';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CustomSlider as Slider } from '../components/CustomSlider';
 import { useAuth } from '../contexts/AuthContext';
 import { SupabaseService } from '../services/SupabaseService';
+import { getRecommendedExercises, getDailyPlan } from '../services/RecommendationService';
+import { EXERCISES_DATA } from './(tabs)/exercises';
 
-const QUICK_EXERCISES = [
-    { id: 'shoulder', label: 'Shoulder Shrugs', emoji: '💪' },
-    { id: 'ankle', label: 'Ankle Pumps', emoji: '🦶' },
-    { id: 'trunk', label: 'Trunk Rotations', emoji: '🔄' },
-    { id: 'fist', label: 'Fist Clenches', emoji: '✊' },
-    { id: 'march', label: 'Seated Marching', emoji: '🚶' },
+// Fallback shown only when the user has no plan yet (no profile / no assignments).
+// IDs match real exercises so completions are meaningful even in this case.
+const DEFAULT_EXERCISES = [
+    { id: 'a1', label: 'Shoulder Shrugs', emoji: '💪' },
+    { id: 'l1', label: 'Ankle Pumps', emoji: '🦶' },
+    { id: 'c1', label: 'Trunk Rotations', emoji: '🔄' },
+    { id: 'h1', label: 'Fist Clenches', emoji: '✊' },
+    { id: 'l2', label: 'Seated Marching', emoji: '🚶' },
 ];
+
+const CATEGORY_EMOJI = {
+    Arms: '💪',
+    Legs: '🦵',
+    Core: '🧘',
+    Hands: '✋',
+    'Head & Neck': '🧠',
+};
+
+// Build the day's check-in list from the user's real plan: medical-staff
+// assignments first, then AI recommendations. Deduped, real exercise IDs.
+function buildPlanExercises(profile, assignments) {
+    const items = [];
+    const seen = new Set();
+    const addById = (id) => {
+        if (!id || seen.has(id)) return;
+        const ex = EXERCISES_DATA.find((e) => e.id === id);
+        if (!ex) return;
+        seen.add(id);
+        items.push({ id, label: ex.title, emoji: CATEGORY_EMOJI[ex.category] || '✅' });
+    };
+
+    (assignments || []).forEach((a) => addById(a.exercise_id));
+
+    const { recommended } = getRecommendedExercises(profile, EXERCISES_DATA);
+    getDailyPlan(recommended).forEach((ex) => addById(ex.id));
+
+    return items;
+}
 
 export default function CheckIn() {
     const router = useRouter();
@@ -24,8 +57,35 @@ export default function CheckIn() {
     const [pain, setPain] = useState(3);
     const [energy, setEnergy] = useState(6);
     const [completedExercises, setCompletedExercises] = useState([]);
+    const [exerciseList, setExerciseList] = useState(DEFAULT_EXERCISES);
     const [notes, setNotes] = useState('');
     const [saving, setSaving] = useState(false);
+
+    // Load today's personalized plan (staff assignments + AI recommendations)
+    // so the check-in reflects what the user was actually prescribed.
+    // Falls back to DEFAULT_EXERCISES when there's no plan or on error.
+    useEffect(() => {
+        if (!user) return;
+        let cancelled = false;
+
+        (async () => {
+            try {
+                const [profileRes, assignedRes] = await Promise.all([
+                    SupabaseService.getUserProfile(user.id),
+                    SupabaseService.getAssignedExercises(user.id, 'assigned'),
+                ]);
+                if (cancelled) return;
+
+                const planItems = buildPlanExercises(profileRes?.profile, assignedRes?.data);
+                if (planItems.length > 0) setExerciseList(planItems);
+            } catch (error) {
+                console.error('Failed to load daily plan for check-in:', error);
+                // Keep DEFAULT_EXERCISES
+            }
+        })();
+
+        return () => { cancelled = true; };
+    }, [user]);
 
     const toggleExercise = (exerciseId) => {
         if (completedExercises.includes(exerciseId)) {
@@ -129,7 +189,7 @@ export default function CheckIn() {
                     <Text style={styles.sectionTitle}>Exercises Completed Today</Text>
                     <Text style={styles.sectionSubtitle}>Check off what you've done 🎯</Text>
                     <View style={styles.exerciseList}>
-                        {QUICK_EXERCISES.map((exercise) => (
+                        {exerciseList.map((exercise) => (
                             <TouchableOpacity
                                 key={exercise.id}
                                 style={[
