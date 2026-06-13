@@ -10,7 +10,7 @@ import { ChevronRight, BookOpen } from 'lucide-react-native';
  */
 export function ResourceCard({ title, snippet, onPress }) {
     return (
-        <TouchableOpacity style={styles.card} onPress={onPress}>
+        <TouchableOpacity style={styles.card} onPress={onPress} accessibilityRole="button" accessibilityLabel={`Open article: ${title}`}>
             <View style={styles.iconContainer}>
                 <BookOpen size={20} color={Colors.primary} />
             </View>

@@ -245,6 +245,7 @@ export default function CheckIn() {
                         minimumTrackTintColor={pain <= 3 ? Colors.actionGreen : pain <= 6 ? Colors.primary : Colors.actionCoral}
                         maximumTrackTintColor={Colors.border}
                         thumbTintColor={pain <= 3 ? Colors.actionGreen : pain <= 6 ? Colors.primary : Colors.actionCoral}
+                        accessibilityLabel="Pain level, 0 to 10"
                     />
                     <View style={styles.sliderLabels}>
                         <Text style={styles.sliderLabel}>😊 No pain</Text>
@@ -267,6 +268,7 @@ export default function CheckIn() {
                         minimumTrackTintColor={energy >= 7 ? Colors.actionGreen : Colors.primary}
                         maximumTrackTintColor={Colors.border}
                         thumbTintColor={energy >= 7 ? Colors.actionGreen : Colors.primary}
+                        accessibilityLabel="Energy level, 0 to 10"
                     />
                     <View style={styles.sliderLabels}>
                         <Text style={styles.sliderLabel}>😴 Exhausted</Text>

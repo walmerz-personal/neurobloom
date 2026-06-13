@@ -1101,6 +1101,8 @@ export default function Progress() {
                                             onPress={handleSyncHealth}
                                             disabled={healthLoading}
                                             style={styles.syncButton}
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Sync health data"
                                         >
                                             {healthLoading ? (
                                                 <ActivityIndicator size="small" color={Colors.primary} />
@@ -1374,7 +1376,7 @@ const styles = StyleSheet.create({
     },
     streakLabel: {
         fontFamily: 'Inter_500Medium',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.textSecondary,
     },
     divider: {

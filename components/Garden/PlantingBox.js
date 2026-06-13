@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     },
     labelText: {
         fontFamily: 'Inter_600SemiBold',
-        fontSize: 10,
+        fontSize: 13,
         color: '#3E2723', // Dark text on wood
         textAlign: 'center',
     },

@@ -54,6 +54,8 @@ const BuyButton = ({ item, userPoints, onBuy }) => {
             onPressOut={handlePressOut}
             disabled={!canBuy}
             activeOpacity={0.9}
+            accessibilityRole="button"
+            accessibilityLabel={`Buy ${item.name} for ${item.cost} points`}
         >
             <Animated.View
                 style={[
@@ -173,7 +175,7 @@ export default function ShopScreen() {
     return (
         <ScreenWrapper>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
                     <ArrowLeft size={24} color={Colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Seed Shop</Text>
@@ -273,7 +275,7 @@ const styles = StyleSheet.create({
     },
     itemDuration: {
         fontFamily: 'Inter_400Regular',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.textTertiary,
     },
     buyButton: {
@@ -315,7 +317,7 @@ const styles = StyleSheet.create({
     },
     ownedText: {
         fontFamily: 'Inter_600SemiBold',
-        fontSize: 12,
+        fontSize: 13,
         color: 'white',
     },
 });

@@ -1426,7 +1426,7 @@ export default function Exercises() {
                     <View style={styles.recommendedSection}>
                         <View style={styles.recommendedHeader}>
                             <Text style={styles.recommendedTitle}>Recommended for You</Text>
-                            <TouchableOpacity onPress={() => setShowInfoModal(true)} style={styles.infoButton}>
+                            <TouchableOpacity onPress={() => setShowInfoModal(true)} style={styles.infoButton} accessibilityRole="button" accessibilityLabel="How recommendations work">
                                 <Info size={20} color={Colors.textSecondary} />
                             </TouchableOpacity>
                         </View>
@@ -1448,6 +1448,9 @@ export default function Exercises() {
                                         toggleCompletion(exercise.id);
                                     }}
                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                    accessibilityRole="checkbox"
+                                    accessibilityState={{ checked: completedExercises.includes(exercise.id) }}
+                                    accessibilityLabel={`Mark ${exercise.title} complete`}
                                 >
                                     {completedExercises.includes(exercise.id) ? (
                                         <CheckCircle size={24} color={Colors.primary} />
@@ -1870,7 +1873,7 @@ const styles = StyleSheet.create({
     },
     categoryBadgeText: {
         fontFamily: 'Inter_600SemiBold',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.text,
     },
     topLeftActions: {
@@ -1960,7 +1963,7 @@ const styles = StyleSheet.create({
     diffHard: { backgroundColor: '#FEE2E2' },
     difficultyText: {
         fontFamily: 'Inter_600SemiBold',
-        fontSize: 11,
+        fontSize: 13,
         color: Colors.text,
     },
     description: {
@@ -1999,7 +2002,7 @@ const styles = StyleSheet.create({
     },
     assignmentDueDate: {
         fontFamily: 'Inter_500Medium',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.textSecondary,
     },
     instructionsContainer: {
@@ -2106,7 +2109,7 @@ const styles = StyleSheet.create({
     },
     recommendedDisclaimer: {
         fontFamily: 'Inter_400Regular',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.textTertiary,
         marginTop: 12,
         textAlign: 'center',
