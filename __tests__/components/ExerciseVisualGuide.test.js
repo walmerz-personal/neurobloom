@@ -38,11 +38,22 @@ describe('ExerciseVisualGuide', () => {
         });
     });
 
-    it('shows step 1 content and step counter', async () => {
-        const a1 = EXERCISE_VISUAL_GUIDES.a1;
-        const { getByText } = render(
+    it('defaults to Video mode and shows the Video/Steps toggle when a video exists', async () => {
+        const { getByTestId } = render(
             <ExerciseVisualGuide visible={true} exerciseId="a1" onClose={() => {}} />
         );
+        await waitFor(() => {
+            expect(getByTestId('visual-guide-mode-video')).toBeTruthy();
+            expect(getByTestId('visual-guide-mode-steps')).toBeTruthy();
+        });
+    });
+
+    it('shows step 1 content and step counter after switching to Steps mode', async () => {
+        const a1 = EXERCISE_VISUAL_GUIDES.a1;
+        const { getByText, getByTestId } = render(
+            <ExerciseVisualGuide visible={true} exerciseId="a1" onClose={() => {}} />
+        );
+        fireEvent.press(getByTestId('visual-guide-mode-steps'));
         await waitFor(() => {
             expect(getByText(a1.steps[0].instruction)).toBeTruthy();
             expect(getByText(a1.steps[0].lillyTip)).toBeTruthy();
@@ -63,6 +74,7 @@ describe('ExerciseVisualGuide', () => {
         const { getByText, getByTestId } = render(
             <ExerciseVisualGuide visible={true} exerciseId="a1" onClose={() => {}} />
         );
+        fireEvent.press(getByTestId('visual-guide-mode-steps'));
         await waitFor(() => expect(getByText(`Step 1 of ${a1.steps.length}`)).toBeTruthy());
         fireEvent.press(getByTestId('visual-guide-next'));
         if (stepWithHold) {
@@ -85,6 +97,7 @@ describe('ExerciseVisualGuide', () => {
         const { getByText, getByTestId } = render(
             <ExerciseVisualGuide visible={true} exerciseId="a1" onClose={() => {}} />
         );
+        fireEvent.press(getByTestId('visual-guide-mode-steps'));
         await waitFor(() => expect(getByText(`Step 1 of ${a1.steps.length}`)).toBeTruthy());
         fireEvent.press(getByTestId('visual-guide-dot-1'));
         await waitFor(() => {

@@ -1,0 +1,75 @@
+{
+    "id": "a1",
+    "title": "Shoulder Shrugs",
+    "category": "Arms & Shoulders",
+    "character": "A",
+    "context": "seated",
+    "camera": "seated_three_quarter",
+    "mirror": false,
+    "sideLabel": null,
+    "poses": {
+        "rest": {},
+        "shrug": {
+            "shoulder.L": [0, 0, 22],
+            "shoulder.R": [0, 0, -22]
+        }
+    },
+    "phases": [
+        {
+            "type": "title",
+            "dur": 4,
+            "text": "Shoulder Shrugs",
+            "subtitle": "Arms & Shoulders · Beginner",
+            "narration": "Shoulder shrugs. A gentle exercise for your upper shoulders."
+        },
+        {
+            "type": "setup",
+            "dur": 6,
+            "pose": "rest",
+            "text": "Sit tall, feet flat on the floor",
+            "narration": "Sit up straight in a sturdy chair, with your feet flat on the floor and your arms relaxed at your sides."
+        },
+        {
+            "type": "reps",
+            "count": 3,
+            "displayTotal": 10,
+            "cycle": [
+                {
+                    "move": "shrug",
+                    "dur": 3,
+                    "text": "Lift your shoulders toward your ears",
+                    "narration": [
+                        "Slowly lift your shoulders up toward your ears.",
+                        "Again. Slowly lift up.",
+                        "One more. Lift up."
+                    ]
+                },
+                {
+                    "hold": 3,
+                    "countdown": true,
+                    "narration": "Hold. Two. Three."
+                },
+                {
+                    "move": "rest",
+                    "dur": 3,
+                    "text": "Lower them slowly back down",
+                    "narration": [
+                        "And gently lower them back down.",
+                        "And lower down.",
+                        "And relax."
+                    ]
+                },
+                {
+                    "rest": 2
+                }
+            ]
+        },
+        {
+            "type": "outro",
+            "dur": 6,
+            "pose": "rest",
+            "text": "Repeat 10 times — rest when you need to",
+            "narration": "Continue for ten slow repetitions. Rest whenever you need to. Well done."
+        }
+    ]
+}

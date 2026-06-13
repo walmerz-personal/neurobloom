@@ -361,6 +361,16 @@ jest.mock('expo-splash-screen', () => ({
     hideAsync: jest.fn(() => Promise.resolve()),
 }));
 
+// Mock expo-video
+jest.mock('expo-video', () => ({
+    VideoView: 'VideoView',
+    useVideoPlayer: jest.fn(() => ({
+        play: jest.fn(),
+        pause: jest.fn(),
+        loop: false,
+    })),
+}));
+
 // Mock lottie-react-native
 jest.mock('lottie-react-native', () => 'LottieView');
 
