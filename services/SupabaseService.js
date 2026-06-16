@@ -395,6 +395,71 @@ export const SupabaseService = {
     },
 
     /**
+     * Whether the user has consented to AI features (Lilly chat + voice).
+     * Stored in user_profiles.preferences.aiConsent (no migration needed).
+     * @param {string} userId
+     * @returns {Promise<{granted: boolean, error}>}
+     */
+    async getAiConsent(userId) {
+        if (!this.isInitialized()) {
+            return { granted: false, error: initError || new Error('Supabase not initialized') };
+        }
+        try {
+            const { data, error } = await supabase
+                .from('user_profiles')
+                .select('preferences')
+                .eq('user_id', userId)
+                .single();
+
+            if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
+                return { granted: false, error };
+            }
+            return { granted: data?.preferences?.aiConsent === true, error: null };
+        } catch (error) {
+            console.error('❌ Get AI consent error:', error);
+            return { granted: false, error };
+        }
+    },
+
+    /**
+     * Record the user's AI consent decision (merges into existing preferences).
+     * @param {string} userId
+     * @param {boolean} granted
+     * @returns {Promise<{error}>}
+     */
+    async setAiConsent(userId, granted) {
+        if (!this.isInitialized()) {
+            return { error: initError || new Error('Supabase not initialized') };
+        }
+        try {
+            const { data } = await supabase
+                .from('user_profiles')
+                .select('preferences')
+                .eq('user_id', userId)
+                .single();
+
+            const preferences = {
+                ...(data?.preferences || {}),
+                aiConsent: granted,
+                aiConsentAt: granted ? new Date().toISOString() : null,
+            };
+
+            const { error } = await supabase
+                .from('user_profiles')
+                .update({ preferences })
+                .eq('user_id', userId);
+
+            if (error) {
+                console.error('❌ Set AI consent error:', error);
+            }
+            return { error };
+        } catch (error) {
+            console.error('❌ Set AI consent error:', error);
+            return { error };
+        }
+    },
+
+    /**
      * Get user data (from users table)
      * @param {string} userId 
      * @returns {Promise<{user, error}>}

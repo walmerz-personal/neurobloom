@@ -64,6 +64,8 @@ describe('Lilly Chat Screen', () => {
         SupabaseService.getDailyLogs.mockResolvedValue({ logs: [], error: null });
         SupabaseService.getAssignedExercises.mockResolvedValue({ data: [], error: null });
         SupabaseService.getCustomExercises.mockResolvedValue({ data: [], error: null });
+        SupabaseService.getAiConsent.mockResolvedValue({ granted: true });
+        SupabaseService.setAiConsent.mockResolvedValue({ error: null });
         sendMessage.mockResolvedValue({ text: 'Hello! How can I help?', action: null });
         AsyncStorage.getItem.mockResolvedValue(null); // First-time user by default
     });
@@ -210,6 +212,48 @@ describe('Lilly Chat Screen', () => {
 
             await waitFor(() => {
                 expect(getByText('I am here to help!')).toBeTruthy();
+            });
+        });
+    });
+
+    describe('AI consent gate', () => {
+        it('blocks sending and shows the consent modal when not consented', async () => {
+            SupabaseService.getAiConsent.mockResolvedValue({ granted: false });
+            const { getByLabelText, getByText } = render(<Lilly />);
+
+            await waitFor(() => {
+                expect(getByText(/Lilly/)).toBeTruthy();
+            });
+
+            const input = getByLabelText('Message input');
+            fireEvent.changeText(input, 'Hello Lilly');
+            fireEvent(input, 'submitEditing');
+
+            await waitFor(() => {
+                expect(getByText('Enable Lilly, your AI companion')).toBeTruthy();
+            });
+            expect(sendMessage).not.toHaveBeenCalled();
+        });
+
+        it('records consent when Enable Lilly is pressed', async () => {
+            SupabaseService.getAiConsent.mockResolvedValue({ granted: false });
+            const { getByLabelText, getByText } = render(<Lilly />);
+
+            await waitFor(() => {
+                expect(getByText(/Lilly/)).toBeTruthy();
+            });
+
+            fireEvent.changeText(getByLabelText('Message input'), 'Hello');
+            fireEvent(getByLabelText('Message input'), 'submitEditing');
+
+            await waitFor(() => {
+                expect(getByText('Enable Lilly')).toBeTruthy();
+            });
+
+            fireEvent.press(getByText('Enable Lilly'));
+
+            await waitFor(() => {
+                expect(SupabaseService.setAiConsent).toHaveBeenCalledWith('test-user-id', true);
             });
         });
     });

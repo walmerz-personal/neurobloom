@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Image, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAudioRecorder, AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorderState } from 'expo-audio';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -25,6 +25,8 @@ export default function Lilly() {
     const [userProfile, setUserProfile] = useState(null);
     const [lillyContext, setLillyContext] = useState(null);
     const [permissionGranted, setPermissionGranted] = useState(false);
+    const [aiConsent, setAiConsent] = useState(null); // null = loading, true/false = decided
+    const [showConsent, setShowConsent] = useState(false);
     const scrollViewRef = useRef(null);
     const router = useRouter();
     const { user, userData } = useAuth();
@@ -207,7 +209,31 @@ export default function Lilly() {
         }
     };
 
+    // Load the user's AI consent decision. Lilly chat and voice are gated on
+    // it because messages and check-in context are sent to a third-party AI.
+    useEffect(() => {
+        if (!user?.id) return;
+        let cancelled = false;
+        (async () => {
+            const res = await SupabaseService.getAiConsent(user.id);
+            if (!cancelled) setAiConsent(res?.granted === true);
+        })();
+        return () => { cancelled = true; };
+    }, [user?.id]);
+
+    const handleGrantConsent = async () => {
+        setShowConsent(false);
+        setAiConsent(true);
+        if (user?.id) {
+            await SupabaseService.setAiConsent(user.id, true);
+        }
+    };
+
     const handleVoicePress = () => {
+        if (!aiConsent) {
+            setShowConsent(true);
+            return;
+        }
         if (recorderState.isRecording) {
             stopRecording();
         } else {
@@ -217,6 +243,10 @@ export default function Lilly() {
 
     const handleSend = async () => {
         if (!inputText.trim()) return;
+        if (!aiConsent) {
+            setShowConsent(true);
+            return;
+        }
 
         const userMsgText = inputText.trim();
         const userMsg = { id: Date.now(), isLilly: false, text: userMsgText };
@@ -361,6 +391,42 @@ export default function Lilly() {
                         </TouchableOpacity>
                     </View>
                 </KeyboardAvoidingView>
+
+                <Modal
+                    visible={showConsent}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setShowConsent(false)}
+                >
+                    <View style={styles.consentOverlay}>
+                        <View style={styles.consentCard}>
+                            <Text style={styles.consentTitle}>Enable Lilly, your AI companion</Text>
+                            <Text style={styles.consentBody}>
+                                Lilly uses a secure AI service to chat with you. To give helpful,
+                                personal responses, your messages and recent check-in details
+                                (mood, pain, energy, and exercises) are sent to our AI provider.
+                                Voice messages are transcribed by the same service. We never sell
+                                your data, and you can turn this off anytime in your profile.
+                            </Text>
+                            <TouchableOpacity
+                                style={styles.consentPrimary}
+                                onPress={handleGrantConsent}
+                                accessibilityRole="button"
+                                accessibilityLabel="Enable Lilly"
+                            >
+                                <Text style={styles.consentPrimaryText}>Enable Lilly</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.consentSecondary}
+                                onPress={() => setShowConsent(false)}
+                                accessibilityRole="button"
+                                accessibilityLabel="Not now"
+                            >
+                                <Text style={styles.consentSecondaryText}>Not now</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </Modal>
             </View>
         </ScreenWrapper>
     );
@@ -619,5 +685,53 @@ const styles = StyleSheet.create({
         fontFamily: 'SourceSans3_600SemiBold',
         color: Colors.textSecondary,
         fontSize: 14,
-    }
+    },
+    consentOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24,
+    },
+    consentCard: {
+        backgroundColor: Colors.background,
+        borderRadius: 20,
+        padding: 24,
+        width: '100%',
+        maxWidth: 420,
+    },
+    consentTitle: {
+        fontFamily: 'Inter_700Bold',
+        fontSize: 20,
+        color: Colors.text,
+        marginBottom: 12,
+    },
+    consentBody: {
+        fontFamily: 'SourceSans3_400Regular',
+        fontSize: 16,
+        lineHeight: 23,
+        color: Colors.textSecondary,
+        marginBottom: 20,
+    },
+    consentPrimary: {
+        backgroundColor: Colors.primary,
+        borderRadius: 14,
+        paddingVertical: 14,
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    consentPrimaryText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 16,
+        color: 'white',
+    },
+    consentSecondary: {
+        paddingVertical: 12,
+        alignItems: 'center',
+    },
+    consentSecondaryText: {
+        fontFamily: 'SourceSans3_600SemiBold',
+        fontSize: 15,
+        color: Colors.textSecondary,
+    },
 });
