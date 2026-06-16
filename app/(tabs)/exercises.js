@@ -11,6 +11,7 @@ import { MedicalStaffService } from '../../services/MedicalStaffService';
 import { CustomExerciseModal } from '../../components/CustomExerciseModal';
 import { ConfettiBurst } from '../../components/ConfettiBurst';
 import { getRecommendedExercises } from '../../services/RecommendationService';
+import { isFallRiskExercise, EXERCISE_SAFETY_NOTE, FALL_RISK_SAFETY_NOTE } from '../../constants/exerciseMetadata';
 import { ExerciseVisualGuide, getExerciseHasVisualGuide } from '../../components/ExerciseVisualGuide';
 
 const CATEGORIES = ['All', 'Arms', 'Legs', 'Core', 'Hands', 'Head & Neck'];
@@ -1707,6 +1708,12 @@ function ExerciseCard({ data, isExpanded, isCompleted, isCustom, isAssigned, isR
                                 <Text style={styles.stepText}>{step}</Text>
                             </View>
                         ))}
+                        <View style={styles.safetyNote}>
+                            <Text style={styles.safetyNoteText}>⚠️ {EXERCISE_SAFETY_NOTE}</Text>
+                            {isFallRiskExercise(data) && (
+                                <Text style={styles.safetyNoteText}>{FALL_RISK_SAFETY_NOTE}</Text>
+                            )}
+                        </View>
                     </View>
                 )}
             </View>
@@ -2053,6 +2060,19 @@ const styles = StyleSheet.create({
         flex: 1,
         flexShrink: 1,
         flexWrap: 'wrap',
+    },
+    safetyNote: {
+        marginTop: 14,
+        backgroundColor: '#FEF3C7',
+        borderRadius: 12,
+        padding: 12,
+        gap: 6,
+    },
+    safetyNoteText: {
+        fontFamily: 'SourceSans3_400Regular',
+        fontSize: 14,
+        color: '#92400E',
+        lineHeight: 20,
     },
     // Recommended section
     recommendedSection: {

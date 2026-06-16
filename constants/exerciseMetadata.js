@@ -150,3 +150,28 @@ export const REGION_REASONS = {
     fine_motor: 'For fine motor skills',
     head_neck: 'For jaw and cervical recovery',
 };
+
+// Safety guidance shown on every exercise detail.
+export const EXERCISE_SAFETY_NOTE =
+    'Stop if you feel pain, dizziness, or short of breath. Rest and let your care team know.';
+
+// Extra guidance for exercises with balance / fall risk.
+export const FALL_RISK_SAFETY_NOTE =
+    'Do this near a sturdy chair or wall, or with someone nearby, in case you lose your balance.';
+
+// Standing / weight-transfer movements carry meaningful fall risk. Detected
+// from the exercise title (conservative: seated/lying movements are excluded).
+const FALL_RISK_PATTERN = /\b(stand|standing|balance|squats?|lunges?|heel raises?|toe raises?|step[- ]?ups?|weight shift|single[- ]?leg|tandem)\b/i;
+const NON_STANDING_PATTERN = /\b(seated|sitting|supine|lying|in bed)\b/i;
+
+/**
+ * Whether an exercise should show the fall-risk safety callout.
+ * @param {Object} exercise - exercise object with a `title`
+ * @returns {boolean}
+ */
+export function isFallRiskExercise(exercise) {
+    const title = (exercise?.title || '').toLowerCase();
+    if (!title) return false;
+    if (NON_STANDING_PATTERN.test(title)) return false;
+    return FALL_RISK_PATTERN.test(title);
+}
