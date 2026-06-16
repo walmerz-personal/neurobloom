@@ -58,6 +58,7 @@ export default function Progress() {
     const [showRangePicker, setShowRangePicker] = useState(false);
     const [fetchError, setFetchError] = useState(null);
     const [retryKey, setRetryKey] = useState(0);
+    const [promisAssessment, setPromisAssessment] = useState(null);
 
     // Use ref to track if component is mounted
     const isMountedRef = useRef(true);
@@ -93,6 +94,16 @@ export default function Progress() {
                     fetchData(signal),
                     fetchHealthData(signal),
                 ]);
+
+                // Load latest monthly health check-in (non-critical)
+                try {
+                    const res = await SupabaseService.getLatestPromisAssessment(user.id);
+                    if (!signal.aborted && isMountedRef.current) {
+                        setPromisAssessment(res?.assessment || null);
+                    }
+                } catch (error) {
+                    console.log('[Progress] Could not load monthly check-in:', error.message);
+                }
 
                 // Check AsyncStorage for existing permission status (safe, no native calls)
                 // This allows us to show the correct UI state without triggering native calls
@@ -1002,6 +1013,42 @@ export default function Progress() {
                         </TouchableOpacity>
                     </View>
                 )}
+                {(() => {
+                    const last = promisAssessment?.assessment_date;
+                    const days = last ? Math.floor((Date.now() - new Date(last).getTime()) / 86400000) : Infinity;
+                    const due = days >= 30;
+                    return (
+                        <View style={styles.card}>
+                            <View style={styles.cardHeader}>
+                                <View style={styles.iconContainer}>
+                                    <TrendingUp size={24} color={Colors.primary} />
+                                </View>
+                                <Text style={styles.cardTitle}>Monthly Health Check-In</Text>
+                            </View>
+                            {promisAssessment && (
+                                <Text style={styles.cardFooter}>
+                                    Last check-in: Physical {promisAssessment.physical_raw ?? '–'}/20 · Mental {promisAssessment.mental_raw ?? '–'}/20
+                                </Text>
+                            )}
+                            <Text style={styles.cardFooter}>
+                                {due
+                                    ? 'A quick 2-minute check-in on your overall health helps you and your care team see how your recovery is trending.'
+                                    : `Your next check-in will be ready in ${30 - days} day${30 - days === 1 ? '' : 's'}.`}
+                            </Text>
+                            {due && (
+                                <TouchableOpacity
+                                    style={styles.connectButton}
+                                    onPress={() => router.push('/promis-checkin')}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Start monthly health check-in"
+                                >
+                                    <Text style={styles.connectButtonText}>Start check-in</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    );
+                })()}
+
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
                         <View style={styles.iconContainer}>
@@ -1101,6 +1148,8 @@ export default function Progress() {
                                             onPress={handleSyncHealth}
                                             disabled={healthLoading}
                                             style={styles.syncButton}
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Sync health data"
                                         >
                                             {healthLoading ? (
                                                 <ActivityIndicator size="small" color={Colors.primary} />
@@ -1374,7 +1423,7 @@ const styles = StyleSheet.create({
     },
     streakLabel: {
         fontFamily: 'Inter_500Medium',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.textSecondary,
     },
     divider: {

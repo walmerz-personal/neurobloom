@@ -71,7 +71,7 @@ export default function RequestAccess() {
     return (
         <ScreenWrapper>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
                     <ArrowLeft size={24} color={Colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Request Access</Text>
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     },
     privacyNote: {
         fontFamily: 'Inter_400Regular',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.textTertiary,
         textAlign: 'center',
         marginTop: 24,

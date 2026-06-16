@@ -226,6 +226,8 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
                                     }}
                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                     testID={`care-team-remove-caregiver-${caregiver.linkId}`}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`Remove caregiver ${caregiver.name}`}
                                 >
                                     <X size={18} color={Colors.error} />
                                 </TouchableOpacity>
@@ -265,6 +267,8 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
                                     }}
                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                     testID={`care-team-remove-staff-${staff.linkId}`}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`Remove medical staff ${staff.name}`}
                                 >
                                     <X size={18} color={Colors.error} />
                                 </TouchableOpacity>
@@ -288,6 +292,8 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
                                                     Alert.alert('Copied!', 'Code copied to clipboard');
                                                 }}
                                                 testID="care-team-copy-code"
+                                                accessibilityRole="button"
+                                                accessibilityLabel="Copy invitation code"
                                             >
                                                 <Copy size={14} color={Colors.textSecondary} />
                                             </TouchableOpacity>
@@ -298,6 +304,8 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
                                     style={styles.removeButton}
                                     onPress={() => handleCancelInvitation(invitation)}
                                     testID={`care-team-cancel-invitation-${invitation.linkId}`}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Cancel invitation"
                                 >
                                     <X size={18} color={Colors.textSecondary} />
                                 </TouchableOpacity>
@@ -329,6 +337,8 @@ export function CareTeamSection({ userId, userRole, onNavigateToCaregiver }) {
                                 style={styles.profileModalClose}
                                 onPress={() => setProfileMember(null)}
                                 testID="care-team-profile-close"
+                                accessibilityRole="button"
+                                accessibilityLabel="Close profile"
                             >
                                 <X size={24} color={Colors.text} />
                             </TouchableOpacity>
@@ -514,7 +524,7 @@ const styles = StyleSheet.create({
     },
     codeText: {
         fontFamily: 'Inter_600SemiBold',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.primary,
         letterSpacing: 1,
     },

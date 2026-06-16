@@ -1,4 +1,4 @@
-import { EXERCISE_METADATA, REGION_REASONS } from '../constants/exerciseMetadata';
+import { EXERCISE_METADATA, REGION_REASONS, isFallRiskExercise } from '../constants/exerciseMetadata';
 
 const EXPECTED_IDS = ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8', 'a9', 'a10', 'a11', 'a12', 'a13', 'a14', 'a15', 'a16', 'l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8', 'l9', 'l10', 'l11', 'l12', 'l13', 'l14', 'l15', 'l16', 'l17', 'l18', 'l19', 'l20', 'l21', 'l22', 'l23', 'l24', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9', 'c10', 'c11', 'c12', 'h1', 'h2', 'h3', 'n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'n7'];
 const VALID_BODY_REGIONS = ['upper', 'lower', 'core', 'fine_motor', 'head_neck'];
@@ -80,5 +80,25 @@ describe('REGION_REASONS', () => {
         const val = REGION_REASONS[region];
         expect(typeof val).toBe('string');
         expect(val.length).toBeGreaterThan(0);
+    });
+});
+
+describe('isFallRiskExercise', () => {
+    it('flags standing / balance movements', () => {
+        expect(isFallRiskExercise({ title: 'Sit-to-Stand' })).toBe(true);
+        expect(isFallRiskExercise({ title: 'Standing Balance' })).toBe(true);
+        expect(isFallRiskExercise({ title: 'Mini Squats' })).toBe(true);
+    });
+
+    it('does not flag seated or non-standing movements', () => {
+        expect(isFallRiskExercise({ title: 'Seated Marching' })).toBe(false);
+        expect(isFallRiskExercise({ title: 'Seated Balance' })).toBe(false);
+        expect(isFallRiskExercise({ title: 'Shoulder Shrugs' })).toBe(false);
+        expect(isFallRiskExercise({ title: 'Ankle Pumps' })).toBe(false);
+    });
+
+    it('handles missing title safely', () => {
+        expect(isFallRiskExercise({})).toBe(false);
+        expect(isFallRiskExercise(null)).toBe(false);
     });
 });

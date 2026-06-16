@@ -197,7 +197,7 @@ export default function AcceptSurvivorInvite() {
             <View style={styles.header}>
                 <View style={{ width: 40 }} />
                 <Text style={styles.headerTitle}>Accept Invite</Text>
-                <TouchableOpacity onPress={() => router.replace('/(tabs)/home')} style={styles.closeButton}>
+                <TouchableOpacity onPress={() => router.replace('/(tabs)/home')} style={styles.closeButton} accessibilityRole="button" accessibilityLabel="Go to home">
                     <X size={24} color={Colors.textSecondary} />
                 </TouchableOpacity>
             </View>
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     },
     permissionNote: {
         fontFamily: 'Inter_400Regular',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.textTertiary,
         marginTop: 8,
         fontStyle: 'italic',

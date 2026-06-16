@@ -36,17 +36,17 @@ export const Typography = {
         color: '#6e6e73',
     },
     footnote: {
-        fontSize: 13,
+        fontSize: 15,
         fontFamily: 'SourceSans3_400Regular',
         color: '#6e6e73',
     },
     caption1: {
-        fontSize: 12,
+        fontSize: 14,
         fontFamily: 'SourceSans3_400Regular',
         color: '#6e6e73',
     },
     caption2: {
-        fontSize: 11,
+        fontSize: 13,
         fontFamily: 'SourceSans3_400Regular',
         color: '#6e6e73',
     },

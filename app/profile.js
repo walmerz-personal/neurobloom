@@ -7,7 +7,7 @@ import { Colors } from '../constants/Colors';
 import { Typography } from '../constants/Typography';
 import { useAuth } from '../contexts/AuthContext';
 import { SupabaseService } from '../services/SupabaseService';
-import { ArrowLeft, Save, User, Calendar, Activity, Target, Mail, Trash2, Bell, Plus, X, Briefcase } from 'lucide-react-native';
+import { ArrowLeft, Save, User, Calendar, Activity, Target, Mail, Trash2, Bell, Plus, X, Briefcase, Sparkles } from 'lucide-react-native';
 import { CareTeamSection } from '../components/CareTeamSection';
 import { HealthSharingSection } from '../components/HealthSharingSection';
 import { NotificationService } from '../services/NotificationService';
@@ -41,6 +41,9 @@ export default function Profile() {
         new Date(2000, 0, 1, 12, 30), // Default 12:30 PM
     ]);
     const [showTimePickers, setShowTimePickers] = useState({});
+
+    // AI consent (Lilly chat + voice). Stored server-side per account.
+    const [aiConsentEnabled, setAiConsentEnabled] = useState(false);
 
     useEffect(() => {
         loadProfile();
@@ -141,6 +144,23 @@ export default function Profile() {
             Alert.alert('Error', 'Failed to save profile');
         } finally {
             setSaving(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!user?.id) return;
+        let cancelled = false;
+        (async () => {
+            const res = await SupabaseService.getAiConsent(user.id);
+            if (!cancelled) setAiConsentEnabled(res?.granted === true);
+        })();
+        return () => { cancelled = true; };
+    }, [user?.id]);
+
+    const handleAiConsentToggle = async (value) => {
+        setAiConsentEnabled(value);
+        if (user?.id) {
+            await SupabaseService.setAiConsent(user.id, value);
         }
     };
 
@@ -770,6 +790,32 @@ export default function Profile() {
                 {role === 'survivor' && (
                     <HealthSharingSection userId={user?.id} userRole={role} />
                 )}
+
+                {/* Privacy Section (AI consent) */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Privacy</Text>
+                    <View style={styles.notificationCard}>
+                        <View style={styles.notificationRow}>
+                            <View style={styles.notificationInfo}>
+                                <View style={styles.labelContainer}>
+                                    <Sparkles size={18} color={Colors.primary} />
+                                    <Text style={styles.notificationLabel}>AI Assistant (Lilly)</Text>
+                                </View>
+                                <Text style={styles.notificationDescription}>
+                                    Allow Lilly to use a secure AI service. Your messages and check-in
+                                    details are sent to our AI provider to give personal responses. Voice
+                                    is transcribed by the same service. Turn off anytime.
+                                </Text>
+                            </View>
+                            <Switch
+                                value={aiConsentEnabled}
+                                onValueChange={handleAiConsentToggle}
+                                trackColor={{ false: Colors.border, true: Colors.primaryLight }}
+                                thumbColor={aiConsentEnabled ? Colors.primary : '#f4f3f4'}
+                            />
+                        </View>
+                    </View>
+                </View>
 
                 {/* Notifications Section (Survivors only) */}
                 {role === 'survivor' && (

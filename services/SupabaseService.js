@@ -395,6 +395,134 @@ export const SupabaseService = {
     },
 
     /**
+     * Whether the user has consented to AI features (Lilly chat + voice).
+     * Stored in user_profiles.preferences.aiConsent (no migration needed).
+     * @param {string} userId
+     * @returns {Promise<{granted: boolean, error}>}
+     */
+    async getAiConsent(userId) {
+        if (!this.isInitialized()) {
+            return { granted: false, error: initError || new Error('Supabase not initialized') };
+        }
+        try {
+            const { data, error } = await supabase
+                .from('user_profiles')
+                .select('preferences')
+                .eq('user_id', userId)
+                .single();
+
+            if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
+                return { granted: false, error };
+            }
+            return { granted: data?.preferences?.aiConsent === true, error: null };
+        } catch (error) {
+            console.error('❌ Get AI consent error:', error);
+            return { granted: false, error };
+        }
+    },
+
+    /**
+     * Record the user's AI consent decision (merges into existing preferences).
+     * @param {string} userId
+     * @param {boolean} granted
+     * @returns {Promise<{error}>}
+     */
+    async setAiConsent(userId, granted) {
+        if (!this.isInitialized()) {
+            return { error: initError || new Error('Supabase not initialized') };
+        }
+        try {
+            const { data } = await supabase
+                .from('user_profiles')
+                .select('preferences')
+                .eq('user_id', userId)
+                .single();
+
+            const preferences = {
+                ...(data?.preferences || {}),
+                aiConsent: granted,
+                aiConsentAt: granted ? new Date().toISOString() : null,
+            };
+
+            const { error } = await supabase
+                .from('user_profiles')
+                .update({ preferences })
+                .eq('user_id', userId);
+
+            if (error) {
+                console.error('❌ Set AI consent error:', error);
+            }
+            return { error };
+        } catch (error) {
+            console.error('❌ Set AI consent error:', error);
+            return { error };
+        }
+    },
+
+    /**
+     * Save a PROMIS Global-10 assessment.
+     * @param {string} userId
+     * @param {Object} assessment - { assessmentDate?, responses, physicalRaw, mentalRaw }
+     * @returns {Promise<{data, error}>}
+     */
+    async savePromisAssessment(userId, assessment) {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+        try {
+            const { data, error } = await supabase
+                .from('promis_assessments')
+                .insert([{
+                    user_id: userId,
+                    assessment_date: assessment.assessmentDate || new Date().toISOString().split('T')[0],
+                    responses: assessment.responses || {},
+                    physical_raw: assessment.physicalRaw ?? null,
+                    mental_raw: assessment.mentalRaw ?? null,
+                }])
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Save PROMIS assessment error:', error);
+                return { data: null, error };
+            }
+            return { data, error: null };
+        } catch (error) {
+            console.error('❌ Save PROMIS assessment error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
+     * Get the user's most recent PROMIS Global-10 assessment (or null).
+     * @param {string} userId
+     * @returns {Promise<{assessment, error}>}
+     */
+    async getLatestPromisAssessment(userId) {
+        if (!this.isInitialized()) {
+            return { assessment: null, error: initError || new Error('Supabase not initialized') };
+        }
+        try {
+            const { data, error } = await supabase
+                .from('promis_assessments')
+                .select('*')
+                .eq('user_id', userId)
+                .order('assessment_date', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (error) {
+                console.error('❌ Get PROMIS assessment error:', error);
+                return { assessment: null, error };
+            }
+            return { assessment: data || null, error: null };
+        } catch (error) {
+            console.error('❌ Get PROMIS assessment error:', error);
+            return { assessment: null, error };
+        }
+    },
+
+    /**
      * Get user data (from users table)
      * @param {string} userId 
      * @returns {Promise<{user, error}>}
@@ -1187,30 +1315,50 @@ export const SupabaseService = {
         try {
             console.log('🗑️ Starting account deletion for user:', userId);
 
-            // Delete user from auth.users
-            // This will CASCADE delete from all tables due to ON DELETE CASCADE foreign keys
-            // Tables affected: users, user_profiles, daily_logs, conversations, user_inventory, garden_plants
-            const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-
-            if (authError) {
-                // If we don't have admin access, try deleting from the tables directly
-                console.warn('⚠️ Auth admin delete not available, deleting data manually');
-
-                // Delete in correct order (children first, parents last)
-                await supabase.from('user_inventory').delete().eq('user_id', userId);
-                await supabase.from('garden_plants').delete().eq('user_id', userId);
-                await supabase.from('conversations').delete().eq('user_id', userId);
-                await supabase.from('daily_logs').delete().eq('user_id', userId);
-                await supabase.from('user_profiles').delete().eq('user_id', userId);
-                await supabase.from('users').delete().eq('id', userId);
-
-                // Note: Without admin access, we cannot delete from auth.users
-                // The user will need to contact support or the auth record will remain orphaned
-                console.log('✅ User data deleted from database tables');
-            } else {
-                console.log('✅ User account and all data deleted successfully');
+            // Preferred path: server-side deletion via the delete-account Edge
+            // Function. It runs with the service role and removes the auth
+            // record, which cascades (ON DELETE CASCADE) across every data
+            // table. The user can only delete their own account (id derived
+            // from their JWT inside the function).
+            const { data, error: fnError } = await this.callEdgeFunction('delete-account', {});
+            if (!fnError && data?.success) {
+                console.log('✅ User account and all data deleted via edge function');
+                return { success: true, error: null };
             }
 
+            // Fallback: edge function unavailable (e.g., not yet deployed).
+            // Best-effort manual deletion of all of the user's data across every
+            // table that references them. The auth record may remain until the
+            // edge function is deployed; deleting the users row cascades the
+            // relational tables where RLS permits.
+            console.warn('⚠️ delete-account function unavailable, deleting data manually', fnError);
+
+            // Owned data (user_id)
+            await supabase.from('user_inventory').delete().eq('user_id', userId);
+            await supabase.from('garden_plants').delete().eq('user_id', userId);
+            await supabase.from('conversations').delete().eq('user_id', userId);
+            await supabase.from('daily_logs').delete().eq('user_id', userId);
+            await supabase.from('health_metrics').delete().eq('user_id', userId);
+
+            // Relational data (user may be referenced by more than one column)
+            await supabase.from('health_sharing_preferences').delete().eq('user_id', userId);
+            await supabase.from('health_sharing_preferences').delete().eq('shared_with_user_id', userId);
+            await supabase.from('exercise_assignments').delete().eq('survivor_id', userId);
+            await supabase.from('exercise_assignments').delete().eq('assigned_by_id', userId);
+            await supabase.from('kudos').delete().eq('survivor_id', userId);
+            await supabase.from('kudos').delete().eq('caregiver_id', userId);
+            await supabase.from('nudges').delete().eq('survivor_id', userId);
+            await supabase.from('nudges').delete().eq('sender_id', userId);
+            await supabase.from('care_team_links').delete().eq('survivor_id', userId);
+            await supabase.from('care_team_links').delete().eq('caregiver_id', userId);
+            await supabase.from('care_team_links').delete().eq('medical_staff_id', userId);
+
+            // Profile and root row last (cascades any remaining relational rows)
+            await supabase.from('user_profiles').delete().eq('user_id', userId);
+            await supabase.from('users').delete().eq('id', userId);
+
+            // Without the edge function we cannot remove the auth.users record.
+            console.log('✅ User data deleted from database tables (auth record requires delete-account function)');
             return { success: true, error: null };
         } catch (error) {
             console.error('❌ Delete account error:', error);

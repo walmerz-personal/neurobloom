@@ -14,6 +14,7 @@ export function CustomSlider({
     maximumTrackTintColor = Colors.border,
     thumbTintColor = Colors.primary,
     style,
+    accessibilityLabel = 'Slider',
 }) {
     const [sliderWidth, setSliderWidth] = useState(0);
     const [currentValue, setCurrentValue] = useState(value);
@@ -82,6 +83,10 @@ export function CustomSlider({
             onLayout={(e) => setSliderWidth(e.nativeEvent.layout.width)}
             {...panResponder.panHandlers}
             testID="custom-slider"
+            accessible={true}
+            accessibilityRole="adjustable"
+            accessibilityLabel={accessibilityLabel}
+            accessibilityValue={{ min: minimumValue, max: maximumValue, now: currentValue }}
         >
             {/* Background track */}
             <View style={[styles.track, { backgroundColor: maximumTrackTintColor }]}>

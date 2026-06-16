@@ -117,7 +117,7 @@ export default function GardenScreen() {
                 {/* Header with Title and Stats */}
                 <SafeAreaView style={styles.safeArea}>
                     <View style={styles.header}>
-                        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
                             <ArrowLeft size={24} color="#5D4037" />
                         </TouchableOpacity>
                         <Text style={styles.headerTitle}>NeuroBloom</Text>
@@ -131,7 +131,8 @@ export default function GardenScreen() {
 
                     {/* Stats Pills - Interactive */}
                     <View style={styles.statsContainer}>
-                        <TouchableOpacity style={styles.statPill} onPress={() => setSeedBankVisible(true)}>
+                        <TouchableOpacity style={styles.statPill} onPress={() => setSeedBankVisible(true)} accessibilityRole="button" accessibilityLabel="View seed bank">
+
                             <Leaf size={16} color="#8D6E63" fill="#8D6E63" />
                             <Text style={styles.statText}>Seeds: {inventory.reduce((acc, curr) => acc + curr.quantity, 0)}</Text>
                         </TouchableOpacity>

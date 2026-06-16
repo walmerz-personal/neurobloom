@@ -16,7 +16,7 @@ export function SeedBankModal({ visible, onClose, inventory }) {
                 <View style={styles.modalView}>
                     <View style={styles.header}>
                         <Text style={styles.title}>Seed Bank</Text>
-                        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                        <TouchableOpacity onPress={onClose} style={styles.closeButton} accessibilityRole="button" accessibilityLabel="Close seed bank">
                             <X size={24} color="#5D4037" />
                         </TouchableOpacity>
                     </View>

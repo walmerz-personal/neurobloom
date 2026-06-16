@@ -114,7 +114,7 @@ export function NudgeSendModal({
                     {/* Header */}
                     <View style={styles.header}>
                         <Text style={styles.headerTitle}>Send Nudge</Text>
-                        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                        <TouchableOpacity onPress={onClose} style={styles.closeButton} accessibilityRole="button" accessibilityLabel="Close">
                             <X size={24} color={Colors.text} />
                         </TouchableOpacity>
                     </View>

@@ -38,3 +38,16 @@ yarn-error.*
 
 # generated native folders
 
+# secrets / credentials (rotate any that were ever committed)
+credentials.json
+credentials/
+
+# build & test artifacts
+hermes-engine/
+coverage/
+*.log
+build_output*.log
+
+# media / capture artifacts
+*.mov
+

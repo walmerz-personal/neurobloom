@@ -2,7 +2,7 @@ export const Colors = {
     // NeuroBloom Brand
     deepNavy: '#1a237e',
     navyBlue: '#283593',
-    bloomMagenta: '#e040fb',
+    bloomMagenta: '#c2009a',
     bloomPink: '#f06292',
     bloomViolet: '#9c27b0',
     leafTeal: '#00bcd4',
@@ -15,7 +15,7 @@ export const Colors = {
     primaryLight: '#534bae',
 
     // Secondary System
-    secondary: '#e040fb', // Bloom Magenta
+    secondary: '#c2009a', // Bloom Magenta
     secondaryLight: '#f06292',
 
     // Neutral & Surface System
@@ -42,7 +42,7 @@ export const Colors = {
 
     // Lilly
     lillyAvatarStart: '#f06292',
-    lillyAvatarEnd: '#e040fb',
+    lillyAvatarEnd: '#c2009a',
     lillyBubble: '#F8F9FA',
     userBubble: '#1a237e',
 };

@@ -87,7 +87,7 @@ export function ExerciseVisualGuide({ visible, exerciseId, onClose }) {
                         <Text style={styles.headerTitle}>{guide.title}</Text>
                         <Text style={styles.headerSubtitle}>Visual Guide</Text>
                     </View>
-                    <TouchableOpacity style={styles.closeButton} onPress={onClose} testID="visual-guide-close">
+                    <TouchableOpacity style={styles.closeButton} onPress={onClose} testID="visual-guide-close" accessibilityRole="button" accessibilityLabel="Close visual guide">
                         <X size={24} color={Colors.text} />
                     </TouchableOpacity>
                 </View>
@@ -110,6 +110,8 @@ export function ExerciseVisualGuide({ visible, exerciseId, onClose }) {
                             onPress={() => animateTransition(() => setCurrentStep(i))}
                             style={[styles.dot, i === currentStep && styles.dotActive]}
                             testID={`visual-guide-dot-${i}`}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Go to step ${i + 1}`}
                         />
                     ))}
                 </View>
@@ -137,6 +139,8 @@ export function ExerciseVisualGuide({ visible, exerciseId, onClose }) {
                         style={[styles.navButton, isFirst && styles.navButtonDisabled]}
                         onPress={goPrev}
                         disabled={isFirst}
+                        accessibilityRole="button"
+                        accessibilityLabel="Previous step"
                     >
                         <ChevronLeft size={24} color={isFirst ? Colors.textTertiary : Colors.text} />
                     </TouchableOpacity>
@@ -151,6 +155,8 @@ export function ExerciseVisualGuide({ visible, exerciseId, onClose }) {
                                 setIsAutoPlaying(!isAutoPlaying);
                             }
                         }}
+                        accessibilityRole="button"
+                        accessibilityLabel={isAutoPlaying ? 'Pause slideshow' : isLast ? 'Restart slideshow' : 'Play slideshow'}
                     >
                         {isAutoPlaying ? (
                             <Pause size={24} color="white" />
@@ -166,6 +172,8 @@ export function ExerciseVisualGuide({ visible, exerciseId, onClose }) {
                         onPress={goNext}
                         disabled={isLast}
                         testID="visual-guide-next"
+                        accessibilityRole="button"
+                        accessibilityLabel="Next step"
                     >
                         <ChevronRight size={24} color={isLast ? Colors.textTertiary : Colors.text} />
                     </TouchableOpacity>

@@ -11,6 +11,7 @@ import { MedicalStaffService } from '../../services/MedicalStaffService';
 import { CustomExerciseModal } from '../../components/CustomExerciseModal';
 import { ConfettiBurst } from '../../components/ConfettiBurst';
 import { getRecommendedExercises } from '../../services/RecommendationService';
+import { isFallRiskExercise, EXERCISE_SAFETY_NOTE, FALL_RISK_SAFETY_NOTE } from '../../constants/exerciseMetadata';
 import { ExerciseVisualGuide, getExerciseHasVisualGuide } from '../../components/ExerciseVisualGuide';
 
 const CATEGORIES = ['All', 'Arms', 'Legs', 'Core', 'Hands', 'Head & Neck'];
@@ -1426,7 +1427,7 @@ export default function Exercises() {
                     <View style={styles.recommendedSection}>
                         <View style={styles.recommendedHeader}>
                             <Text style={styles.recommendedTitle}>Recommended for You</Text>
-                            <TouchableOpacity onPress={() => setShowInfoModal(true)} style={styles.infoButton}>
+                            <TouchableOpacity onPress={() => setShowInfoModal(true)} style={styles.infoButton} accessibilityRole="button" accessibilityLabel="How recommendations work">
                                 <Info size={20} color={Colors.textSecondary} />
                             </TouchableOpacity>
                         </View>
@@ -1448,6 +1449,9 @@ export default function Exercises() {
                                         toggleCompletion(exercise.id);
                                     }}
                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                    accessibilityRole="checkbox"
+                                    accessibilityState={{ checked: completedExercises.includes(exercise.id) }}
+                                    accessibilityLabel={`Mark ${exercise.title} complete`}
                                 >
                                     {completedExercises.includes(exercise.id) ? (
                                         <CheckCircle size={24} color={Colors.primary} />
@@ -1704,6 +1708,12 @@ function ExerciseCard({ data, isExpanded, isCompleted, isCustom, isAssigned, isR
                                 <Text style={styles.stepText}>{step}</Text>
                             </View>
                         ))}
+                        <View style={styles.safetyNote}>
+                            <Text style={styles.safetyNoteText}>⚠️ {EXERCISE_SAFETY_NOTE}</Text>
+                            {isFallRiskExercise(data) && (
+                                <Text style={styles.safetyNoteText}>{FALL_RISK_SAFETY_NOTE}</Text>
+                            )}
+                        </View>
                     </View>
                 )}
             </View>
@@ -1870,7 +1880,7 @@ const styles = StyleSheet.create({
     },
     categoryBadgeText: {
         fontFamily: 'Inter_600SemiBold',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.text,
     },
     topLeftActions: {
@@ -1960,7 +1970,7 @@ const styles = StyleSheet.create({
     diffHard: { backgroundColor: '#FEE2E2' },
     difficultyText: {
         fontFamily: 'Inter_600SemiBold',
-        fontSize: 11,
+        fontSize: 13,
         color: Colors.text,
     },
     description: {
@@ -1999,7 +2009,7 @@ const styles = StyleSheet.create({
     },
     assignmentDueDate: {
         fontFamily: 'Inter_500Medium',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.textSecondary,
     },
     instructionsContainer: {
@@ -2050,6 +2060,19 @@ const styles = StyleSheet.create({
         flex: 1,
         flexShrink: 1,
         flexWrap: 'wrap',
+    },
+    safetyNote: {
+        marginTop: 14,
+        backgroundColor: '#FEF3C7',
+        borderRadius: 12,
+        padding: 12,
+        gap: 6,
+    },
+    safetyNoteText: {
+        fontFamily: 'SourceSans3_400Regular',
+        fontSize: 14,
+        color: '#92400E',
+        lineHeight: 20,
     },
     // Recommended section
     recommendedSection: {
@@ -2106,7 +2129,7 @@ const styles = StyleSheet.create({
     },
     recommendedDisclaimer: {
         fontFamily: 'Inter_400Regular',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.textTertiary,
         marginTop: 12,
         textAlign: 'center',

@@ -292,7 +292,7 @@ export default function Home() {
                             </Text>
                         </View>
                     </View>
-                    <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+                    <TouchableOpacity onPress={handleLogout} style={styles.logoutButton} accessibilityRole="button" accessibilityLabel="Log out">
                         <LogOut size={24} color={Colors.textSecondary} />
                     </TouchableOpacity>
                 </View>
@@ -320,7 +320,7 @@ export default function Home() {
                             </Text>
                         </View>
                     </View>
-                    <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+                    <TouchableOpacity onPress={handleLogout} style={styles.logoutButton} accessibilityRole="button" accessibilityLabel="Log out">
                         <LogOut size={24} color={Colors.textSecondary} />
                     </TouchableOpacity>
                 </View>

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Image, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAudioRecorder, AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorderState } from 'expo-audio';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -12,7 +12,8 @@ import { SupabaseService } from '../../services/SupabaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import { getLillyGreeting } from '../../constants/lillyGreetings';
 import { EXERCISES_DATA } from './exercises';
-import { Send, Mic, Flower2, User } from 'lucide-react-native';
+import { Send, Mic, Flower2, User, Volume2 } from 'lucide-react-native';
+import * as Speech from 'expo-speech';
 
 const builtInIdToTitle = Object.fromEntries((EXERCISES_DATA || []).map((e) => [e.id, e.title]));
 
@@ -24,6 +25,8 @@ export default function Lilly() {
     const [userProfile, setUserProfile] = useState(null);
     const [lillyContext, setLillyContext] = useState(null);
     const [permissionGranted, setPermissionGranted] = useState(false);
+    const [aiConsent, setAiConsent] = useState(null); // null = loading, true/false = decided
+    const [showConsent, setShowConsent] = useState(false);
     const scrollViewRef = useRef(null);
     const router = useRouter();
     const { user, userData } = useAuth();
@@ -206,7 +209,31 @@ export default function Lilly() {
         }
     };
 
+    // Load the user's AI consent decision. Lilly chat and voice are gated on
+    // it because messages and check-in context are sent to a third-party AI.
+    useEffect(() => {
+        if (!user?.id) return;
+        let cancelled = false;
+        (async () => {
+            const res = await SupabaseService.getAiConsent(user.id);
+            if (!cancelled) setAiConsent(res?.granted === true);
+        })();
+        return () => { cancelled = true; };
+    }, [user?.id]);
+
+    const handleGrantConsent = async () => {
+        setShowConsent(false);
+        setAiConsent(true);
+        if (user?.id) {
+            await SupabaseService.setAiConsent(user.id, true);
+        }
+    };
+
     const handleVoicePress = () => {
+        if (!aiConsent) {
+            setShowConsent(true);
+            return;
+        }
         if (recorderState.isRecording) {
             stopRecording();
         } else {
@@ -216,6 +243,10 @@ export default function Lilly() {
 
     const handleSend = async () => {
         if (!inputText.trim()) return;
+        if (!aiConsent) {
+            setShowConsent(true);
+            return;
+        }
 
         const userMsgText = inputText.trim();
         const userMsg = { id: Date.now(), isLilly: false, text: userMsgText };
@@ -326,6 +357,8 @@ export default function Lilly() {
                             ]}
                             onPress={handleVoicePress}
                             disabled={isTranscribing}
+                            accessibilityRole="button"
+                            accessibilityLabel={recorderState.isRecording ? 'Stop recording' : 'Record a voice message'}
                         >
                             {recorderState.isRecording ? (
                                 <View style={styles.recordingIndicator} />
@@ -351,11 +384,49 @@ export default function Lilly() {
                             style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
                             onPress={handleSend}
                             disabled={!inputText.trim() || recorderState.isRecording || isTranscribing}
+                            accessibilityRole="button"
+                            accessibilityLabel="Send message"
                         >
                             <Send size={20} color="white" />
                         </TouchableOpacity>
                     </View>
                 </KeyboardAvoidingView>
+
+                <Modal
+                    visible={showConsent}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setShowConsent(false)}
+                >
+                    <View style={styles.consentOverlay}>
+                        <View style={styles.consentCard}>
+                            <Text style={styles.consentTitle}>Enable Lilly, your AI companion</Text>
+                            <Text style={styles.consentBody}>
+                                Lilly uses a secure AI service to chat with you. To give helpful,
+                                personal responses, your messages and recent check-in details
+                                (mood, pain, energy, and exercises) are sent to our AI provider.
+                                Voice messages are transcribed by the same service. We never sell
+                                your data, and you can turn this off anytime in your profile.
+                            </Text>
+                            <TouchableOpacity
+                                style={styles.consentPrimary}
+                                onPress={handleGrantConsent}
+                                accessibilityRole="button"
+                                accessibilityLabel="Enable Lilly"
+                            >
+                                <Text style={styles.consentPrimaryText}>Enable Lilly</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.consentSecondary}
+                                onPress={() => setShowConsent(false)}
+                                accessibilityRole="button"
+                                accessibilityLabel="Not now"
+                            >
+                                <Text style={styles.consentSecondaryText}>Not now</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </Modal>
             </View>
         </ScreenWrapper>
     );
@@ -377,6 +448,17 @@ function Message({ isLilly, text, action, onActionPress }) {
                 <Text style={[styles.messageText, isLilly ? styles.lillyText : styles.userText]}>
                     {text}
                 </Text>
+                {isLilly && !!text && (
+                    <TouchableOpacity
+                        style={styles.speakButton}
+                        onPress={() => Speech.speak(text)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Read this message aloud"
+                    >
+                        <Volume2 size={16} color={Colors.textSecondary} />
+                        <Text style={styles.speakButtonText}>Listen</Text>
+                    </TouchableOpacity>
+                )}
                 {action && action.type === 'navigate' && (
                     <TouchableOpacity style={styles.actionButton} onPress={onActionPress}>
                         <Text style={styles.actionButtonText}>
@@ -590,5 +672,66 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter_600SemiBold',
         color: Colors.primary,
         fontSize: 14,
-    }
+    },
+    speakButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 8,
+        alignSelf: 'flex-start',
+        paddingVertical: 4,
+    },
+    speakButtonText: {
+        fontFamily: 'SourceSans3_600SemiBold',
+        color: Colors.textSecondary,
+        fontSize: 14,
+    },
+    consentOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24,
+    },
+    consentCard: {
+        backgroundColor: Colors.background,
+        borderRadius: 20,
+        padding: 24,
+        width: '100%',
+        maxWidth: 420,
+    },
+    consentTitle: {
+        fontFamily: 'Inter_700Bold',
+        fontSize: 20,
+        color: Colors.text,
+        marginBottom: 12,
+    },
+    consentBody: {
+        fontFamily: 'SourceSans3_400Regular',
+        fontSize: 16,
+        lineHeight: 23,
+        color: Colors.textSecondary,
+        marginBottom: 20,
+    },
+    consentPrimary: {
+        backgroundColor: Colors.primary,
+        borderRadius: 14,
+        paddingVertical: 14,
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    consentPrimaryText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 16,
+        color: 'white',
+    },
+    consentSecondary: {
+        paddingVertical: 12,
+        alignItems: 'center',
+    },
+    consentSecondaryText: {
+        fontFamily: 'SourceSans3_600SemiBold',
+        fontSize: 15,
+        color: Colors.textSecondary,
+    },
 });

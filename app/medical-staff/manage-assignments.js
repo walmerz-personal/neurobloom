@@ -138,7 +138,7 @@ export default function ManageAssignments() {
         return (
             <ScreenWrapper>
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Go back">
                         <ArrowLeft size={24} color={Colors.text} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Manage Assignments</Text>
@@ -278,6 +278,8 @@ export default function ManageAssignments() {
                                         <TouchableOpacity
                                             style={styles.deleteButton}
                                             onPress={() => handleDeleteAssignment(assignment.id)}
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Delete assignment"
                                         >
                                             <Trash2 size={16} color="#EF4444" />
                                             <Text style={styles.deleteButtonText}>Delete</Text>
@@ -418,7 +420,7 @@ const styles = StyleSheet.create({
     },
     exerciseType: {
         fontFamily: 'Inter_400Regular',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.textSecondary,
     },
     statusBadge: {
@@ -429,7 +431,7 @@ const styles = StyleSheet.create({
     },
     statusText: {
         fontFamily: 'Inter_600SemiBold',
-        fontSize: 11,
+        fontSize: 13,
     },
     assignmentMeta: {
         gap: 8,
@@ -453,7 +455,7 @@ const styles = StyleSheet.create({
     },
     notesLabel: {
         fontFamily: 'Inter_600SemiBold',
-        fontSize: 12,
+        fontSize: 13,
         color: Colors.textSecondary,
         marginBottom: 4,
     },
