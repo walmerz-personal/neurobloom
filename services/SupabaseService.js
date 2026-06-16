@@ -460,6 +460,69 @@ export const SupabaseService = {
     },
 
     /**
+     * Save a PROMIS Global-10 assessment.
+     * @param {string} userId
+     * @param {Object} assessment - { assessmentDate?, responses, physicalRaw, mentalRaw }
+     * @returns {Promise<{data, error}>}
+     */
+    async savePromisAssessment(userId, assessment) {
+        if (!this.isInitialized()) {
+            return { data: null, error: initError || new Error('Supabase not initialized') };
+        }
+        try {
+            const { data, error } = await supabase
+                .from('promis_assessments')
+                .insert([{
+                    user_id: userId,
+                    assessment_date: assessment.assessmentDate || new Date().toISOString().split('T')[0],
+                    responses: assessment.responses || {},
+                    physical_raw: assessment.physicalRaw ?? null,
+                    mental_raw: assessment.mentalRaw ?? null,
+                }])
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Save PROMIS assessment error:', error);
+                return { data: null, error };
+            }
+            return { data, error: null };
+        } catch (error) {
+            console.error('❌ Save PROMIS assessment error:', error);
+            return { data: null, error };
+        }
+    },
+
+    /**
+     * Get the user's most recent PROMIS Global-10 assessment (or null).
+     * @param {string} userId
+     * @returns {Promise<{assessment, error}>}
+     */
+    async getLatestPromisAssessment(userId) {
+        if (!this.isInitialized()) {
+            return { assessment: null, error: initError || new Error('Supabase not initialized') };
+        }
+        try {
+            const { data, error } = await supabase
+                .from('promis_assessments')
+                .select('*')
+                .eq('user_id', userId)
+                .order('assessment_date', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (error) {
+                console.error('❌ Get PROMIS assessment error:', error);
+                return { assessment: null, error };
+            }
+            return { assessment: data || null, error: null };
+        } catch (error) {
+            console.error('❌ Get PROMIS assessment error:', error);
+            return { assessment: null, error };
+        }
+    },
+
+    /**
      * Get user data (from users table)
      * @param {string} userId 
      * @returns {Promise<{user, error}>}
