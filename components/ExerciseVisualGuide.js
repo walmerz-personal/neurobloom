@@ -1,31 +1,42 @@
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Image, Dimensions, Animated } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, Play, Pause, RotateCcw } from 'lucide-react-native';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { Colors } from '../constants/Colors';
 import { EXERCISE_VISUAL_GUIDES, getExerciseHasVisualGuide } from '../constants/exerciseVisualGuides';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_HEIGHT = SCREEN_WIDTH * 0.55;
+const VIDEO_HEIGHT = (SCREEN_WIDTH - 48) * (9 / 16);
 
 export { getExerciseHasVisualGuide };
 
 export function ExerciseVisualGuide({ visible, exerciseId, onClose }) {
     const [currentStep, setCurrentStep] = useState(0);
     const [isAutoPlaying, setIsAutoPlaying] = useState(false);
+    const [mode, setMode] = useState('video');
     const fadeAnim = useRef(new Animated.Value(1)).current;
     const autoPlayTimer = useRef(null);
 
     const guide = EXERCISE_VISUAL_GUIDES[exerciseId];
+    const hasVideo = !!guide?.video;
+
+    const player = useVideoPlayer(guide?.video?.source ?? null, (p) => {
+        p.loop = false;
+    });
 
     useEffect(() => {
         if (visible) {
             setCurrentStep(0);
             setIsAutoPlaying(false);
+            setMode(hasVideo ? 'video' : 'steps');
+        } else {
+            player?.pause?.();
         }
         return () => {
             if (autoPlayTimer.current) clearTimeout(autoPlayTimer.current);
         };
-    }, [visible]);
+    }, [visible, hasVideo]);
 
     useEffect(() => {
         if (isAutoPlaying && guide) {
@@ -92,84 +103,139 @@ export function ExerciseVisualGuide({ visible, exerciseId, onClose }) {
                     </TouchableOpacity>
                 </View>
 
-                {/* Illustration */}
-                <Animated.View style={[styles.imageContainer, { opacity: fadeAnim }]}>
-                    <Image source={step.image} style={styles.image} resizeMode="contain" />
-                    {step.holdSeconds && (
-                        <View style={styles.holdBadge}>
-                            <Text style={styles.holdBadgeText}>Hold {step.holdSeconds}s</Text>
-                        </View>
-                    )}
-                </Animated.View>
-
-                {/* Step indicator dots */}
-                <View style={styles.dots}>
-                    {guide.steps.map((_, i) => (
+                {/* Video / Steps toggle */}
+                {hasVideo && (
+                    <View style={styles.modeToggle}>
                         <TouchableOpacity
-                            key={i}
-                            onPress={() => animateTransition(() => setCurrentStep(i))}
-                            style={[styles.dot, i === currentStep && styles.dotActive]}
-                            testID={`visual-guide-dot-${i}`}
-                        />
-                    ))}
-                </View>
-
-                {/* Step label */}
-                <Text style={styles.stepLabel}>Step {currentStep + 1} of {guide.steps.length}</Text>
-
-                {/* Instruction text */}
-                <Animated.View style={[styles.instructionCard, { opacity: fadeAnim }]}>
-                    <Text style={styles.instructionText}>{step.instruction}</Text>
-                </Animated.View>
-
-                {/* Lilly narration bubble */}
-                <Animated.View style={[styles.lillyBubble, { opacity: fadeAnim }]}>
-                    <View style={styles.lillyHeader}>
-                        <Text style={styles.lillyEmoji}>🌸</Text>
-                        <Text style={styles.lillyName}>Lilly says</Text>
+                            style={[styles.modeButton, mode === 'video' && styles.modeButtonActive]}
+                            onPress={() => setMode('video')}
+                            testID="visual-guide-mode-video"
+                        >
+                            <Text style={[styles.modeButtonText, mode === 'video' && styles.modeButtonTextActive]}>
+                                Video
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.modeButton, mode === 'steps' && styles.modeButtonActive]}
+                            onPress={() => setMode('steps')}
+                            testID="visual-guide-mode-steps"
+                        >
+                            <Text style={[styles.modeButtonText, mode === 'steps' && styles.modeButtonTextActive]}>
+                                Steps
+                            </Text>
+                        </TouchableOpacity>
                     </View>
-                    <Text style={styles.lillyText}>{step.lillyTip}</Text>
-                </Animated.View>
+                )}
 
-                {/* Navigation controls */}
-                <View style={styles.controls}>
-                    <TouchableOpacity
-                        style={[styles.navButton, isFirst && styles.navButtonDisabled]}
-                        onPress={goPrev}
-                        disabled={isFirst}
-                    >
-                        <ChevronLeft size={24} color={isFirst ? Colors.textTertiary : Colors.text} />
-                    </TouchableOpacity>
+                {hasVideo && mode === 'video' ? (
+                    <>
+                        {/* Demonstration video */}
+                        <View style={styles.videoContainer}>
+                            <VideoView
+                                player={player}
+                                style={styles.video}
+                                contentFit="contain"
+                                nativeControls
+                            />
+                        </View>
 
-                    <TouchableOpacity
-                        style={styles.playButton}
-                        onPress={() => {
-                            if (isLast && !isAutoPlaying) {
-                                restart();
-                                setIsAutoPlaying(true);
-                            } else {
-                                setIsAutoPlaying(!isAutoPlaying);
-                            }
-                        }}
-                    >
-                        {isAutoPlaying ? (
-                            <Pause size={24} color="white" />
-                        ) : isLast ? (
-                            <RotateCcw size={24} color="white" />
-                        ) : (
-                            <Play size={24} color="white" />
-                        )}
-                    </TouchableOpacity>
+                        <View style={styles.instructionCard}>
+                            <Text style={styles.instructionText}>
+                                Follow along with the demonstration. Pause or replay any time you need to.
+                            </Text>
+                        </View>
 
-                    <TouchableOpacity
-                        style={[styles.navButton, isLast && styles.navButtonDisabled]}
-                        onPress={goNext}
-                        disabled={isLast}
-                        testID="visual-guide-next"
-                    >
-                        <ChevronRight size={24} color={isLast ? Colors.textTertiary : Colors.text} />
-                    </TouchableOpacity>
-                </View>
+                        {/* Lilly narration bubble */}
+                        <View style={styles.lillyBubble}>
+                            <View style={styles.lillyHeader}>
+                                <Text style={styles.lillyEmoji}>🌸</Text>
+                                <Text style={styles.lillyName}>Lilly says</Text>
+                            </View>
+                            <Text style={styles.lillyText}>{guide.steps[0]?.lillyTip}</Text>
+                        </View>
+                    </>
+                ) : (
+                    <>
+                        {/* Illustration */}
+                        <Animated.View style={[styles.imageContainer, { opacity: fadeAnim }]}>
+                            <Image source={step.image} style={styles.image} resizeMode="contain" />
+                            {step.holdSeconds && (
+                                <View style={styles.holdBadge}>
+                                    <Text style={styles.holdBadgeText}>Hold {step.holdSeconds}s</Text>
+                                </View>
+                            )}
+                        </Animated.View>
+
+                        {/* Step indicator dots */}
+                        <View style={styles.dots}>
+                            {guide.steps.map((_, i) => (
+                                <TouchableOpacity
+                                    key={i}
+                                    onPress={() => animateTransition(() => setCurrentStep(i))}
+                                    style={[styles.dot, i === currentStep && styles.dotActive]}
+                                    testID={`visual-guide-dot-${i}`}
+                                />
+                            ))}
+                        </View>
+
+                        {/* Step label */}
+                        <Text style={styles.stepLabel}>Step {currentStep + 1} of {guide.steps.length}</Text>
+
+                        {/* Instruction text */}
+                        <Animated.View style={[styles.instructionCard, { opacity: fadeAnim }]}>
+                            <Text style={styles.instructionText}>{step.instruction}</Text>
+                        </Animated.View>
+
+                        {/* Lilly narration bubble */}
+                        <Animated.View style={[styles.lillyBubble, { opacity: fadeAnim }]}>
+                            <View style={styles.lillyHeader}>
+                                <Text style={styles.lillyEmoji}>🌸</Text>
+                                <Text style={styles.lillyName}>Lilly says</Text>
+                            </View>
+                            <Text style={styles.lillyText}>{step.lillyTip}</Text>
+                        </Animated.View>
+
+                        {/* Navigation controls */}
+                        <View style={styles.controls}>
+                            <TouchableOpacity
+                                style={[styles.navButton, isFirst && styles.navButtonDisabled]}
+                                onPress={goPrev}
+                                disabled={isFirst}
+                            >
+                                <ChevronLeft size={24} color={isFirst ? Colors.textTertiary : Colors.text} />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.playButton}
+                                onPress={() => {
+                                    if (isLast && !isAutoPlaying) {
+                                        restart();
+                                        setIsAutoPlaying(true);
+                                    } else {
+                                        setIsAutoPlaying(!isAutoPlaying);
+                                    }
+                                }}
+                            >
+                                {isAutoPlaying ? (
+                                    <Pause size={24} color="white" />
+                                ) : isLast ? (
+                                    <RotateCcw size={24} color="white" />
+                                ) : (
+                                    <Play size={24} color="white" />
+                                )}
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.navButton, isLast && styles.navButtonDisabled]}
+                                onPress={goNext}
+                                disabled={isLast}
+                                testID="visual-guide-next"
+                            >
+                                <ChevronRight size={24} color={isLast ? Colors.textTertiary : Colors.text} />
+                            </TouchableOpacity>
+                        </View>
+                    </>
+                )}
             </View>
         </Modal>
     );
@@ -214,6 +280,48 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 3,
         elevation: 2,
+    },
+    modeToggle: {
+        flexDirection: 'row',
+        alignSelf: 'center',
+        backgroundColor: Colors.surfaceHighlight,
+        borderRadius: 12,
+        padding: 4,
+        marginBottom: 12,
+        gap: 4,
+    },
+    modeButton: {
+        paddingHorizontal: 28,
+        paddingVertical: 8,
+        borderRadius: 9,
+    },
+    modeButtonActive: {
+        backgroundColor: Colors.primary,
+    },
+    modeButtonText: {
+        fontFamily: 'Inter_600SemiBold',
+        fontSize: 14,
+        color: Colors.textSecondary,
+    },
+    modeButtonTextActive: {
+        color: 'white',
+    },
+    videoContainer: {
+        width: SCREEN_WIDTH - 48,
+        height: VIDEO_HEIGHT,
+        marginHorizontal: 24,
+        borderRadius: 20,
+        backgroundColor: '#000',
+        overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 4,
+    },
+    video: {
+        width: '100%',
+        height: '100%',
     },
     imageContainer: {
         width: SCREEN_WIDTH - 48,
